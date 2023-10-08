@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Description>Do more logs conf</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+        <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
+    </ItemGroup>
+</Project>

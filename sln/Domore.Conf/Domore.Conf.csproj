@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+    <PropertyGroup>
+        <Description>Do more conf</Description>
+    </PropertyGroup>
+</Project>
