@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Description>Do more indexing</Description>
+    </PropertyGroup>
+</Project>
