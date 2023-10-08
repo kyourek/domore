@@ -1,0 +1,8 @@
+{
+    "profiles": {
+        "Domore.Release.Console": {
+            "commandName": "Project",
+            "commandLineArgs": "-Repository=https://github.com/kyourek/domore-release.git -Package[0]=Domore.Release.Core -Package[1]=Domore.Release.Console -Stage=alpha"
+        }
+    }
+}

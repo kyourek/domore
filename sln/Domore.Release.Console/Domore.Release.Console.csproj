@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Description>Do More Release Console</Description>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Domore.Conf.ConfigurationManager\Domore.Conf.ConfigurationManager.csproj" />
+      <ProjectReference Include="..\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
+      <ProjectReference Include="..\Domore.Release.Core\Domore.Release.Core.csproj" />
+    </ItemGroup>
+</Project>

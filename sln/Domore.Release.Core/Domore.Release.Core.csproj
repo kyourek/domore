@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Description>Do More Release Core</Description>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
+      <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+    </ItemGroup>
+</Project>
