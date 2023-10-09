@@ -1,8 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
     <PropertyGroup>
-        <TargetFrameworks>net40;net45;netcoreapp2.0;netstandard2.0;netcoreapp3.1;net5.0;net6.0;net7.0</TargetFrameworks>
-        <RootNamespace>Domore</RootNamespace>
-        <Description>Do more conf</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
