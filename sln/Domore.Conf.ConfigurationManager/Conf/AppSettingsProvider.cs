@@ -1,13 +1,12 @@
-﻿using System;
+﻿using Domore.Conf.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
 
 namespace Domore.Conf {
-    using Text;
-
-    public class AppSettingsProvider : IConfContentProvider {
+    public sealed class AppSettingsProvider : IConfContentProvider {
         private static TextContentProvider Text =>
             _Text ?? (
             _Text = new TextContentProvider());

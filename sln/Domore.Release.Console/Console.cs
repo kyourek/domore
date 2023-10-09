@@ -1,14 +1,14 @@
-﻿using System;
+﻿using Domore.Conf;
+using Domore.Conf.Logs;
+using System;
+using CONF = Domore.Conf.Conf;
 using CONSOLE = System.Console;
 
 namespace Domore {
-    using Conf;
-    using CONF = Conf.Conf;
-
     public static class Console {
         public static void Release(string[] args) {
             try {
-                CONF.Container.ContentsProvider = new AppSettingsProvider();
+                CONF.ContentProvider = new AppSettingsProvider();
                 CONF.Container.ConfigureLogging();
 
                 var command = ReleaseCommand.From(args);

@@ -3,34 +3,36 @@ using System.Collections.Generic;
 
 namespace Domore.Conf {
     public class Conf : IConf {
-        private static readonly ConfContainer Container = new ConfContainer();
+        private static readonly ConfContainer _Container = new ConfContainer();
+
+        public static IConfContainer Container => _Container;
 
         public static IEnumerable<object> Sources =>
-            Container.Sources;
+            _Container.Sources;
 
         public static object Source {
-            get => Container.Source;
-            set => Container.Source = value;
+            get => _Container.Source;
+            set => _Container.Source = value;
         }
 
         public static IConfContentProvider ContentProvider {
-            get => Container.ContentProvider;
-            set => Container.ContentProvider = value;
+            get => _Container.ContentProvider;
+            set => _Container.ContentProvider = value;
         }
 
         public static IConfLookup Lookup =>
-            Container.Lookup;
+            _Container.Lookup;
 
         public static T Configure<T>(T target, string key = null) {
-            return Container.Configure(target, key);
+            return _Container.Configure(target, key);
         }
 
         public static IEnumerable<T> Configure<T>(Func<T> factory, string key = null, IEqualityComparer<string> comparer = null) {
-            return Container.Configure(factory, key, comparer);
+            return _Container.Configure(factory, key, comparer);
         }
 
         public static IEnumerable<KeyValuePair<string, T>> Configure<T>(Func<string, T> factory, string key = null, IEqualityComparer<string> comparer = null) {
-            return Container.Configure(factory, key, comparer);
+            return _Container.Configure(factory, key, comparer);
         }
 
         public static IConfContainer Contain(object source) {

@@ -1,5 +1,5 @@
 ﻿namespace Domore {
-    internal class Program {
+    internal sealed class Program {
         private static void Main(string[] args) {
             Console.Release(args);
         }
