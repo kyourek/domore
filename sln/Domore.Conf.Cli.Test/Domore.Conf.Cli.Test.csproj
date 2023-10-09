@@ -2,7 +2,10 @@
     <PropertyGroup>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj"/>
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
         <ProjectReference Include="..\Domore.Conf.Cli\Domore.Conf.Cli.csproj" />
     </ItemGroup>
 </Project>
