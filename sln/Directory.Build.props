@@ -3,17 +3,17 @@
   <PropertyGroup>
     <Authors>Ken Yourek</Authors>
     <Copyright>Copyright © Ken Yourek 2023</Copyright>
-    <VersionPrefix>8.0.0.76</VersionPrefix>
+    <VersionPrefix>8.0.0.77</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <AssemblyVersion>8.0.0.76</AssemblyVersion>
-    <InformationalVersion>8.0.0.76</InformationalVersion>
-    <FileVersion>8.0.0.76</FileVersion>
-    <PackageVersion>8.0.0.76</PackageVersion>
+    <AssemblyVersion>8.0.0.77</AssemblyVersion>
+    <InformationalVersion>8.0.0.77</InformationalVersion>
+    <FileVersion>8.0.0.77</FileVersion>
+    <PackageVersion>8.0.0.77</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
     <RepositoryBranch>master</RepositoryBranch>
-    <RepositoryCommit>ea810c8675526af5b0eed7175aabc14614815698</RepositoryCommit>
+    <RepositoryCommit>4ac93915d23fc0d9d5b387cbeb27ba0c503569ce</RepositoryCommit>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageTags></PackageTags>
