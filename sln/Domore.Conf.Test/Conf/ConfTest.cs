@@ -3,7 +3,7 @@ using System;
 
 namespace Domore.Conf {
     [TestFixture]
-    public class ConfTest {
+    public sealed class ConfTest {
         private class A {
             public TimeSpan TimeSpan { get; set; }
         }

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 #endif
 
 namespace Domore.ComponentModel {
-    public class NotifyPropertyChangedImplementation : INotifyPropertyChanged {
+    public abstract class NotifyPropertyChangedImplementation : INotifyPropertyChanged {
 #if !NET40
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif

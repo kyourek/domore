@@ -2,7 +2,7 @@
 using PATH = System.IO.Path;
 
 namespace Domore.Conventions {
-    public class Project {
+    public sealed class Project {
         public string Root { get; }
         public string Extension { get; }
 

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Domore.Conf {
     [TestFixture]
-    public class ConfContainerTest {
+    public sealed class ConfContainerTest {
         private object Content;
 
         private ConfContainer Subject {
@@ -557,7 +557,7 @@ namespace Domore.Conf {
             }
             private ICollection<Inner> _Inners;
 
-            public class Inner {
+            public sealed class Inner {
                 public double Value { get; set; }
             }
         }
@@ -690,7 +690,7 @@ namespace Domore.Conf {
             }
             private ICollection<Inner> _Inners;
 
-            public class Inner {
+            public sealed class Inner {
                 public double Value { get; set; }
             }
         }

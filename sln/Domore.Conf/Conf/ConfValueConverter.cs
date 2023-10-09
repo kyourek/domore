@@ -1,9 +1,8 @@
-﻿using System;
+﻿using Domore.Conf.Converters;
+using System;
 using System.Collections;
 
 namespace Domore.Conf {
-    using Converters;
-
     public class ConfValueConverter {
         private static readonly ConfValueConverter DefaultListItemsConverter = new ConfListItemsAttribute().ConverterInstance;
         private static readonly ConfValueConverter DefaultEnumFlagsConverter = new ConfEnumFlagsAttribute().ConverterInstance;

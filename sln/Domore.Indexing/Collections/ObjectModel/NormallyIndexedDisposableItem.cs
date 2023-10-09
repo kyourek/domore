@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace Domore.Collections.ObjectModel {
-    public class NormallyIndexedDisposableItem<TItem> : NormallyIndexedItem, IDisposable where TItem : NormallyIndexedItem, IDisposable, new() {
+    public abstract class NormallyIndexedDisposableItem<TItem> : NormallyIndexedItem, IDisposable where TItem : NormallyIndexedItem, IDisposable, new() {
         protected NormallyIndexedDisposableItem() {
         }
 

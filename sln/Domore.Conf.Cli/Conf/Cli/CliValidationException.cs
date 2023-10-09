@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace Domore.Conf.Cli {
-    public class CliValidationException : CliException {
+    public sealed class CliValidationException : CliException {
         public CliValidationException(string message) : base(message) {
         }
 

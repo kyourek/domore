@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 
 namespace Domore.Collections.Generic {
-    public class NormalStringComparer : IEqualityComparer<string> {
+    public sealed class NormalStringComparer : IEqualityComparer<string> {
         private static string Normalize(string s) =>
             string.Join("", (s ?? "").Split()).ToUpperInvariant();
 

@@ -8,7 +8,7 @@ namespace Domore.Conf.Converters {
     using Extensions;
 
     [TestFixture]
-    public class ConfListItemsTest {
+    public sealed class ConfListItemsTest {
         private class Kid {
             [ConfListItems]
             public List<string> FavoriteColors { get; set; }
@@ -48,7 +48,7 @@ namespace Domore.Conf.Converters {
             public string Thing1 { get; set; }
             public double Thing2 { get; set; }
 
-            public class Converter : TypeConverter {
+            public sealed class Converter : TypeConverter {
                 public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) {
                     var s = $"{value}";
                     var p = s.Split('&');
@@ -77,7 +77,7 @@ namespace Domore.Conf.Converters {
             public string Thing1 { get; set; }
             public double Thing2 { get; set; }
 
-            public class Converter : TypeConverter {
+            public sealed class Converter : TypeConverter {
                 public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) {
                     var s = $"{value}";
                     var p = s.Split('&');
@@ -106,7 +106,7 @@ namespace Domore.Conf.Converters {
             public string Thing1 { get; set; }
             public double Thing2 { get; set; }
 
-            public class Converter : ConfValueConverter {
+            public sealed class Converter : ConfValueConverter {
                 public override object Convert(string value, ConfValueConverterState state) {
                     var s = $"{value}";
                     var p = s.Split('&');

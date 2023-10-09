@@ -3,7 +3,7 @@ using System.Linq;
 using PATH = System.IO.Path;
 
 namespace Domore.Conventions {
-    public class CodeBase {
+    public sealed class CodeBase {
         private string Id =>
             _Id ?? (
             _Id = string.Join("_", Name, DateTime.Now.ToString("yyyyMMddhhmmss"), Guid.NewGuid().ToString("N")));

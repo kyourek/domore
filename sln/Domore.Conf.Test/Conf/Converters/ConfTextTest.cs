@@ -5,7 +5,7 @@ namespace Domore.Conf.Converters {
     using Extensions;
 
     [TestFixture]
-    public class ConfTextTest {
+    public sealed class ConfTextTest {
         private class Parent {
             [ConfText]
             public Child Child { get; set; }

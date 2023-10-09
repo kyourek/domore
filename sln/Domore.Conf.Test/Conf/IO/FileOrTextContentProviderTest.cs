@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Domore.Conf.IO {
     [TestFixture]
-    public class FileOrTextContentProviderTest {
+    public sealed class FileOrTextContentProviderTest {
         private FileOrTextContentProvider Subject {
             get => _Subject ?? (_Subject = new FileOrTextContentProvider());
             set => _Subject = value;
@@ -24,7 +24,7 @@ namespace Domore.Conf.IO {
             }
             private ICollection<Inner> _Inners;
 
-            public class Inner {
+            public sealed class Inner {
                 public double Value { get; set; }
             }
         }

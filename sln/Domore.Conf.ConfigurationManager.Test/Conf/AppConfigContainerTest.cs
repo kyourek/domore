@@ -2,6 +2,6 @@
 
 namespace Domore.Conf {
     [TestFixture]
-    public class AppConfigContainerTest {
+    public sealed class AppConfigContainerTest {
     }
 }

@@ -1,1 +1,1 @@
-dotnet .\sln\Domore.Release\bin\Debug\Domore.Release.dll %*
+dotnet .\sln\Domore.Release.Console\bin\Debug\Domore.Release.Console.dll %*

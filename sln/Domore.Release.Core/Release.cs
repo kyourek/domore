@@ -6,7 +6,7 @@ namespace Domore {
     using ReleaseActions;
     using CONF = Conf.Conf;
 
-    public class Release {
+    public sealed class Release {
         public ReleaseCommand Command { get; }
         public string Repository { get; set; }
 

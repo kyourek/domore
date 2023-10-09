@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 
 namespace Domore.Conf {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public class ConfAttribute : Attribute {
+    public sealed class ConfAttribute : Attribute {
         private ConfAttribute(bool ignore, bool ignoreGet, bool ignoreSet, string[] names) {
             Ignore = ignore;
             IgnoreGet = ignoreGet;

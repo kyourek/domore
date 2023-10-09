@@ -2,7 +2,7 @@
 
 namespace Domore.Conf.Cli {
     [TestFixture]
-    public class CliComparerTest {
+    public sealed class CliComparerTest {
         private CliComparer Subject {
             get => _Subject ?? (_Subject = new CliComparer());
             set => _Subject = value;

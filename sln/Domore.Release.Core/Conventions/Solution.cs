@@ -4,7 +4,7 @@ using System.Xml.Linq;
 using PATH = System.IO.Path;
 
 namespace Domore.Conventions {
-    public class Solution {
+    public sealed class Solution {
         public string Root { get; }
         public string Name { get; }
 

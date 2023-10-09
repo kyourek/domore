@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 
 namespace Domore.Conf {
-    public class Conf : IConf {
+    public sealed class Conf : IConf {
         private static readonly ConfContainer _Container = new ConfContainer();
 
         public static IConfContainer Container => _Container;

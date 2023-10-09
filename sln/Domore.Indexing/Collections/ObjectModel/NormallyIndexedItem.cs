@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace Domore.Collections.ObjectModel {
-    public class NormallyIndexedItem : IIndexedItem<string> {
+    public abstract class NormallyIndexedItem : IIndexedItem<string> {
         protected string Index { get; private set; }
 
         protected NormallyIndexedItem() {
@@ -26,7 +26,7 @@ namespace Domore.Collections.ObjectModel {
         }
     }
 
-    public class NormallyIndexedItem<TItem> : NormallyIndexedItem where TItem : NormallyIndexedItem, new() {
+    public abstract class NormallyIndexedItem<TItem> : NormallyIndexedItem where TItem : NormallyIndexedItem, new() {
         protected NormallyIndexedItem() {
         }
 

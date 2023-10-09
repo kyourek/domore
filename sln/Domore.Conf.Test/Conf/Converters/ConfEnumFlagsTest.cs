@@ -5,7 +5,7 @@ namespace Domore.Conf.Converters {
     using Extensions;
 
     [TestFixture]
-    public class ConfEnumFlagsTest {
+    public sealed class ConfEnumFlagsTest {
         [Flags]
         private enum Colors {
             Red = 1,

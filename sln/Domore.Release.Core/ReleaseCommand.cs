@@ -5,7 +5,7 @@ using System.Linq;
 using CONF = Domore.Conf.Conf;
 
 namespace Domore {
-    public class ReleaseCommand {
+    public sealed class ReleaseCommand {
         private readonly IConfContainer Conf;
 
         public object Content { get; }

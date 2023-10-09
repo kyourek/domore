@@ -409,7 +409,7 @@ WORLD   and
             }
             private ICollection<Inner> _Inners;
 
-            public class Inner {
+            public sealed class Inner {
                 public double Value { get; set; }
             }
         }

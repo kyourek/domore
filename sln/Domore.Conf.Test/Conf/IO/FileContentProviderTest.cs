@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Domore.Conf.IO {
     [TestFixture]
-    public class FileContentProviderTest {
+    public sealed class FileContentProviderTest {
         private string FilePath {
             get => _FilePath ?? (_FilePath = Path.GetTempFileName());
             set => _FilePath = value;
@@ -45,7 +45,7 @@ namespace Domore.Conf.IO {
             }
             private ICollection<Inner> _Inners;
 
-            public class Inner {
+            public sealed class Inner {
                 public double Value { get; set; }
             }
         }
