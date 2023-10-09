@@ -1,27 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
-    <PropertyGroup>
-        <Authors>Ken Yourek</Authors>
-        <Copyright>Copyright © Ken Yourek 2023</Copyright>
-        <VersionPrefix>8.0.0.0</VersionPrefix>
-        <VersionSuffix></VersionSuffix>
-        <AssemblyVersion>8.0.0.0</AssemblyVersion>
-        <InformationalVersion>8.0.0.0</InformationalVersion>
-        <FileVersion>8.0.0.75</FileVersion>
-        <PackageVersion>8.0.0.0</PackageVersion>
-        <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
-        <RepositoryType>git</RepositoryType>
-        <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
-        <RepositoryBranch>master</RepositoryBranch>
-        <RepositoryCommit></RepositoryCommit>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-        <PackageTags></PackageTags>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <CheckEolTargetFramework>false</CheckEolTargetFramework>
-        <RootNamespace>Domore</RootNamespace>
-        <TargetFrameworks>net40;net45;netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
-        <LangVersion>latest</LangVersion>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Authors>Ken Yourek</Authors>
+    <Copyright>Copyright © Ken Yourek 2023</Copyright>
+    <VersionPrefix>8.0.0.76</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyVersion>8.0.0.76</AssemblyVersion>
+    <InformationalVersion>8.0.0.76</InformationalVersion>
+    <FileVersion>8.0.0.76</FileVersion>
+    <PackageVersion>8.0.0.76</PackageVersion>
+    <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
+    <RepositoryBranch>master</RepositoryBranch>
+    <RepositoryCommit>ea810c8675526af5b0eed7175aabc14614815698</RepositoryCommit>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags></PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <RootNamespace>Domore</RootNamespace>
+    <TargetFrameworks>net40;net45;netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
 </Project>
