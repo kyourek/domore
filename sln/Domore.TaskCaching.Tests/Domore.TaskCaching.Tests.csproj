@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Domore.TaskCaching\Domore.TaskCaching.csproj" />
+      <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
+    </ItemGroup>
+</Project>

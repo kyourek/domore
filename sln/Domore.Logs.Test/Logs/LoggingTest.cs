@@ -1,5 +1,7 @@
 ﻿using NUnit.Framework;
+using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using CONF = Domore.Conf.Conf;
 
@@ -84,6 +86,18 @@ namespace Domore.Logs {
             Logging.Complete();
             var actual = ReadFile();
             Assert.That(actual, Is.EqualTo("LoggingTest [wrn] this Should be logged"));
+        }
+
+        [Test]
+        public void FileLogsLotsOfData() {
+            ConfigFile("log[f].config[LoggingTest].format = {sev}");
+            for (var i = 0; i < 100; i++) {
+                Log.Info($"{i}");
+            }
+            Logging.Complete();
+            var expected = string.Join(Environment.NewLine, Enumerable.Range(0, 100).Select(i => $"inf {i}"));
+            var actual = ReadFile();
+            Assert.That(actual, Is.EqualTo(expected));
         }
     }
 }
