@@ -1,32 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
-    <PropertyGroup>
-        <Authors>Ken Yourek</Authors>
-        <Copyright>Copyright © Ken Yourek 2023</Copyright>
-        <RootNamespace>Domore</RootNamespace>
-        <TargetFrameworks>net40;net45;netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
-        <CheckEolTargetFramework>false</CheckEolTargetFramework>
-        <LangVersion>latest</LangVersion>
-        <VersionPrefix>8.0.0.80</VersionPrefix>
-        <VersionSuffix></VersionSuffix>
-        <AssemblyVersion>8.0.0.80</AssemblyVersion>
-        <InformationalVersion>8.0.0.80</InformationalVersion>
-        <FileVersion>8.0.0.80</FileVersion>
-        <PackageVersion>8.0.0.80</PackageVersion>
-        <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
-        <RepositoryType>git</RepositoryType>
-        <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
-        <RepositoryBranch>master</RepositoryBranch>
-        <RepositoryCommit>e432fdb653d604f727106ba650a26d2df42a8090</RepositoryCommit>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-        <PackageTags></PackageTags>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
-    </ItemGroup>
+  <PropertyGroup>
+    <Authors>Ken Yourek</Authors>
+    <Copyright>Copyright © Ken Yourek 2023</Copyright>
+    <RootNamespace>Domore</RootNamespace>
+    <TargetFrameworks>net40;net45;netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <LangVersion>latest</LangVersion>
+    <VersionPrefix>8.0.0.81</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyVersion>8.0.0.81</AssemblyVersion>
+    <InformationalVersion>8.0.0.81</InformationalVersion>
+    <FileVersion>8.0.0.81</FileVersion>
+    <PackageVersion>8.0.0.81</PackageVersion>
+    <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
+    <RepositoryBranch>master</RepositoryBranch>
+    <RepositoryCommit>0b9782ee3ef8f07fe2be8884f95ae18fc6c2e8e0</RepositoryCommit>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags></PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
 </Project>
