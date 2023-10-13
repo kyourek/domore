@@ -39,5 +39,5 @@
         <PackageReference Include="System.Configuration.ConfigurationManager">
             <Version>7.0</Version>
         </PackageReference>
-    </ItemGroup>    
+    </ItemGroup>
 </Project>

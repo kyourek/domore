@@ -2,6 +2,6 @@
     <PropertyGroup>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj"/>
+        <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
     </ItemGroup>
 </Project>
