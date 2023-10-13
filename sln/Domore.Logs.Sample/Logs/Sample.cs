@@ -6,7 +6,6 @@ namespace Domore.Logs {
     internal sealed class Sample {
         private static void Main() {
             CONF.Contain(@"
-                log[console].type                    = console
                 log[console].config.default.severity = debug
                 log[console].config.default.format   = {log} ({sev})
             ").ConfigureLogging();

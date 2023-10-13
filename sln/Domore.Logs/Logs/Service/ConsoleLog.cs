@@ -31,15 +31,18 @@ namespace Domore.Logs.Service {
         }
         private Dictionary<LogSeverity, ConsoleColor> _Background;
 
-
         public void Log(string name, string data, LogSeverity severity) {
             var prevForeground = Console.ForegroundColor;
             var prevBackground = Console.BackgroundColor;
-            Console.ForegroundColor = Foreground.TryGetValue(severity, out var foreground) ? foreground : prevForeground;
-            Console.BackgroundColor = Background.TryGetValue(severity, out var background) ? background : prevBackground;
-            Console.WriteLine(data);
-            Console.ForegroundColor = prevForeground;
-            Console.BackgroundColor = prevBackground;
+            try {
+                Console.ForegroundColor = Foreground.TryGetValue(severity, out var foreground) ? foreground : prevForeground;
+                Console.BackgroundColor = Background.TryGetValue(severity, out var background) ? background : prevBackground;
+                Console.WriteLine(data);
+            }
+            finally {
+                Console.ForegroundColor = prevForeground;
+                Console.BackgroundColor = prevBackground;
+            }
         }
     }
 }

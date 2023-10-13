@@ -40,7 +40,7 @@ namespace Domore.Logs {
         private LogServiceConfig _Config;
 
         public string Type {
-            get => _Type;
+            get => _Type ?? (_Type = Name);
             set {
                 if (_Type != value) {
                     lock (Locker) {
