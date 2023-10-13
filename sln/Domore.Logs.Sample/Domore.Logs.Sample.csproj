@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
+        <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+    </ItemGroup>
+</Project>
