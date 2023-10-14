@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Domore.Conf.Converters;
+using Domore.Conf.Extensions;
 
 namespace Domore.Conf {
-    using Extensions;
 
     internal class ConfTargetProperty {
         public object Target { get; }
@@ -28,9 +29,17 @@ namespace Domore.Conf {
                         return null;
                     }
                     var parameters = PropertyInfo.GetIndexParameters();
-
+                    object convert(string s, Type type) {
+                        var t = Nullable.GetUnderlyingType(type) ?? type;
+                        if (t != null) {
+                            if (t.IsEnum) {
+                                return new ConfEnumFlagsConverter().Convert(s, t);
+                            }
+                        }
+                        return Convert.ChangeType(s, type);
+                    }
                     _Index = indices[0].Parts // TODO: Allow multiple indices.
-                        .Select((v, i) => Convert.ChangeType(v.Content, parameters[i].ParameterType))
+                        .Select((v, i) => convert(v.Content, parameters[i].ParameterType))
                         .ToArray();
                 }
                 return _Index;

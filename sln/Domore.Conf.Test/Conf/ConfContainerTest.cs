@@ -785,5 +785,26 @@ namespace Domore.Conf {
                     ";
             Assert.That(actual, Is.EqualTo(expected));
         }
+
+        public sealed class EnumIndexParameter {
+            public enum MyEnum {
+                Tiny,
+                Small,
+                Big
+            }
+
+            public Dictionary<MyEnum, string> Dict { get; set; }
+        }
+
+        [TestCase(EnumIndexParameter.MyEnum.Tiny, "this is tiny")]
+        [TestCase(EnumIndexParameter.MyEnum.Big, "this is BIG")]
+        public void Configure_SetsIndexedPropertiesWithEnumIndex(EnumIndexParameter.MyEnum key, string expected) {
+            Content = @"
+                dict[tiny] = this is tiny
+                dict[BIG] = this is BIG
+            ";
+            var actual = Subject.Configure(new EnumIndexParameter(), key: "").Dict[key];
+            Assert.That(actual, Is.EqualTo(expected));
+        }
     }
 }
