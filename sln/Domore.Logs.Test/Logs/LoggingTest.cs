@@ -35,6 +35,7 @@ namespace Domore.Logs {
                 Log[f].type = file
                 Log[f].service.directory = {Path.GetDirectoryName(TempFile)}
                 log[f].service.name = {Path.GetFileName(TempFile)}
+                log[f].service.flush interval = 00:00:00.1
                 log[f].config.default.severity = info
                 log[f].config.default.format = {{log}} [{{sev}}]
                 {config}
@@ -98,6 +99,100 @@ namespace Domore.Logs {
             var expected = string.Join(Environment.NewLine, Enumerable.Range(0, 100).Select(i => $"inf {i}"));
             var actual = ReadFile();
             Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void FileRotatesLogFile() {
+            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileName = $"domore.logs.loggingtest.{nameof(FileRotatesLogFile)}";
+            var fileSearchPattern = $"{fileName}_*";
+            File.Delete(Path.Combine(fileDir, fileName));
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+            ConfigFile(@$"
+                log[f].service.name = {fileName}
+                log[f].service.file size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+                log[f].config.default.format = {{sev}}
+            ");
+            Log.Critical("Some data that will be in a dated log");
+            Thread.Sleep(100);
+            Config = "log[f].service.FileSizeLimit = 1000";
+            Log.Critical("More data that will be in the original log");
+            Logging.Complete();
+
+            var datedLog = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly).Single();
+            Assert.AreEqual("crt Some data that will be in a dated log" + Environment.NewLine, File.ReadAllText(datedLog));
+
+            var originalLog = Path.Combine(fileDir, fileName);
+            Assert.AreEqual("crt More data that will be in the original log" + Environment.NewLine, File.ReadAllText(originalLog));
+
+            File.Delete(Path.Combine(fileDir, fileName));
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+        }
+
+        [Test]
+        public void FileRotatesLogsManyTimes() {
+            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileName = $"domore.logs.loggingtest.{nameof(FileRotatesLogsManyTimes)}";
+            var fileSearchPattern = $"{fileName}_*";
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+            ConfigFile(@$"
+                log[f].service.name = {fileName}
+                log[f].service.file size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+            ");
+            for (var i = 0; i < 10; i++) {
+                Log.Info($"{i}");
+                Thread.Sleep(100);
+            }
+            Logging.Complete();
+            var files = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly);
+            var expected = 10;
+            var actual = files.Length;
+            Assert.That(actual, Is.EqualTo(expected));
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+        }
+
+        [Test]
+        public void FileRespectsTotalSizeLimit() {
+            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileName = $"domore.logs.loggingtest.{nameof(FileRespectsTotalSizeLimit)}";
+            var fileSearchPattern = $"{fileName}_*";
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+            ConfigFile(@$"
+                log[f].service.name = {fileName}
+                log[f].service.file size limit = 1
+                log[f].service.total size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+            ");
+            for (var i = 0; i < 10; i++) {
+                Log.Info($"{i}");
+                Thread.Sleep(100);
+            }
+            Logging.Complete();
+            var files = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly);
+            var expected = 0;
+            var actual = files.Length;
+            Assert.That(actual, Is.EqualTo(expected));
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
         }
     }
 }

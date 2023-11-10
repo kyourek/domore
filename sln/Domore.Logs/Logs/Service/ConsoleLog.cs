@@ -31,7 +31,7 @@ namespace Domore.Logs.Service {
         }
         private Dictionary<LogSeverity, ConsoleColor> _Background;
 
-        public void Log(string name, string data, LogSeverity severity) {
+        void ILogService.Log(string name, string data, LogSeverity severity) {
             var prevForeground = Console.ForegroundColor;
             var prevBackground = Console.BackgroundColor;
             try {
@@ -43,6 +43,9 @@ namespace Domore.Logs.Service {
                 Console.ForegroundColor = prevForeground;
                 Console.BackgroundColor = prevBackground;
             }
+        }
+
+        void ILogService.Complete() {
         }
     }
 }

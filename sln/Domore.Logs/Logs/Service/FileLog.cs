@@ -1,9 +1,15 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using DIRECTORY = System.IO.Directory;
 
 namespace Domore.Logs.Service {
     internal sealed class FileLog : ILogService {
-        private readonly object Locker = new object();
+        private readonly object Locker = new();
+        private readonly ConcurrentQueue<string> Queue = new();
 
         private FileInfo FileInfo =>
             _FileInfo ?? (
@@ -14,6 +20,128 @@ namespace Domore.Logs.Service {
             _DirectoryInfo ?? (
             _DirectoryInfo = new DirectoryInfo(Directory));
         private DirectoryInfo _DirectoryInfo;
+
+        private string FileDateName() {
+            var d = DateTime.UtcNow;
+            return $"{Name}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}.{d.Millisecond:000}";
+        }
+
+        private DateTime? FileDate(string name) {
+            if (name == null) {
+                return null;
+            }
+            var prefix = $"{Name}_";
+            if (prefix.Length >= name.Length) {
+                return null;
+            }
+            var date = name.Substring(prefix.Length);
+            if (date.Length != 19) {
+                return null;
+            }
+            if (date[8] != '-') {
+                return null;
+            }
+            if (date[15] != '.') {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(0, 4), out var year)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(4, 2), out var month)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(6, 2), out var day)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(9, 2), out var hour)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(11, 2), out var minute)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(13, 2), out var second)) {
+                return null;
+            }
+            if (!int.TryParse(date.Substring(16, 3), out var millisecond)) {
+                return null;
+            }
+            return new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Utc);
+        }
+
+        private void Rotate() {
+            var fileInfo = _FileInfo;
+            if (fileInfo == null) {
+                return;
+            }
+            fileInfo.Refresh();
+            var size = fileInfo.Length;
+            if (size < FileSizeLimit) {
+                return;
+            }
+            var nextName = FileDateName();
+            var nextPath = Path.Combine(Directory, nextName);
+            fileInfo.MoveTo(nextPath);
+            _FileInfo = null;
+
+            var now = DateTime.UtcNow;
+            var fileSearchPattern = $"{Name}_*";
+            var files = DirectoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
+            var items = files
+                .Select(file => new { File = file, Date = FileDate(file.Name) })
+                .Where(item => item.Date.HasValue)
+                .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value })
+                .OrderByDescending(item => item.Age)
+                .ToList();
+            var itemsToDelete = items
+                .Where(item => item.Age > FileAgeLimit)
+                .ToList();
+            foreach (var item in itemsToDelete) {
+                item.File.Delete();
+                items.Remove(item);
+            }
+            while (items.Count > 0 && items.Sum(item => item.File.Length) > TotalSizeLimit) {
+                var oldest = items[0];
+                oldest.File.Delete();
+                items.Remove(oldest);
+            }
+        }
+
+        private void Log(IEnumerable<string> lines) {
+            if (DirectoryInfo.Exists == false) {
+                DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
+                DirectoryInfo.Refresh();
+            }
+            if (FileInfo.Exists == false) {
+                using (FileInfo.Create()) {
+                }
+                FileInfo.Refresh();
+            }
+            File.AppendAllLines(FileInfo.FullName, lines);
+        }
+
+        public long FileSizeLimit {
+            get => _FileSizeLimit;
+            set => _FileSizeLimit = value;
+        }
+        private long _FileSizeLimit = 100000;
+
+        public long TotalSizeLimit {
+            get => _TotalSizeLimit;
+            set => _TotalSizeLimit = value;
+        }
+        private long _TotalSizeLimit = 10000000;
+
+        public TimeSpan FileAgeLimit {
+            get => _FileAgeLimit;
+            set => _FileAgeLimit = value;
+        }
+        private TimeSpan _FileAgeLimit = TimeSpan.FromDays(28);
+
+        public TimeSpan FlushInterval {
+            get => _FlushInterval;
+            set => _FlushInterval = value;
+        }
+        private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
 
         public string Directory {
             get => _Directory;
@@ -41,19 +169,66 @@ namespace Domore.Logs.Service {
             }
         }
         private string _Name;
-        
+
+        public bool Started { get; private set; }
+        public bool Completed { get; private set; }
+        public bool Completing { get; private set; }
+
+        void ILogService.Complete() {
+            Completing = true;
+            SpinWait.SpinUntil(() => Completed, timeout: TimeSpan.FromSeconds(10));
+        }
+
         void ILogService.Log(string name, string data, LogSeverity severity) {
-            lock (Locker) {
-                if (DirectoryInfo.Exists == false) {
-                    DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
-                    DirectoryInfo.Refresh();
+            if (Started == false) {
+                lock (Locker) {
+                    if (Started == false) {
+                        Started = true;
+                        void start() {
+                            var timer = default(Timer);
+                            var callback = new TimerCallback(_ => {
+                                using (timer) {
+                                    for (; ; ) {
+                                        if (Queue.Count == 0) {
+                                            break;
+                                        }
+                                        var lines = new List<string>();
+                                        for (; ; ) {
+                                            if (lines.Count > 100) {
+                                                break;
+                                            }
+                                            var dequeued = Queue.TryDequeue(out var line);
+                                            if (dequeued == false) {
+                                                break;
+                                            }
+                                            lines.Add(line);
+                                        }
+                                        if (lines.Count > 0) {
+                                            lock (Locker) {
+                                                Log(lines);
+                                                Rotate();
+                                            }
+                                        }
+                                    }
+                                }
+                                if (Completing) {
+                                    Completed = true;
+                                }
+                                else {
+                                    start();
+                                }
+                            });
+                            timer = new Timer(
+                                callback: callback,
+                                state: null,
+                                dueTime: (int)FlushInterval.TotalMilliseconds,
+                                period: Timeout.Infinite);
+                        }
+                        start();
+                    }
                 }
-                if (FileInfo.Exists == false) {
-                    FileInfo.Create();
-                    FileInfo.Refresh();
-                }
-                File.AppendAllLines(FileInfo.FullName, new[] { data });
             }
+            Queue.Enqueue(data);
         }
     }
 }

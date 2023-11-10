@@ -100,6 +100,11 @@ namespace Domore.Logs {
 
         public void Complete() {
             Queue.Complete();
+            lock (Set) {
+                foreach (var item in Set) {
+                    item.Value.Complete();
+                }
+            }
         }
 
         public void Dispose() {

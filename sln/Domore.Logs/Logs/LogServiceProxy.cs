@@ -9,6 +9,9 @@ namespace Domore.Logs {
         private sealed class None : ILogService {
             void ILogService.Log(string name, string data, LogSeverity severity) {
             }
+
+            void ILogService.Complete() {
+            }
         }
 
         public ILogService Service {
@@ -68,6 +71,10 @@ namespace Domore.Logs {
                 var data = entry.LogData(frmt);
                 Service.Log(name, data, sev);
             }
+        }
+
+        public void Complete() {
+            Service.Complete();
         }
     }
 }

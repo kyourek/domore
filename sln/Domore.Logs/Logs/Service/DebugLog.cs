@@ -2,8 +2,11 @@
 
 namespace Domore.Logs.Service {
     internal sealed class DebugLog : ILogService {
-        public void Log(string name, string data, LogSeverity severity) {
+        void ILogService.Log(string name, string data, LogSeverity severity) {
             Debug.WriteLine(data, name);
+        }
+
+        void ILogService.Complete() {
         }
     }
 }
