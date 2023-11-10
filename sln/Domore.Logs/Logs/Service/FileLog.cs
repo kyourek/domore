@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -129,7 +130,7 @@ namespace Domore.Logs.Service {
             get => _TotalSizeLimit;
             set => _TotalSizeLimit = value;
         }
-        private long _TotalSizeLimit = 10000000;
+        private long _TotalSizeLimit = 100000000;
 
         public TimeSpan FileAgeLimit {
             get => _FileAgeLimit;
@@ -205,8 +206,13 @@ namespace Domore.Logs.Service {
                                         }
                                         if (lines.Count > 0) {
                                             lock (Locker) {
-                                                Log(lines);
-                                                Rotate();
+                                                try {
+                                                    Log(lines);
+                                                    Rotate();
+                                                }
+                                                catch (Exception ex) {
+                                                    Logging.Notify(ex);
+                                                }
                                             }
                                         }
                                     }
