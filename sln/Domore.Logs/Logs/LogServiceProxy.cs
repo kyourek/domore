@@ -66,7 +66,7 @@ namespace Domore.Logs {
             var sev = entry.LogSeverity;
             var name = entry.LogName;
             var limit = Config[name].Severity ?? Config.Default.Severity;
-            if (limit.HasValue && limit.Value <= sev) {
+            if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
                 var frmt = Config[name].Format ?? Config.Default.Format;
                 var data = entry.LogData(frmt);
                 Service.Log(name, data, sev);
