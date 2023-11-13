@@ -44,7 +44,7 @@ namespace Domore.Logs {
 
             CONF.Contain(@"
                 log[console].config.default.severity        = info
-                log[console].config.default.format          = [{sev}]
+                log[console].config.default.format          = {dat} {tim} [{sev}]
             ").ConfigureLogging();
 
             log.Debug($"This won't show up.");

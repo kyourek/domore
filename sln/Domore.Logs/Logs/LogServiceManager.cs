@@ -84,6 +84,7 @@ namespace Domore.Logs {
             if (data  != null) {
                 var entry = new LogEntry(
                     logType: type,
+                    logDate: DateTime.UtcNow,
                     logSeverity: severity,
                     logList: data
                         .Select(d => $"{d}")

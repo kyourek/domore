@@ -15,7 +15,11 @@ namespace Domore.Logs {
         private readonly Dictionary<string, string> Format = new Dictionary<string, string>();
 
         private string GetFormat(string format) {
-            var s = format.Replace("{log}", LogName).Replace("{sev}", Sev[LogSeverity]);
+            var s = format
+                .Replace("{log}", LogName)
+                .Replace("{sev}", Sev[LogSeverity])
+                .Replace("{dat}", LogDate.ToString("yyyy-MM-dd"))
+                .Replace("{tim}", LogDate.ToString("HH:mm:ss.fff"));
             var logList = LogList;
             if (logList.Length == 1) {
                 return s == ""
@@ -31,6 +35,7 @@ namespace Domore.Logs {
         }
 
         public Type LogType { get; }
+        public DateTime LogDate { get; }
         public string[] LogList { get; }
         public LogSeverity LogSeverity { get; }
 
@@ -39,10 +44,11 @@ namespace Domore.Logs {
             _LogName = LogType.Name);
         private string _LogName;
 
-        public LogEntry(Type logType, LogSeverity logSeverity, string[] logList) {
+        public LogEntry(Type logType, DateTime logDate, LogSeverity logSeverity, string[] logList) {
             if (null == logType) throw new ArgumentNullException(nameof(logType));
             if (null == logList) throw new ArgumentNullException(nameof(logList));
             LogType = logType;
+            LogDate = logDate;
             LogList = logList;
             LogSeverity = logSeverity;
         }
