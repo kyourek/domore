@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -120,29 +119,55 @@ namespace Domore.Logs.Service {
             File.AppendAllLines(FileInfo.FullName, lines);
         }
 
-        public long FileSizeLimit {
-            get => _FileSizeLimit;
-            set => _FileSizeLimit = value;
+        private void Start() {
+            if (Complete) {
+                return;
+            }
+            var
+            timer = default(Timer);
+            timer = new Timer(state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite, callback: _ => {
+                using (timer) {
+                    for (; ; ) {
+                        lock (Locker) {
+                            if (Complete) {
+                                break;
+                            }
+                            if (Queue.Count == 0) {
+                                break;
+                            }
+                            var limit = LogCountLimit;
+                            var lines = new List<string>(capacity: limit);
+                            for (; ; ) {
+                                if (lines.Count >= limit) {
+                                    break;
+                                }
+                                var dequeued = Queue.TryDequeue(out var line);
+                                if (dequeued == false) {
+                                    break;
+                                }
+                                lines.Add(line);
+                            }
+                            if (lines.Count > 0) {
+                                try {
+                                    Log(lines);
+                                    Rotate();
+                                }
+                                catch (Exception ex) {
+                                    Logging.Notify(ex);
+                                }
+                            }
+                        }
+                    }
+                }
+                Start();
+            });
         }
-        private long _FileSizeLimit = 100000;
 
-        public long TotalSizeLimit {
-            get => _TotalSizeLimit;
-            set => _TotalSizeLimit = value;
-        }
-        private long _TotalSizeLimit = 100000000;
-
-        public TimeSpan FileAgeLimit {
-            get => _FileAgeLimit;
-            set => _FileAgeLimit = value;
-        }
-        private TimeSpan _FileAgeLimit = TimeSpan.FromDays(28);
-
-        public TimeSpan FlushInterval {
-            get => _FlushInterval;
-            set => _FlushInterval = value;
-        }
-        private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
+        public int LogCountLimit { get; set; } = 100;
+        public long FileSizeLimit { get; set; } = 100000;
+        public long TotalSizeLimit { get; set; } = 100000000;
+        public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
+        public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(2.5);
 
         public string Directory {
             get => _Directory;
@@ -172,12 +197,30 @@ namespace Domore.Logs.Service {
         private string _Name;
 
         public bool Started { get; private set; }
-        public bool Completed { get; private set; }
-        public bool Completing { get; private set; }
+        public bool Complete { get; private set; }
 
         void ILogService.Complete() {
-            Completing = true;
-            SpinWait.SpinUntil(() => Completed, timeout: TimeSpan.FromSeconds(10));
+            lock (Locker) {
+                var lines = new List<string>(capacity: Queue.Count);
+                try {
+                    while (Queue.Count > 0) {
+                        while (Queue.TryDequeue(out var line)) {
+                            lines.Add(line);
+                        }
+                    }
+                }
+                finally {
+                    Complete = true;
+                }
+                if (lines.Count > 0) {
+                    try {
+                        Log(lines);
+                    }
+                    catch (Exception ex) {
+                        Logging.Notify(ex);
+                    }
+                }
+            }
         }
 
         void ILogService.Log(string name, string data, LogSeverity severity) {
@@ -185,52 +228,7 @@ namespace Domore.Logs.Service {
                 lock (Locker) {
                     if (Started == false) {
                         Started = true;
-                        void start() {
-                            var timer = default(Timer);
-                            var callback = new TimerCallback(_ => {
-                                using (timer) {
-                                    for (; ; ) {
-                                        if (Queue.Count == 0) {
-                                            break;
-                                        }
-                                        var lines = new List<string>();
-                                        for (; ; ) {
-                                            if (lines.Count > 100) {
-                                                break;
-                                            }
-                                            var dequeued = Queue.TryDequeue(out var line);
-                                            if (dequeued == false) {
-                                                break;
-                                            }
-                                            lines.Add(line);
-                                        }
-                                        if (lines.Count > 0) {
-                                            lock (Locker) {
-                                                try {
-                                                    Log(lines);
-                                                    Rotate();
-                                                }
-                                                catch (Exception ex) {
-                                                    Logging.Notify(ex);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                if (Completing) {
-                                    Completed = true;
-                                }
-                                else {
-                                    start();
-                                }
-                            });
-                            timer = new Timer(
-                                callback: callback,
-                                state: null,
-                                dueTime: (int)FlushInterval.TotalMilliseconds,
-                                period: Timeout.Infinite);
-                        }
-                        start();
+                        Start();
                     }
                 }
             }

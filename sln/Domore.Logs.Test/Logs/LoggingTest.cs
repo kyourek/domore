@@ -194,5 +194,36 @@ namespace Domore.Logs {
                 .ToList()
                 .ForEach(File.Delete);
         }
+
+        [Test]
+        public void FileRemovesLogsGreaterThanAgeLimit() {
+            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileName = $"domore.logs.loggingtest.{nameof(FileRemovesLogsGreaterThanAgeLimit)}";
+            var fileSearchPattern = $"{fileName}_*";
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+            ConfigFile(@$"
+                log[f].service.name = {fileName}
+                log[f].service.file size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+                log[f].service.file age limit = 00:00:00
+            ");
+            for (var i = 0; i < 10; i++) {
+                Log.Info($"{i}");
+                Thread.Sleep(100);
+            }
+            Logging.Complete();
+            var files = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly);
+            var expected = 0;
+            var actual = files.Length;
+            Assert.That(actual, Is.EqualTo(expected));
+            Directory
+                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
+                .ToList()
+                .ForEach(File.Delete);
+
+        }
     }
 }
