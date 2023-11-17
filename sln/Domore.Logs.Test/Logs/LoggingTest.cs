@@ -223,7 +223,26 @@ namespace Domore.Logs {
                 .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
                 .ToList()
                 .ForEach(File.Delete);
+        }
 
+        [Test]
+        public void FileLogsToSpecialFolderPath() {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            try {
+                ConfigFile($@"
+                    Log[f].service.directory = <LocalApplicationData>/Domore/Domore.Logs.LoggingTest
+                    log[f].service.name = test.log
+                    LOG[f].config.default.format = {{sev}}
+                ");
+                Log.Info("Got the message?");
+                Logging.Complete();
+                var actual = File.ReadAllText(Path.Combine(dir, "test.log")).Trim();
+                var expected = "inf Got the message?";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                Directory.Delete(dir, recursive: true);
+            }
         }
     }
 }
