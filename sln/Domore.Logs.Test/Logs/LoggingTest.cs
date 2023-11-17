@@ -230,7 +230,7 @@ namespace Domore.Logs {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = <LocalApplicationData>/Domore/Domore.Logs.LoggingTest
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
                     log[f].service.name = test.log
                     LOG[f].config.default.format = {{sev}}
                 ");

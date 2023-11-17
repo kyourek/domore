@@ -25,11 +25,11 @@ namespace Domore.IO {
         public string Expand(string path) {
             if (path == null) return path;
             if (path.Length < 3) return path;
-            if (path[0] != '<') return path;
+            if (path[0] != '{') return path;
             var sb = new StringBuilder();
             for (var i = 1; i < path.Length; i++) {
                 var c = path[i];
-                if (c == '>') {
+                if (c == '}') {
                     if (FolderLookup.TryGetValue(sb.ToString(), out var specialFolder)) {
                         var specialPath = Lookup(specialFolder);
                         if (specialPath != null && specialPath != "") {
