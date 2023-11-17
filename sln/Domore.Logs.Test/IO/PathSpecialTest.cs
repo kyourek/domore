@@ -101,5 +101,21 @@ namespace Domore.IO {
         public void WhiteSpaceIsReturned() {
             Assert.That(Subject.Expand("    "), Is.EqualTo("    "));
         }
+
+        [Test]
+        public void TrailingSlashIsPreserved() {
+            var actual = Subject.Expand("<ApplicationData>/");
+            var expected = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify) + "/";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TrailingBackSlashIsPreserved() {
+            if (Path.DirectorySeparatorChar == '\\') {
+                var actual = Subject.Expand("<ApplicationData>\\");
+                var expected = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify) + "\\";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+        }
     }
 }

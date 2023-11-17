@@ -33,10 +33,15 @@ namespace Domore.IO {
                     if (FolderLookup.TryGetValue(sb.ToString(), out var specialFolder)) {
                         var specialPath = Lookup(specialFolder);
                         if (specialPath != null && specialPath != "") {
-                            var remIndex = i + 1;
-                            return path.Length > remIndex
-                                ? Path.Combine(specialPath, path.Substring(remIndex).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                                : specialPath;
+                            var pathSubIndex = i + 1;
+                            if (path.Length > pathSubIndex) {
+                                var sub = path.Substring(pathSubIndex);
+                                if (sub.Length == 1 && (sub[0] == Path.DirectorySeparatorChar || sub[0] == Path.AltDirectorySeparatorChar)) {
+                                    return specialPath + sub;
+                                }
+                                return Path.Combine(specialPath, sub.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                            }
+                            return specialPath;
                         }
                     }
                     return path;
