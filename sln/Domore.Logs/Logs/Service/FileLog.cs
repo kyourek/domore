@@ -5,11 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using DIRECTORY = System.IO.Directory;
+using Domore.IO;
 
 namespace Domore.Logs.Service {
     internal sealed class FileLog : ILogService {
         private readonly object Locker = new();
         private readonly ConcurrentQueue<string> Queue = new();
+        private readonly PathSpecial PathSpecial = new();
 
         private FileInfo FileInfo =>
             _FileInfo ?? (
@@ -18,7 +20,7 @@ namespace Domore.Logs.Service {
 
         private DirectoryInfo DirectoryInfo =>
             _DirectoryInfo ?? (
-            _DirectoryInfo = new DirectoryInfo(Directory));
+            _DirectoryInfo = new DirectoryInfo(PathSpecial.Expand(Environment.ExpandEnvironmentVariables(Directory))));
         private DirectoryInfo _DirectoryInfo;
 
         private string FileDateName() {
@@ -79,7 +81,7 @@ namespace Domore.Logs.Service {
                 return;
             }
             var nextName = FileDateName();
-            var nextPath = Path.Combine(Directory, nextName);
+            var nextPath = Path.Combine(DirectoryInfo.FullName, nextName);
             fileInfo.MoveTo(nextPath);
             _FileInfo = null;
 

@@ -4,4 +4,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    </ItemGroup>
 </Project>

@@ -77,7 +77,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching.Tests", "Domore.Async.TaskCaching.Tests\Domore.Async.TaskCaching.Tests.csproj", "{DE6AEA85-E1D7-4A6A-8911-ADB16DD5858A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Logs.Sample", "Domore.Logs.Sample\Domore.Logs.Sample.csproj", "{06D3F97C-855E-46A2-A2F4-75DF8E4CB4AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Sample", "Domore.Logs.Sample\Domore.Logs.Sample.csproj", "{06D3F97C-855E-46A2-A2F4-75DF8E4CB4AC}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Domore.Sharing", "Domore.Sharing\Domore.Sharing.shproj", "{DF8A9E45-CA4F-44A2-8059-7F62E7174553}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -208,5 +210,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Domore.Sharing\Domore.Sharing.projitems*{df8a9e45-ca4f-44a2-8059-7f62e7174553}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

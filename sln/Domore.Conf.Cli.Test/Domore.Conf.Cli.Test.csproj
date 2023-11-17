@@ -8,4 +8,7 @@
         <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
         <ProjectReference Include="..\Domore.Conf.Cli\Domore.Conf.Cli.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    </ItemGroup>
 </Project>
