@@ -6,7 +6,6 @@ using System.Linq;
 namespace Domore.Logs {
     internal sealed class LogServiceManager : IDisposable {
         private readonly BackgroundQueue Queue = new BackgroundQueue();
-        private readonly LogServiceFactory Factory = new LogServiceFactory();
         private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new ConcurrentDictionary<string, LogServiceProxy>();
         private readonly ConcurrentDictionary<string, LogSeverity> TypeSeverity = new ConcurrentDictionary<string, LogSeverity>();
         private LogSeverity DefaultSeverity;
@@ -52,6 +51,12 @@ namespace Domore.Logs {
             SetSeverityChanged();
         }
 
+        public event LogEventHandler LogEvent;
+
+        public LogFormatter Formatter { get; } = new LogFormatter();
+
+        public LogSeverity LogEventSeverity { get; set; }
+
         public LogServiceProxy this[string name] {
             get {
                 lock (Set) {
@@ -72,6 +77,9 @@ namespace Domore.Logs {
             if (severity == LogSeverity.None) {
                 return false;
             }
+            if (LogEvent != null && LogEventSeverity != LogSeverity.None && LogEventSeverity <= severity) {
+                return true;
+            }
             if (TypeSeverity.Count > 0) {
                 if (TypeSeverity.TryGetValue(type.Name, out var value)) {
                     return value != LogSeverity.None && value <= severity;
@@ -81,14 +89,15 @@ namespace Domore.Logs {
         }
 
         public void Log(LogSeverity severity, Type type, object[] data) {
-            if (data  != null) {
+            if (data != null) {
                 var entry = new LogEntry(
                     logType: type,
                     logDate: DateTime.UtcNow,
                     logSeverity: severity,
-                    logList: data
-                        .Select(d => $"{d}")
-                        .ToArray());
+                    logList: Formatter.Format(data));
+                if (LogEventSeverity != LogSeverity.None && LogEventSeverity <= severity) {
+                    LogEvent?.Invoke(this, new LogEventArgs(entry));
+                }
                 Queue.Add(() => {
                     lock (Set) {
                         foreach (var item in Set) {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
-    internal sealed class LogEntry {
+    internal sealed class LogEntry : ILogEntry {
         private static readonly Dictionary<LogSeverity, string> Sev = new Dictionary<LogSeverity, string> {
             { LogSeverity.Critical, "crt" },
             { LogSeverity.Debug, "dbg" },
@@ -28,10 +28,7 @@ namespace Domore.Logs {
             }
             return s == ""
                 ? string.Join(Environment.NewLine, logList)
-                : s + Environment.NewLine + string.Join(Environment.NewLine, logList
-                    .Select(d => string.Join(Environment.NewLine, d
-                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(line => $"    {line}"))));
+                : (s + Environment.NewLine + string.Join(Environment.NewLine, logList.Select(line => $"  {line}")));
         }
 
         public Type LogType { get; }
@@ -60,5 +57,7 @@ namespace Domore.Logs {
             }
             return value;
         }
+
+        IEnumerable<string> ILogEntry.LogList => LogList;
     }
 }

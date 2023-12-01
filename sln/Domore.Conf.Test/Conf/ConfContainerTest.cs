@@ -806,5 +806,17 @@ namespace Domore.Conf {
             var actual = Subject.Configure(new EnumIndexParameter(), key: "").Dict[key];
             Assert.That(actual, Is.EqualTo(expected));
         }
+
+        private sealed class Shipwreck {
+            public int Depth { get; private set; }
+        }
+
+        [Test]
+        public void Configure_SetsPropertiesWithPrivateSetter() {
+            Content = "depth = 25";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 25;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
     }
 }

@@ -39,11 +39,25 @@ namespace Domore.Logs {
             try { Console.WriteLine(obj); } catch { }
         }
 
+        public static event LogEventHandler LogEvent {
+            add => Instance.Manager.LogEvent += value;
+            remove => Instance.Manager.LogEvent -= value;
+        }
+
+        public static LogSeverity LogEventSeverity {
+            get => Instance.Manager.LogEventSeverity;
+            set => Instance.Manager.LogEventSeverity = value;
+        }
+
         public static object Config =>
             new { Log = Instance.Manager };
 
         public static ILog For(Type type) {
             return new Logger(type, Instance);
+        }
+
+        public static void Format(Type type, Func<object, string[]> toString) {
+            Instance.Manager.Formatter.Format(type, toString);
         }
 
         public static void Complete() {

@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Domore.Logs {
     internal sealed class Logger : ILog {
