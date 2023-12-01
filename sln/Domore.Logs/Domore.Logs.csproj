@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <Description>Do more logs</Description>
-    </PropertyGroup>
-    <ItemGroup>
-      <Compile Include="..\Domore.Sharing\IO\PathSpecial.cs" Link="IO\PathSpecial.cs" />
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="IO\" />
-    </ItemGroup>
-    <ItemGroup>
-      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    </ItemGroup>
+  <PropertyGroup>
+    <Description>Do more logs</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Domore.Sharing\IO\PathSpecial.cs" Link="IO\PathSpecial.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="IO\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+  </ItemGroup>
 </Project>
