@@ -245,6 +245,57 @@ namespace Domore.Logs {
         }
 
         [Test]
+        public void FileRetriesOnIOException() {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var file = Path.Combine(dir, "test.log");
+            try {
+                ConfigFile($@"
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    log[f].service.name = test.log
+                    LOG[f].config.default.format = {{sev}}
+                    log[f].service.io retry delay = 250
+                ");
+                Directory.CreateDirectory(dir);
+                using (var stream = File.Open(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) {
+                    Log.Info("Got the message?");
+                    Thread.Sleep(500);
+                }
+                Logging.Complete();
+                var actual = File.ReadAllText(Path.Combine(dir, "test.log")).Trim();
+                var expected = "inf Got the message?";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
+        public void FileDoesNotThrowIfInUse() {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var file = Path.Combine(dir, "test.log");
+            try {
+                ConfigFile($@"
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    log[f].service.name = test.log
+                    log[f].service.io retry limit = 0
+                ");
+                Directory.CreateDirectory(dir);
+                using (var stream = File.Open(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) {
+                    Log.Info("Got the message?");
+                    Thread.Sleep(250);
+                }
+                Logging.Complete();
+                var actual = File.ReadAllText(Path.Combine(dir, "test.log")).Trim();
+                var expected = "";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
         public void LogEventIsRaised() {
             var message = "";
             Logging.LogEventSeverity = LogSeverity.Info;

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Domore.IO;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using DIRECTORY = System.IO.Directory;
-using Domore.IO;
 
 namespace Domore.Logs.Service {
     internal sealed class FileLog : ILogService {
@@ -109,16 +110,34 @@ namespace Domore.Logs.Service {
         }
 
         private void Log(IEnumerable<string> lines) {
-            if (DirectoryInfo.Exists == false) {
-                DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
-                DirectoryInfo.Refresh();
-            }
-            if (FileInfo.Exists == false) {
-                using (FileInfo.Create()) {
+            void log() {
+                if (DirectoryInfo.Exists == false) {
+                    DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
+                    DirectoryInfo.Refresh();
                 }
-                FileInfo.Refresh();
+                if (FileInfo.Exists == false) {
+                    using (FileInfo.Create()) {
+                    }
+                    FileInfo.Refresh();
+                }
+                File.AppendAllLines(FileInfo.FullName, lines);
             }
-            File.AppendAllLines(FileInfo.FullName, lines);
+            for (var retry = 1; ; retry++) {
+                try {
+                    log();
+                    break;
+                }
+                catch (IOException) {
+                    var limit = IORetryLimit;
+                    if (limit <= retry) {
+                        throw;
+                    }
+                    var delay = IORetryDelay;
+                    if (delay > 0) {
+                        Thread.Sleep(delay);
+                    }
+                }
+            }
         }
 
         private void Start() {
@@ -165,6 +184,8 @@ namespace Domore.Logs.Service {
             });
         }
 
+        public int IORetryLimit { get; set; } = 5;
+        public int IORetryDelay { get; set; } = 10;
         public int LogCountLimit { get; set; } = 100;
         public long FileSizeLimit { get; set; } = 100000;
         public long TotalSizeLimit { get; set; } = 100000000;
