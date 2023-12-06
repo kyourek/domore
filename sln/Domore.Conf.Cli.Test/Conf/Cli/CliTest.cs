@@ -417,5 +417,27 @@ namespace Domore.Conf.Cli {
             Assert.That(target.Param["FLAG"], Is.EqualTo("TRUE"));
             Assert.That(target.Flag, Is.True);
         }
+
+        private class TargetWithNestedProperties {
+            [CliDisplayOverride("[set.dict[<string>]=<string>]")]
+            public TargetWithDict Set { get; set; } = new TargetWithDict();
+
+            public class TargetWithDict {
+                public Dictionary<string, string> Dict { get; set; } = new Dictionary<string, string>();
+            }
+        }
+
+        [Test]
+        public void Configure_SetsNestedProperties() {
+            var target = new TargetWithNestedProperties();
+            Cli.Configure(target, "set.dict[hello]=world");
+            Assert.That(target.Set.Dict["hello"], Is.EqualTo("world"));
+        }
+
+        [Test]
+        public void Display_UsesDisplayOverrideForProperty() {
+            var display = Cli.Display(new TargetWithNestedProperties());
+            Assert.That(display, Is.EqualTo("targetwithnestedproperties [set.dict[<string>]=<string>]"));
+        }
     }
 }
