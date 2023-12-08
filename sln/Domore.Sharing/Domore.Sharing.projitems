@@ -9,6 +9,6 @@
     <Import_RootNamespace>Domore</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)IO\PathSpecial.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IO\PathFormatter.cs" />
   </ItemGroup>
 </Project>

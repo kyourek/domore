@@ -3,7 +3,7 @@
     <Description>Do more logs</Description>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\Domore.Sharing\IO\PathSpecial.cs" Link="IO\PathSpecial.cs" />
+    <Compile Include="..\Domore.Sharing\IO\PathFormatter.cs" Link="IO\PathFormatter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="IO\" />

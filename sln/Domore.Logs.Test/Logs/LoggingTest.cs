@@ -245,6 +245,26 @@ namespace Domore.Logs {
         }
 
         [Test]
+        public void FileLogsToFormattedPath() {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", AppDomain.CurrentDomain?.FriendlyName);
+            try {
+                ConfigFile($@"
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{{appDomain.friendlyName}}
+                    log[f].service.name = test-{{thread.ManagedThreadID}}.log
+                    LOG[f].config.default.format = {{sev}}
+                ");
+                Log.Info("Got the message?");
+                Logging.Complete();
+                var actual = File.ReadAllText(Path.Combine(dir, $"test-{Thread.CurrentThread.ManagedThreadId}.log")).Trim();
+                var expected = "inf Got the message?";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Test]
         public void FileRetriesOnIOException() {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
             var file = Path.Combine(dir, "test.log");

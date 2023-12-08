@@ -12,16 +12,19 @@ namespace Domore.Logs.Service {
     internal sealed class FileLog : ILogService {
         private readonly object Locker = new();
         private readonly ConcurrentQueue<string> Queue = new();
-        private readonly PathSpecial PathSpecial = new();
+        private readonly PathFormatter PathFormatter = new();
 
         private FileInfo FileInfo =>
             _FileInfo ?? (
-            _FileInfo = new FileInfo(Path.Combine(DirectoryInfo.FullName, Name)));
+            _FileInfo = new FileInfo(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name))));
         private FileInfo _FileInfo;
 
         private DirectoryInfo DirectoryInfo =>
             _DirectoryInfo ?? (
-            _DirectoryInfo = new DirectoryInfo(PathSpecial.Expand(Environment.ExpandEnvironmentVariables(Directory))));
+            _DirectoryInfo = new DirectoryInfo(
+                PathFormatter.Format(
+                    PathFormatter.Expand(
+                        Environment.ExpandEnvironmentVariables(Directory)))));
         private DirectoryInfo _DirectoryInfo;
 
         private string FileDateName() {
