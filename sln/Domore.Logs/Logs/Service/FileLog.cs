@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using DIRECTORY = System.IO.Directory;
 
 namespace Domore.Logs.Service {
@@ -29,14 +28,14 @@ namespace Domore.Logs.Service {
 
         private string FileDateName() {
             var d = DateTime.UtcNow;
-            return $"{Name}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}.{d.Millisecond:000}";
+            return $"{FileInfo.Name}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}.{d.Millisecond:000}";
         }
 
         private DateTime? FileDate(string name) {
             if (name == null) {
                 return null;
             }
-            var prefix = $"{Name}_";
+            var prefix = $"{FileInfo.Name}_";
             if (prefix.Length >= name.Length) {
                 return null;
             }
@@ -90,7 +89,7 @@ namespace Domore.Logs.Service {
             _FileInfo = null;
 
             var now = DateTime.UtcNow;
-            var fileSearchPattern = $"{Name}_*";
+            var fileSearchPattern = $"{FileInfo.Name}_*";
             var files = DirectoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
             var items = files
                 .Select(file => new { File = file, Date = FileDate(file.Name) })
