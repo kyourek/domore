@@ -1,5 +1,6 @@
 ﻿using Domore.Conf.Logs;
 using System;
+using System.Collections.Generic;
 
 namespace Domore.Logs {
     using Conf = Conf.Conf;
@@ -85,10 +86,53 @@ namespace Domore.Logs {
             Log.Info($"But this will.");
 
             /*
+             * The static method `ConfigureLogging` of class `LogConf`
+             * can be called as a shortcut to log configuration.
+             */
+            LogConf.ConfigureLogging("log[console].service.background[info] = black; log[console].service.foreground[info] = gray");
+
+            /*
+             * Custom formats may be specified for types. That
+             * format will be used whenever an instance of the
+             * type is passed as a parameter to one of the logging
+             * methods. To specify a custom format for a type,
+             * call `Logging.Format`.
+             */
+            Logging.Format(typeof(XY), obj => [$"{((XY)obj).X},{((XY)obj).Y}"]);
+            Log.Info("These XY coordinates have been formatted by a callback.", new XY { X = 1, Y = 2 }, new XY { X = 2, Y = 3 });
+
+            /*
+             * Custom log handlers implement `ILogService`.
+             * They're used by specifying the assembly qualified
+             * name of the type in conf. 
+             */
+            LogConf.ConfigureLogging($@"
+                log[queue].type = {typeof(CustomLogQueue).AssemblyQualifiedName}
+                log[queue].config.default.severity = info
+            ");
+            Log.Info("This message will be handled by the custom log service:", typeof(CustomLogQueue).AssemblyQualifiedName);
+
+            /*
              * Call `Logging.Complete` before the program exits
              * to guarantee the pending log queue is emptied.
              */
             Logging.Complete();
+        }
+
+        private class CustomLogQueue : ILogService {
+            public static Queue<string> Queue { get; } = new();
+
+            public void Log(string name, string data, LogSeverity severity) {
+                Queue.Enqueue(data);
+            }
+
+            public void Complete() {
+            }
+        }
+
+        private class XY {
+            public int X { get; set; }
+            public int Y { get; set; }
         }
     }
 }

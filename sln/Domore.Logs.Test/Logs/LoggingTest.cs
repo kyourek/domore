@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Domore.Conf.Logs;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -523,6 +524,30 @@ namespace Domore.Logs {
     y: 4
   }";
             Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        private sealed class CustomLogQueue : ILogService {
+            public static Queue<string> Queue { get; } = new();
+
+            public void Log(string name, string data, LogSeverity severity) {
+                Queue.Enqueue(data);
+            }
+
+            public void Complete() {
+            }
+        }
+
+        [Test]
+        public void ExampleLogServiceWorksAsShown() {
+            LogConf.ConfigureLogging($@"
+                log[queue].type = {typeof(CustomLogQueue).AssemblyQualifiedName}
+                log[queue].config.default.severity = info
+            ");
+            Log.Info("Put me in the queue.");
+            Logging.Complete();
+
+            var message = CustomLogQueue.Queue.Dequeue();
+            Assert.That(message, Is.EqualTo("Put me in the queue."));
         }
     }
 }

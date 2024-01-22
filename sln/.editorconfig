@@ -249,3 +249,9 @@ dotnet_style_explicit_tuple_names = true:suggestion
 dotnet_style_prefer_inferred_tuple_names = true:suggestion
 dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
 dotnet_style_prefer_compound_assignment = true:suggestion
+
+[*.{xml,props,csproj}]
+indent_size = 2
+indent_style = space
+tab_width = 4
+end_of_line = crlf
