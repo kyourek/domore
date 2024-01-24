@@ -439,5 +439,21 @@ namespace Domore.Conf.Cli {
             var display = Cli.Display(new TargetWithNestedProperties());
             Assert.That(display, Is.EqualTo("targetwithnestedproperties [set.dict[<string>]=<string>]"));
         }
+
+        private class HeirarchyBase {
+        }
+
+        private class HeirarchyDerived : HeirarchyBase {
+            [CliArgument]
+            [CliRequired]
+            public string TheArg { get; set; }
+        }
+
+        [Test]
+        public void InstancesOfDerivedTypesAreConfigured() {
+            HeirarchyBase target = new HeirarchyDerived();
+            Cli.Configure(target, "the-value");
+            Assert.That(((HeirarchyDerived)target).TheArg, Is.EqualTo("the-value"));
+        }
     }
 }

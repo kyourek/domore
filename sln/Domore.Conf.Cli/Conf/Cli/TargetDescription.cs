@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Domore.Conf.Cli {
     internal sealed class TargetDescription {
-        private static readonly Dictionary<Type, TargetDescription> Cache = new Dictionary<Type, TargetDescription>();
+        private static readonly Dictionary<Type, TargetDescription> Cache = [];
 
         private TargetDescription(Type targetType) {
             TargetType = targetType ?? throw new ArgumentNullException(nameof(targetType));

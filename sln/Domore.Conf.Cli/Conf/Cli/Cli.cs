@@ -4,7 +4,8 @@ using System;
 namespace Domore.Conf.Cli {
     public static class Cli {
         private static T Validate<T>(T target) {
-            var description = TargetDescription.Describe(typeof(T));
+            if (null == target) throw new ArgumentNullException(nameof(target));
+            var description = TargetDescription.Describe(target.GetType());
             var validations = description.Validations;
             try {
                 foreach (var validation in validations) {
@@ -21,7 +22,8 @@ namespace Domore.Conf.Cli {
         }
 
         private static T Conf<T>(T target, string line) {
-            var description = TargetDescription.Describe(typeof(T));
+            if (null == target) throw new ArgumentNullException(nameof(target));
+            var description = TargetDescription.Describe(target.GetType());
             var confLines = description.Conf(line);
             var conf = string.Join(Environment.NewLine, confLines);
             try {
@@ -38,7 +40,8 @@ namespace Domore.Conf.Cli {
         }
 
         public static string Display<T>(T target) {
-            var description = TargetDescription.Describe(typeof(T));
+            if (null == target) throw new ArgumentNullException(nameof(target));
+            var description = TargetDescription.Describe(target.GetType());
             return description.Display;
         }
     }
