@@ -69,8 +69,8 @@ namespace Domore.Conf.Cli {
         }
 
         public static bool Equals(string a, string b) {
-            var ap = Token.Parse(a);
-            var bp = Token.Parse(b);
+            var ap = Parse(a);
+            var bp = Parse(b);
             using (var ae = ap.GetEnumerator())
             using (var be = bp.GetEnumerator()) {
                 for (; ; ) {

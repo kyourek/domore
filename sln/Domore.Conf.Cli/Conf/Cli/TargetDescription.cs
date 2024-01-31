@@ -89,12 +89,12 @@ namespace Domore.Conf.Cli {
                 }
             }
             foreach (var token in Token.Parse(cli)) {
-                var key = token.Key?.Trim() ?? "";
-                var val = token.Value?.Trim() ?? "";
-                if (val == "" && key == "") {
+                var key = token.Key?.Trim();
+                var val = token.Value?.Trim();
+                if (string.IsNullOrEmpty(val) && string.IsNullOrEmpty(key)) {
                     continue;
                 }
-                if (val != "") {
+                if (val != null) {
                     foreach (var set in sets) {
                         var setNam = set.DisplayName;
                         var setKey = setNam + "[" + key + "]";

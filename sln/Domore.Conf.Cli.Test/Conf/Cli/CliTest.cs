@@ -455,5 +455,27 @@ namespace Domore.Conf.Cli {
             Cli.Configure(target, "the-value");
             Assert.That(((HeirarchyDerived)target).TheArg, Is.EqualTo("the-value"));
         }
+
+        private class TypeWithArgumentAndSwitch {
+            [CliArgument]
+            public string TheArg { get; set; }
+
+            public string TheSwitch { get; set; }
+        }
+
+        [Test]
+        public void StringSwitchesCanBeSetToEmptyStrings() {
+            var target = new TypeWithArgumentAndSwitch();
+            Cli.Configure(target, "dothis theswitch=''");
+            Assert.That(target.TheSwitch, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void EmptyStringSwitchesOverrideExistingValues() {
+            var target = new TypeWithArgumentAndSwitch();
+            target.TheSwitch = "some-value";
+            Cli.Configure(target, "dothis theswitch=''");
+            Assert.That(target.TheSwitch, Is.EqualTo(""));
+        }
     }
 }

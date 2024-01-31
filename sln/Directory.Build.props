@@ -4,14 +4,14 @@
     <Authors>Ken Yourek</Authors>
     <Copyright>Copyright © Ken Yourek 2023</Copyright>
     <RootNamespace>Domore</RootNamespace>
-    <TargetFrameworks>net40;net45;netstandard2.0;netcoreapp3.1;net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net40;net45;net46;netstandard2.0;netcoreapp3.1;net6.0;net7.0;net8.0</TargetFrameworks>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <LangVersion>latest</LangVersion>
     <VersionPrefix>8.0.2.92</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>8.0.2.92</AssemblyVersion>
     <InformationalVersion>8.0.2.92</InformationalVersion>
-    <FileVersion>8.0.2.92</FileVersion>
+    <FileVersion>8.0.3.92</FileVersion>
     <PackageVersion>8.0.2.92</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
