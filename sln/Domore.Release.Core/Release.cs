@@ -9,6 +9,7 @@ namespace Domore {
     public sealed class Release {
         public ReleaseCommand Command { get; }
         public string Repository { get; set; }
+        public string Root { get; set; }
 
         public IEnumerable<ReleaseAction> Actions =>
             _Actions ?? (
@@ -37,7 +38,7 @@ namespace Domore {
             }
 
             var info = config(this);
-            var codeBase = new CodeBase(info.Repository);
+            var codeBase = new CodeBase(info.Repository, info.Root);
 
             foreach (var action in Actions) {
                 config(action);

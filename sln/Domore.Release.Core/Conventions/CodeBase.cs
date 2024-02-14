@@ -9,8 +9,6 @@ namespace Domore.Conventions {
             _Id = string.Join("_", Name, DateTime.Now.ToString("yyyyMMddhhmmss"), Guid.NewGuid().ToString("N")));
         private string _Id;
 
-        public string Repository { get; }
-
         public string Name =>
             _Name ?? (
             _Name = PATH.GetFileNameWithoutExtension(Repository.Split('/').Last()));
@@ -18,12 +16,7 @@ namespace Domore.Conventions {
 
         public string Path =>
             _Path ?? (
-            _Path = PATH.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.None),
-                "Domore",
-                "Release",
-                "CodeBase",
-                Id));
+            _Path = PATH.Combine(Root, Id));
         private string _Path;
 
         public Solution Solution =>
@@ -31,8 +24,16 @@ namespace Domore.Conventions {
             _Solution = new Solution(Name, PATH.Combine(Path, "sln")));
         private Solution _Solution;
 
-        public CodeBase(string repository) {
+        public string Root { get; }
+        public string Repository { get; }
+
+        public CodeBase(string repository, string root = null) {
             Repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            Root = root ?? PATH.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
+                "Domore",
+                "Release",
+                "CodeBase");
         }
     }
 }
