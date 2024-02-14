@@ -7,17 +7,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf", "Domore.Conf\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Cli", "Domore.Conf.Cli\Domore.Conf.Cli.csproj", "{12CB0FB7-79DA-4DB3-BE0B-CE1DE6C053C0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Cli.Test", "Domore.Conf.Cli.Test\Domore.Conf.Cli.Test.csproj", "{27CDB65C-79F4-4834-86AB-2166CB96780C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Cli.Test", "test\Domore.Conf.Cli.Test\Domore.Conf.Cli.Test.csproj", "{27CDB65C-79F4-4834-86AB-2166CB96780C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.ConfigurationManager", "Domore.Conf.ConfigurationManager\Domore.Conf.ConfigurationManager.csproj", "{4AC6AB30-2987-49FB-88BF-79151489BD40}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.ConfigurationManager.Test", "Domore.Conf.ConfigurationManager.Test\Domore.Conf.ConfigurationManager.Test.csproj", "{AD91F957-092B-4431-B7F5-1AFE3F6912BC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.ConfigurationManager.Test", "test\Domore.Conf.ConfigurationManager.Test\Domore.Conf.ConfigurationManager.Test.csproj", "{AD91F957-092B-4431-B7F5-1AFE3F6912BC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Sample", "Domore.Conf.Sample\Domore.Conf.Sample.csproj", "{F9D9F532-9F96-4F91-890B-BEE1C7219BB5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Sample.ConfigurationManager", "Domore.Conf.Sample.ConfigurationManager\Domore.Conf.Sample.ConfigurationManager.csproj", "{D20D5D59-6A13-42C2-83EF-B981A8E3C725}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Test", "Domore.Conf.Test\Domore.Conf.Test.csproj", "{6561C2DC-B34E-4D6B-B655-BA0DF528D6A4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Test", "test\Domore.Conf.Test\Domore.Conf.Test.csproj", "{6561C2DC-B34E-4D6B-B655-BA0DF528D6A4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "conf", "conf", "{37B35561-4128-4D30-B2F0-C6F4AFCB1E4C}"
 EndProject
@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs", "Domore.Logs\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Conf", "Domore.Logs.Conf\Domore.Logs.Conf.csproj", "{D713F06A-96CD-42DC-9DF8-EAB23C58BA66}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Test", "Domore.Logs.Test\Domore.Logs.Test.csproj", "{1F322FDE-8511-4FEE-9EE0-368E4473B581}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Test", "test\Domore.Logs.Test\Domore.Logs.Test.csproj", "{1F322FDE-8511-4FEE-9EE0-368E4473B581}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "-", "-", "{269A45D1-2734-419C-8EAE-01B99861D568}"
 	ProjectSection(SolutionItems) = preProject
@@ -39,13 +39,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "indexing", "indexing", "{7C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Indexing", "Domore.Indexing\Domore.Indexing.csproj", "{547BE175-9775-4C75-95B4-AC374C8C918A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Indexing.Tests", "Domore.Indexing.Tests\Domore.Indexing.Tests.csproj", "{DBD9154F-58F6-4F86-86EC-7DF6B1F19649}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Indexing.Tests", "test\Domore.Indexing.Tests\Domore.Indexing.Tests.csproj", "{DBD9154F-58F6-4F86-86EC-7DF6B1F19649}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "notification", "notification", "{108345CA-2B76-45F8-B93C-A38CB515CEF7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Notification", "Domore.Notification\Domore.Notification.csproj", "{226FC135-3966-4989-A992-419A00E36AED}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Notification.Tests", "Domore.Notification.Tests\Domore.Notification.Tests.csproj", "{11DDFB4B-EE64-4C1E-944C-D5DA97A4E4F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Notification.Tests", "test\Domore.Notification.Tests\Domore.Notification.Tests.csproj", "{11DDFB4B-EE64-4C1E-944C-D5DA97A4E4F5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "release", "release", "{DD98D73F-4EFA-42AE-AAD4-59B62F010072}"
 	ProjectSection(SolutionItems) = preProject
@@ -54,7 +54,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "release", "release", "{DD98
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Release.Core", "Domore.Release.Core\Domore.Release.Core.csproj", "{25F60B4B-450C-4C5B-AF96-035F6C2A83B1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Release.Core.Tests", "Domore.Release.Core.Tests\Domore.Release.Core.Tests.csproj", "{0DE90B17-B34F-4FFE-94AA-FE573EE2007F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Release.Core.Tests", "test\Domore.Release.Core.Tests\Domore.Release.Core.Tests.csproj", "{0DE90B17-B34F-4FFE-94AA-FE573EE2007F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Release.Console", "Domore.Release.Console\Domore.Release.Console.csproj", "{052074E2-2B4F-4DED-AD0C-AE29D956C217}"
 EndProject
@@ -68,21 +68,24 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2B812D49-4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{8C470728-E416-4D43-84F8-8F580EA3C988}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Tests", "Domore.Tests\Domore.Tests.csproj", "{4E842D4F-DF16-4F45-A708-7215FB645EC2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Tests", "test\Domore.Tests\Domore.Tests.csproj", "{4E842D4F-DF16-4F45-A708-7215FB645EC2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{FE1FB9FF-B518-488B-9C49-6BBE66F7C5FB}"
+	ProjectSection(SolutionItems) = preProject
+		test\Directory.Build.props = test\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "async", "async", "{003E5404-5686-414F-A16F-2700D765EC53}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching", "Domore.Async.TaskCaching\Domore.Async.TaskCaching.csproj", "{4EB2E64C-4525-4444-9B31-5F60BE957FF5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching.Tests", "Domore.Async.TaskCaching.Tests\Domore.Async.TaskCaching.Tests.csproj", "{DE6AEA85-E1D7-4A6A-8911-ADB16DD5858A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching.Tests", "test\Domore.Async.TaskCaching.Tests\Domore.Async.TaskCaching.Tests.csproj", "{DE6AEA85-E1D7-4A6A-8911-ADB16DD5858A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Logs.Sample", "Domore.Logs.Sample\Domore.Logs.Sample.csproj", "{06D3F97C-855E-46A2-A2F4-75DF8E4CB4AC}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Domore.Sharing", "Domore.Sharing\Domore.Sharing.shproj", "{DF8A9E45-CA4F-44A2-8059-7F62E7174553}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Conf.Test.Process", "Domore.Conf.Test.Process\Domore.Conf.Test.Process.csproj", "{F24E18DB-78AD-4072-BC1E-7DE9C2FA8BDF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Conf.Test.Process", "test\Domore.Conf.Test.Process\Domore.Conf.Test.Process.csproj", "{F24E18DB-78AD-4072-BC1E-7DE9C2FA8BDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

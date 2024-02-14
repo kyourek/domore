@@ -3,6 +3,6 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
+    <ProjectReference Include="..\..\Domore.Conf\Domore.Conf.csproj" />
   </ItemGroup>
 </Project>
