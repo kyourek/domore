@@ -2,4 +2,4 @@
 using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
-[assembly: InternalsVisibleTo("Domore.Conf.ConfigurationManager.Test")]
+[assembly: InternalsVisibleTo("Domore.Conf.ConfigurationManager.Tests")]

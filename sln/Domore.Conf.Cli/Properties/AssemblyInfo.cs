@@ -2,4 +2,4 @@
 using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
-[assembly: InternalsVisibleTo("Domore.Conf.Cli.Test")]
+[assembly: InternalsVisibleTo("Domore.Conf.Cli.Tests")]

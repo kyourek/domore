@@ -152,7 +152,7 @@ namespace Domore.Conf {
 
         [Test]
         public void Configure_CreatesInstanceOfType() {
-            Content = @"Kid.Pet = Domore.Conf.ConfContainerTest+Cat, Domore.Conf.Test";
+            Content = @"Kid.Pet = Domore.Conf.ConfContainerTest+Cat, Domore.Conf.Tests";
             var kid = Subject.Configure(new Kid());
             Assert.That(kid.Pet, Is.InstanceOf(typeof(Cat)));
         }

@@ -26,8 +26,8 @@ namespace Domore.Conf {
             var runtime = thisAssemblyFile.Directory;
             var configuration = runtime.Parent;
             var sln = configuration.Parent.Parent.Parent;
-            var processProject = Path.Combine(sln.FullName, "Domore.Conf.Test.Process");
-            var processPath = Path.Combine(processProject, "bin", configuration.Name, runtime.Name, "Domore.Conf.Test.Process.exe");
+            var processProject = Path.Combine(sln.FullName, "Domore.Conf.Tests.Process");
+            var processPath = Path.Combine(processProject, "bin", configuration.Name, runtime.Name, "Domore.Conf.Tests.Process.exe");
             return processPath;
         }
 

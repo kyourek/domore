@@ -29,6 +29,7 @@ namespace Domore.Conf {
 
         [SetUp]
         public void SetUp() {
+            Key = null;
             Subject = null;
             TempFile = null;
         }
