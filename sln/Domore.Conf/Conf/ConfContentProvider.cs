@@ -1,9 +1,8 @@
-﻿using System.Diagnostics;
+﻿using Domore.Conf.IO;
+using System.Diagnostics;
 using System.IO;
 
 namespace Domore.Conf {
-    using IO;
-
     internal sealed class ConfContentProvider : IConfContentProvider {
         private FileOrTextContentProvider FileOrText =>
             _FileOrText ?? (
@@ -17,27 +16,37 @@ namespace Domore.Conf {
 
         private string GetConfFile() {
             var proc = Process.GetCurrentProcess();
-            var procFile = proc.MainModule.FileName;
-            var confFile = Path.ChangeExtension(procFile, ".conf");
-            if (confFile.Contains(".vshost") && File.Exists(confFile) == false) {
-                confFile = confFile.Replace(".vshost", "");
+            var procFile = proc?.MainModule?.FileName?.Trim() ?? "";
+            if (procFile == "") {
+                return "";
             }
-            if (File.Exists(confFile)) {
+            var confFile = Path.ChangeExtension(procFile, ".conf");
+            var confFileExists = File.Exists(confFile);
+            if (confFileExists == false && confFile.Contains(".vshost")) {
+                confFile = confFile.Replace(".vshost", "");
+                confFileExists = File.Exists(confFile);
+            }
+            if (confFileExists) {
                 return confFile;
             }
             var confFileDefault = confFile + ".default";
-            if (File.Exists(confFileDefault)) {
-                File.Copy(confFileDefault, confFile);
-                return confFile;
+            var confFileDefaultExists = File.Exists(confFileDefault);
+            if (confFileDefaultExists) {
+                try {
+                    File.Copy(confFileDefault, confFile);
+                    return confFile;
+                }
+                catch {
+                    return confFileDefault;
+                }
             }
             return "";
         }
 
         public ConfContent GetConfContent(object source) {
-            var s = source?.ToString()?.Trim() ?? "";
-            if (s == "") {
-                source = ConfFile;
-            }
+            source = string.IsNullOrWhiteSpace(source?.ToString())
+                ? ConfFile
+                : source;
             return FileOrText.GetConfContent(source);
         }
     }

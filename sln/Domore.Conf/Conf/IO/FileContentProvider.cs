@@ -1,9 +1,8 @@
-﻿using System.IO;
+﻿using Domore.Conf.Text;
+using System.IO;
 
 namespace Domore.Conf.IO {
-    using Text;
-
-    internal class FileContentProvider : IConfContentProvider {
+    internal sealed class FileContentProvider : IConfContentProvider {
         private TextContentProvider Text =>
             _Text ?? (
             _Text = new TextContentProvider());
