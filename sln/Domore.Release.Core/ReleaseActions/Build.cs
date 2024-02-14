@@ -10,7 +10,6 @@
                 $"-t:Rebuild",
                 $"-p:Configuration=\"{Configuration}\"",
                 $"-p:Platform=\"{Platform}\"",
-                $"-p:EnableNETAnalyzers=false",
                 $"\"{Solution.Path}\"");
     }
 }
