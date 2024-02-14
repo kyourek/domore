@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more conf CLI</Description>
+    <PackageTags>CLI</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />

@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Do More Notification</Description>
+    <Description>Do more notification</Description>
+    <PackageTags>INotifyPropertyChanged;MVVM</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />

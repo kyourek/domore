@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
+    <PackageTags>.NET App Config;App Config</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />

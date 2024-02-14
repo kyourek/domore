@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more logs</Description>
+    <PackageTags>Log;Logs;Logging;Logger</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Domore.Sharing\IO\PathFormatter.cs" Link="IO\PathFormatter.cs" />

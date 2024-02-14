@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
     <Description>Do more conf</Description>
+    <PackageTags>.NET Conf;.NET Config;.NET Configuration;Conf Files;Config Files;Configuration Files;Conf;Config;Configuration</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
