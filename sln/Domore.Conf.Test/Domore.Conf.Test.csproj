@@ -5,6 +5,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Domore.Conf.Test.Process\Domore.Conf.Test.Process.csproj" />
     <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
   </ItemGroup>

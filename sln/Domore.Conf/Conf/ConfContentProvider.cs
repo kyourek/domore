@@ -14,7 +14,7 @@ namespace Domore.Conf {
             _ConfFile = GetConfFile());
         private string _ConfFile;
 
-        private string GetConfFile() {
+        private static string GetConfFile() {
             var proc = Process.GetCurrentProcess();
             var procFile = proc?.MainModule?.FileName?.Trim() ?? "";
             if (procFile == "") {
