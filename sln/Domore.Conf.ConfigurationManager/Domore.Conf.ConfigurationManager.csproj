@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
+    <Description>Do more conf in app.config</Description>
     <PackageTags>.NET App Config;App Config</PackageTags>
   </PropertyGroup>
   <ItemGroup>
