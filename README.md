@@ -5,7 +5,7 @@ Do more in .NET
 Configure POCO objects with simple, forgiving strings from configuration files or anywhere in a program.
 
 The following sample uses an application `.conf` file that looks like this:
-
+```
     # This is the application's .conf file. Settings in these
     # files are largely case- and whitespace-insensitive. Hash
     # signs may precede comments, but they aren't strictly
@@ -24,7 +24,8 @@ The following sample uses an application `.conf` file that looks like this:
     visitor.ship models and makes[Tie Fighter]      = Imperial
     visitor.ship models and makes[Star Destroyer]   = Imperial
     visitor.ship models and makes[X-wing]           = Rebel
-# 
+```
+```csharp
     internal class Sample {
         private static void Main() {
             /*
@@ -71,11 +72,11 @@ The following sample uses an application `.conf` file that looks like this:
             public IDictionary<string, string> ShipModelsAndMakes { get; set; } = new Dictionary<string, string>();
         }
     }
-
+```
 # Domore.Logs
 
 A lightweight, simple, and very opinionated logging library.
-
+```csharp
     internal class Sample {
         /*
          * Typically, an instance of `ILog` is created for each type
@@ -205,3 +206,5 @@ A lightweight, simple, and very opinionated logging library.
             public int X { get; set; }
             public int Y { get; set; }
         }
+    }
+```
