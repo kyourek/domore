@@ -55,14 +55,16 @@ namespace Domore.Logs {
             set => Instance.Manager.LogEventThreshold = value;
         }
 
-        
+        public static bool Subscribe(ILogSubscription subscription) {
+            return Instance.Manager.Subscribe(subscription);
+        }
+
+        public static bool Unsubscribe(ILogSubscription subscription) {
+            return Instance.Manager.Unsubscribe(subscription);
+        }
 
         public static object Config =>
             new { Log = Instance.Manager };
-
-        public static void Subscribe(LogSeverity severity, LogEventHandler handler) {
-
-        }
 
         public static ILog For(Type type) {
             return new Logger(type, Instance);

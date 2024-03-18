@@ -7,6 +7,7 @@ namespace Domore.Logs {
         private readonly object Locker = new();
         private readonly HashSet<LogSubscriptionProxy> Set = [];
         private readonly Dictionary<Type, LogSeverity> ThresholdCache = [];
+        private readonly Dictionary<ILogSubscription, LogSubscriptionProxy> Lookup = [];
 
         private void Item_ThresholdChanged(object sender, EventArgs e) {
             lock (Locker) {
@@ -33,24 +34,39 @@ namespace Domore.Logs {
         public int Count =>
             Set.Count;
 
-        public void Add(LogSubscriptionProxy item) {
-            lock (Locker) {
-                var added = item != null && Set.Add(item);
-                if (added) {
-                    item.ThresholdChanged += Item_ThresholdChanged;
-                    ThresholdCache.Clear();
-                }
-            }
+        public void Complete() {
         }
 
-        public void Remove(LogSubscriptionProxy item) {
+        public bool Add(ILogSubscription item) {
+            if (item == null) {
+                return false;
+            }
             lock (Locker) {
-                var removed = item != null && Set.Remove(item);
-                if (removed) {
-                    item.ThresholdChanged -= Item_ThresholdChanged;
+                if (Lookup.TryGetValue(item, out var proxy) == false) {
+                    Lookup[item] = proxy = new LogSubscriptionProxy(item);
+                    Set.Add(proxy);
                     ThresholdCache.Clear();
+                    proxy.ThresholdChanged += Item_ThresholdChanged;
+                    return true;
                 }
             }
+            return false;
+        }
+
+        public bool Remove(ILogSubscription item) {
+            if (item == null) {
+                return false;
+            }
+            lock (Locker) {
+                if (Lookup.TryGetValue(item, out var proxy)) {
+                    Lookup.Remove(item);
+                    Set.Remove(proxy);
+                    ThresholdCache.Clear();
+                    proxy.ThresholdChanged -= Item_ThresholdChanged;
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool Send(LogSeverity severity, Type type) {
