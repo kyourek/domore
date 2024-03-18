@@ -2,7 +2,7 @@
 
 namespace Domore.Logs {
     internal sealed class LogServiceProxy {
-        private static readonly LogServiceFactory Factory = new LogServiceFactory();
+        private static readonly LogServiceFactory Factory = new();
 
         private readonly object Locker = new object();
 
@@ -62,7 +62,9 @@ namespace Domore.Logs {
         }
 
         public void Log(LogEntry entry) {
-            if (null == entry) throw new ArgumentNullException(nameof(entry));
+            if (entry == null) {
+                return;
+            }
             var sev = entry.LogSeverity;
             var name = entry.LogName;
             var limit = Config[name].Threshold ?? Config.Default.Threshold;

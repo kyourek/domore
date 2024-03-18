@@ -6,7 +6,7 @@ using System.Linq;
 namespace Domore.Logs {
     internal sealed class LogManager : IDisposable {
         private readonly BackgroundQueue Queue = new();
-        private readonly LogEventSubscriptionCollection Subscriptions = new();
+        private readonly LogSubscriptionCollection Subscriptions = new();
         private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new();
         private readonly ConcurrentDictionary<string, LogSeverity> TypeThreshold = new();
         private LogSeverity DefaultThreshold;
@@ -17,7 +17,7 @@ namespace Domore.Logs {
             }
         }
 
-        private void SetSeverityChanged() {
+        private void SetThresholdChanged() {
             lock (Set) {
                 var names = Set.SelectMany(item => item.Value.Config.Names).Distinct();
                 foreach (var name in names) {
@@ -44,12 +44,12 @@ namespace Domore.Logs {
             }
         }
 
-        private void Config_DefaultSeverityChanged(object sender, LogTypeThresholdChangedEventArgs e) {
-            SetSeverityChanged();
+        private void Config_DefaultThresholdChanged(object sender, LogTypeThresholdChangedEventArgs e) {
+            SetThresholdChanged();
         }
 
-        private void Config_TypeSeverityChanged(object sender, LogTypeThresholdChangedEventArgs e) {
-            SetSeverityChanged();
+        private void Config_TypeThresholdChanged(object sender, LogTypeThresholdChangedEventArgs e) {
+            SetThresholdChanged();
         }
 
         public event LogEventHandler LogEvent;
@@ -63,15 +63,15 @@ namespace Domore.Logs {
                 lock (Set) {
                     if (Set.TryGetValue(name, out var value) == false) {
                         Set[name] = value = new LogServiceProxy(name);
-                        Set[name].Config.TypeThresholdChanged += Config_TypeSeverityChanged;
-                        Set[name].Config.DefaultThresholdChanged += Config_DefaultSeverityChanged;
+                        Set[name].Config.TypeThresholdChanged += Config_TypeThresholdChanged;
+                        Set[name].Config.DefaultThresholdChanged += Config_DefaultThresholdChanged;
                     }
                     return value;
                 }
             }
         }
 
-        public void Add(LogEventSubscription subscription) {
+        public void Add(LogSubscriptionProxy subscription) {
             Subscriptions.Add(subscription);
         }
 
@@ -86,7 +86,7 @@ namespace Domore.Logs {
                 return true;
             }
             if (Subscriptions.Count > 0) {
-                if (Subscriptions.ThresholdMet(severity, type)) {
+                if (Subscriptions.Send(severity, type)) {
                     return true;
                 }
             }

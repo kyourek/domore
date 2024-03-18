@@ -55,6 +55,8 @@ namespace Domore.Logs {
             set => Instance.Manager.LogEventThreshold = value;
         }
 
+        
+
         public static object Config =>
             new { Log = Instance.Manager };
 
