@@ -7,12 +7,12 @@ namespace Domore.Logs {
         private static readonly object CompleteLocker = new object();
         private readonly static Logging Instance = new Logging();
 
-        private LogServiceManager Manager {
+        private LogManager Manager {
             get {
                 if (_Manager == null) {
                     lock (ManagerLocker) {
                         if (_Manager == null) {
-                            _Manager = new LogServiceManager();
+                            _Manager = new LogManager();
                         }
                     }
                 }
@@ -20,7 +20,7 @@ namespace Domore.Logs {
             }
             set => _Manager = value;
         }
-        private LogServiceManager _Manager;
+        private LogManager _Manager;
 
         private Logging() {
         }

@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 
 namespace Domore.Logs {
-    internal sealed class LogServiceManager : IDisposable {
+    internal sealed class LogManager : IDisposable {
         private readonly BackgroundQueue Queue = new();
         private readonly LogEventSubscriptionCollection Subscriptions = new();
         private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new();
@@ -135,7 +135,7 @@ namespace Domore.Logs {
             GC.SuppressFinalize(this);
         }
 
-        ~LogServiceManager() {
+        ~LogManager() {
             Dispose(false);
         }
     }
