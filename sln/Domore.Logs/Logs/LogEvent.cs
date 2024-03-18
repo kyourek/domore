@@ -11,6 +11,7 @@ namespace Domore.Logs {
             Agent = agent ?? throw new ArgumentNullException(nameof(agent));
         }
 
+        public Type LogType => Agent.LogType;
         public string LogName => Agent.LogName;
         public DateTime LogDate => Agent.LogDate;
         public LogSeverity LogSeverity => Agent.LogSeverity;

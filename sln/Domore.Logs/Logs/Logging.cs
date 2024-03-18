@@ -44,13 +44,23 @@ namespace Domore.Logs {
             remove => Instance.Manager.LogEvent -= value;
         }
 
+        [Obsolete($"LogEventSeverity is deprecated. Please use {nameof(LogEventThreshold)} instead.")]
         public static LogSeverity LogEventSeverity {
-            get => Instance.Manager.LogEventSeverity;
-            set => Instance.Manager.LogEventSeverity = value;
+            get => LogEventThreshold;
+            set => LogEventThreshold = value;
+        }
+
+        public static LogSeverity LogEventThreshold {
+            get => Instance.Manager.LogEventThreshold;
+            set => Instance.Manager.LogEventThreshold = value;
         }
 
         public static object Config =>
             new { Log = Instance.Manager };
+
+        public static void Subscribe(LogSeverity severity, LogEventHandler handler) {
+
+        }
 
         public static ILog For(Type type) {
             return new Logger(type, Instance);

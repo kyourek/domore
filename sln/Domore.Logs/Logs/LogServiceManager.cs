@@ -5,10 +5,11 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogServiceManager : IDisposable {
-        private readonly BackgroundQueue Queue = new BackgroundQueue();
-        private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new ConcurrentDictionary<string, LogServiceProxy>();
-        private readonly ConcurrentDictionary<string, LogSeverity> TypeSeverity = new ConcurrentDictionary<string, LogSeverity>();
-        private LogSeverity DefaultSeverity;
+        private readonly BackgroundQueue Queue = new();
+        private readonly LogEventSubscriptionCollection Subscriptions = new();
+        private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new();
+        private readonly ConcurrentDictionary<string, LogSeverity> TypeThreshold = new();
+        private LogSeverity DefaultThreshold;
 
         private void Dispose(bool disposing) {
             if (disposing) {
@@ -20,21 +21,21 @@ namespace Domore.Logs {
             lock (Set) {
                 var names = Set.SelectMany(item => item.Value.Config.Names).Distinct();
                 foreach (var name in names) {
-                    var severity = TypeSeverity[name] = Set
+                    var severity = TypeThreshold[name] = Set
                         .Select(item => item.Value)
-                        .Select(log => log.Config[name].Severity)
+                        .Select(log => log.Config[name].Threshold)
                         .Where(sev => sev.HasValue)
                         .Select(sev => sev.Value)
                         .Where(sev => sev != LogSeverity.None)
                         .OrderBy(sev => sev)
                         .FirstOrDefault();
                     if (severity == LogSeverity.None) {
-                        TypeSeverity.TryRemove(name, out _);
+                        TypeThreshold.TryRemove(name, out _);
                     }
                 }
-                DefaultSeverity = Set
+                DefaultThreshold = Set
                     .Select(item => item.Value)
-                    .Select(log => log.Config.Default.Severity)
+                    .Select(log => log.Config.Default.Threshold)
                     .Where(sev => sev.HasValue)
                     .Select(sev => sev.Value)
                     .Where(sev => sev != LogSeverity.None)
@@ -43,11 +44,11 @@ namespace Domore.Logs {
             }
         }
 
-        private void Config_DefaultSeverityChanged(object sender, LogTypeSeverityChangedEventArgs e) {
+        private void Config_DefaultSeverityChanged(object sender, LogTypeThresholdChangedEventArgs e) {
             SetSeverityChanged();
         }
 
-        private void Config_TypeSeverityChanged(object sender, LogTypeSeverityChangedEventArgs e) {
+        private void Config_TypeSeverityChanged(object sender, LogTypeThresholdChangedEventArgs e) {
             SetSeverityChanged();
         }
 
@@ -55,19 +56,23 @@ namespace Domore.Logs {
 
         public LogFormatter Formatter { get; } = new LogFormatter();
 
-        public LogSeverity LogEventSeverity { get; set; }
+        public LogSeverity LogEventThreshold { get; set; }
 
         public LogServiceProxy this[string name] {
             get {
                 lock (Set) {
                     if (Set.TryGetValue(name, out var value) == false) {
                         Set[name] = value = new LogServiceProxy(name);
-                        Set[name].Config.TypeSeverityChanged += Config_TypeSeverityChanged;
-                        Set[name].Config.DefaultSeverityChanged += Config_DefaultSeverityChanged;
+                        Set[name].Config.TypeThresholdChanged += Config_TypeSeverityChanged;
+                        Set[name].Config.DefaultThresholdChanged += Config_DefaultSeverityChanged;
                     }
                     return value;
                 }
             }
+        }
+
+        public void Add(LogEventSubscription subscription) {
+            Subscriptions.Add(subscription);
         }
 
         public bool Log(LogSeverity severity, Type type) {
@@ -77,15 +82,20 @@ namespace Domore.Logs {
             if (severity == LogSeverity.None) {
                 return false;
             }
-            if (LogEvent != null && LogEventSeverity != LogSeverity.None && LogEventSeverity <= severity) {
+            if (LogEvent != null && LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
                 return true;
             }
-            if (TypeSeverity.Count > 0) {
-                if (TypeSeverity.TryGetValue(type.Name, out var value)) {
+            if (Subscriptions.Count > 0) {
+                if (Subscriptions.ThresholdMet(severity, type)) {
+                    return true;
+                }
+            }
+            if (TypeThreshold.Count > 0) {
+                if (TypeThreshold.TryGetValue(type.Name, out var value)) {
                     return value != LogSeverity.None && value <= severity;
                 }
             }
-            return DefaultSeverity != LogSeverity.None && DefaultSeverity <= severity;
+            return DefaultThreshold != LogSeverity.None && DefaultThreshold <= severity;
         }
 
         public void Log(LogSeverity severity, Type type, object[] data) {
@@ -95,8 +105,11 @@ namespace Domore.Logs {
                     logDate: DateTime.UtcNow,
                     logSeverity: severity,
                     logList: Formatter.Format(data));
-                if (LogEventSeverity != LogSeverity.None && LogEventSeverity <= severity) {
+                if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
                     LogEvent?.Invoke(this, new LogEventArgs(entry));
+                }
+                if (Subscriptions.Count > 0) {
+                    Subscriptions.Send(entry);
                 }
                 Queue.Add(() => {
                     lock (Set) {

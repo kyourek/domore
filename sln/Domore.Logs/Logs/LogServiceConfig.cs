@@ -3,29 +3,29 @@ using System.Collections.Generic;
 
 namespace Domore.Logs {
     internal sealed class LogServiceConfig {
-        private readonly object Locker = new object();
-        private readonly Dictionary<string, LogTypeConfig> Type = new Dictionary<string, LogTypeConfig>();
+        private readonly object Locker = new();
+        private readonly Dictionary<string, LogTypeConfig> Type = [];
 
-        private void Type_SeverityChanged(object sender, EventArgs e) {
+        private void Type_ThresholdChanged(object sender, EventArgs e) {
             var config = (LogTypeConfig)sender;
-            var args = new LogTypeSeverityChangedEventArgs(config.Severity, config.Name);
-            TypeSeverityChanged?.Invoke(this, args);
+            var args = new LogTypeThresholdChangedEventArgs(config.Threshold, config.Name);
+            TypeThresholdChanged?.Invoke(this, args);
         }
 
-        private void Default_SeverityChanged(object sender, EventArgs e) {
-            var args = new LogTypeSeverityChangedEventArgs(Default.Severity);
-            DefaultSeverityChanged?.Invoke(this, args);
+        private void Default_ThresholdChanged(object sender, EventArgs e) {
+            var args = new LogTypeThresholdChangedEventArgs(Default.Threshold);
+            DefaultThresholdChanged?.Invoke(this, args);
         }
 
-        public event LogTypeSeverityChangedEvent TypeSeverityChanged;
-        public event LogTypeSeverityChangedEvent DefaultSeverityChanged;
+        public event LogTypeThresholdChangedEvent TypeThresholdChanged;
+        public event LogTypeThresholdChangedEvent DefaultThresholdChanged;
 
         public LogTypeConfig this[string name] {
             get {
                 lock (Type) {
                     if (Type.TryGetValue(name, out var value) == false) {
                         Type[name] = value = new LogTypeConfig(name);
-                        Type[name].SeverityChanged += Type_SeverityChanged;
+                        Type[name].ThresholdChanged += Type_ThresholdChanged;
                     }
                     return value;
                 }
@@ -38,7 +38,7 @@ namespace Domore.Logs {
                     lock (Locker) {
                         if (_Default == null) {
                             _Default = new LogTypeConfig();
-                            _Default.SeverityChanged += Default_SeverityChanged;
+                            _Default.ThresholdChanged += Default_ThresholdChanged;
                         }
                     }
                 }

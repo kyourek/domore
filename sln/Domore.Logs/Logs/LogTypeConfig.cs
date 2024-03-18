@@ -2,7 +2,7 @@
 
 namespace Domore.Logs {
     internal sealed class LogTypeConfig {
-        public event EventHandler SeverityChanged;
+        public event EventHandler ThresholdChanged;
 
         public string Format { get; set; }
 
@@ -13,14 +13,19 @@ namespace Domore.Logs {
         }
 
         public LogSeverity? Severity {
-            get => _Severity;
+            get => Threshold;
+            set => Threshold = value;
+        }
+
+        public LogSeverity? Threshold {
+            get => _Threshold;
             set {
-                if (_Severity != value) {
-                    _Severity = value;
-                    SeverityChanged?.Invoke(this, EventArgs.Empty);
+                if (_Threshold != value) {
+                    _Threshold = value;
+                    ThresholdChanged?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
-        private LogSeverity? _Severity;
+        private LogSeverity? _Threshold;
     }
 }

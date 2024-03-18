@@ -65,7 +65,7 @@ namespace Domore.Logs {
             if (null == entry) throw new ArgumentNullException(nameof(entry));
             var sev = entry.LogSeverity;
             var name = entry.LogName;
-            var limit = Config[name].Severity ?? Config.Default.Severity;
+            var limit = Config[name].Threshold ?? Config.Default.Threshold;
             if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
                 var frmt = Config[name].Format ?? Config.Default.Format;
                 var data = entry.LogData(frmt);

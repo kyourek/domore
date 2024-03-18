@@ -58,6 +58,7 @@ namespace Domore.Logs {
             return value;
         }
 
-        IEnumerable<string> ILogEntry.LogList => LogList;
+        IEnumerable<string> ILogEntry.LogList => 
+            LogList;
     }
 }
