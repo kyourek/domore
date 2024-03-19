@@ -107,5 +107,42 @@ namespace Domore.Logs {
             var actual = Logging.Subscribe(mock);
             Assert.That(actual, Is.False);
         }
+
+        [Test]
+        public void ThresholdIsSatisfiedBySubscriber() {
+            var mock = new TestLogSubscription();
+            mock.Threshold = _ => LogSeverity.Debug;
+            Logging.Subscribe(mock);
+            var actual = Log.Debug();
+            Assert.That(actual, Is.True);
+        }
+
+        [Test]
+        public void ThresholdIsNotSatisfiedAfterSubscriberIsRemoved() {
+            var mock = new TestLogSubscription();
+            mock.Threshold = _ => LogSeverity.Debug;
+            Logging.Subscribe(mock);
+            Log.Debug();
+            Logging.Unsubscribe(mock);
+            var actual = Log.Debug();
+            Assert.That(actual, Is.False);
+        }
+
+        [Test]
+        public void TrueIsReturnedWhenSubscriberIsRemoved() {
+            var mock = new TestLogSubscription();
+            Logging.Subscribe(mock);
+            var actual = Logging.Unsubscribe(mock);
+            Assert.That(actual, Is.True);
+        }
+
+        [Test]
+        public void FalseIsReturnedWhenSubscriberIsNotRemoved() {
+            var mock = new TestLogSubscription();
+            Logging.Subscribe(mock);
+            Logging.Unsubscribe(mock);
+            var actual = Logging.Unsubscribe(mock);
+            Assert.That(actual, Is.False);
+        }
     }
 }
