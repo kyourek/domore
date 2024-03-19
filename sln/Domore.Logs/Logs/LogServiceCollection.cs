@@ -1,13 +1,14 @@
 ﻿using Domore.Threading;
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogServiceCollection : IDisposable {
+        private readonly object Locker = new();
         private readonly BackgroundQueue Queue = new();
-        private readonly ConcurrentDictionary<string, LogServiceProxy> Set = new();
-        private readonly ConcurrentDictionary<string, LogSeverity> TypeThreshold = new();
+        private readonly Dictionary<string, LogServiceProxy> Set = [];
+        private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
         private LogSeverity DefaultThreshold;
 
         private void Dispose(bool disposing) {
@@ -17,7 +18,7 @@ namespace Domore.Logs {
         }
 
         private void SetThresholdChanged() {
-            lock (Set) {
+            lock (Locker) {
                 var names = Set.SelectMany(item => item.Value.Config.Names).Distinct();
                 foreach (var name in names) {
                     var severity = TypeThreshold[name] = Set
@@ -29,7 +30,7 @@ namespace Domore.Logs {
                         .OrderBy(sev => sev)
                         .FirstOrDefault();
                     if (severity == LogSeverity.None) {
-                        TypeThreshold.TryRemove(name, out _);
+                        TypeThreshold.Remove(name);
                     }
                 }
                 DefaultThreshold = Set
@@ -53,7 +54,7 @@ namespace Domore.Logs {
 
         public LogServiceProxy this[string name] {
             get {
-                lock (Set) {
+                lock (Locker) {
                     if (Set.TryGetValue(name, out var value) == false) {
                         Set[name] = value = new LogServiceProxy(name);
                         Set[name].Config.TypeThresholdChanged += Config_TypeThresholdChanged;
@@ -68,17 +69,19 @@ namespace Domore.Logs {
             Set.Count;
 
         public bool Log(LogSeverity severity, Type type) {
-            if (TypeThreshold.Count > 0) {
-                if (TypeThreshold.TryGetValue(type.Name, out var value)) {
-                    return value != LogSeverity.None && value <= severity;
+            lock (Locker) {
+                if (TypeThreshold.Count > 0) {
+                    if (TypeThreshold.TryGetValue(type.Name, out var value)) {
+                        return value != LogSeverity.None && value <= severity;
+                    }
                 }
+                return DefaultThreshold != LogSeverity.None && DefaultThreshold <= severity;
             }
-            return DefaultThreshold != LogSeverity.None && DefaultThreshold <= severity;
         }
 
         public void Log(LogEntry entry) {
             Queue.Add(() => {
-                lock (Set) {
+                lock (Locker) {
                     foreach (var item in Set) {
                         item.Value.Log(entry);
                     }
@@ -88,7 +91,7 @@ namespace Domore.Logs {
 
         public void Complete() {
             Queue.Complete();
-            lock (Set) {
+            lock (Locker) {
                 foreach (var item in Set) {
                     item.Value.Complete();
                 }
