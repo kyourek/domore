@@ -39,18 +39,24 @@ namespace Domore.Logs {
             try { Console.WriteLine(obj); } catch { }
         }
 
+        [Obsolete($"LogEvent is deprecated. Please use {nameof(Event)} instead.")]
         public static event LogEventHandler LogEvent {
+            add => Event += value;
+            remove => Event -= value;
+        }
+
+        public static event LogEventHandler Event {
             add => Instance.Manager.LogEvent += value;
             remove => Instance.Manager.LogEvent -= value;
         }
 
-        [Obsolete($"LogEventSeverity is deprecated. Please use {nameof(LogEventThreshold)} instead.")]
+        [Obsolete($"LogEventSeverity is deprecated. Please use {nameof(EventThreshold)} instead.")]
         public static LogSeverity LogEventSeverity {
-            get => LogEventThreshold;
-            set => LogEventThreshold = value;
+            get => EventThreshold;
+            set => EventThreshold = value;
         }
 
-        public static LogSeverity LogEventThreshold {
+        public static LogSeverity EventThreshold {
             get => Instance.Manager.LogEventThreshold;
             set => Instance.Manager.LogEventThreshold = value;
         }
