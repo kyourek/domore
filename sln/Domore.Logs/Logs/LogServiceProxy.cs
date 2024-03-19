@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace Domore.Logs {
+﻿namespace Domore.Logs {
     internal sealed class LogServiceProxy {
         private static readonly LogServiceFactory Factory = new();
 
-        private readonly object Locker = new object();
+        private readonly object Locker = new();
 
         private sealed class None : ILogService {
             void ILogService.Log(string name, string data, LogSeverity severity) {
@@ -25,7 +23,7 @@ namespace Domore.Logs {
                 }
                 return _Service;
             }
-        } 
+        }
         private ILogService _Service;
 
         public LogServiceConfig Config {

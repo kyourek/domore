@@ -13,8 +13,10 @@ namespace Domore.Logs {
         }
 
         private void Agent_ThresholdChanged(object sender, EventArgs e) {
-            ThresholdCache.Clear();
-            ThresholdChanged?.Invoke(this, e);
+            lock (ThresholdCache) {
+                ThresholdCache.Clear();
+                ThresholdChanged?.Invoke(this, e);
+            }
         }
 
         public event EventHandler ThresholdChanged;
