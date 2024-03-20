@@ -54,6 +54,10 @@ namespace Domore.Logs {
             }
         }
 
+        public void Complete() {
+            Agent.ThresholdChanged -= Agent_ThresholdChanged;
+        }
+
         private sealed class None : ILogSubscription {
             event EventHandler ILogSubscription.ThresholdChanged {
                 add { }

@@ -68,7 +68,7 @@ namespace Domore.Logs {
         public int Count =>
             Set.Count;
 
-        public bool Log(LogSeverity severity, Type type) {
+        public bool Send(LogSeverity severity, Type type) {
             lock (Locker) {
                 if (TypeThreshold.Count > 0) {
                     if (TypeThreshold.TryGetValue(type.Name, out var value)) {
@@ -79,7 +79,7 @@ namespace Domore.Logs {
             }
         }
 
-        public void Log(LogEntry entry) {
+        public void Send(LogEntry entry) {
             Queue.Add(() => {
                 lock (Locker) {
                     foreach (var item in Set) {

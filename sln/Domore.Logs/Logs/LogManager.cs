@@ -43,7 +43,7 @@ namespace Domore.Logs {
                 }
             }
             if (Services.Count > 0) {
-                if (Services.Log(severity, type)) {
+                if (Services.Send(severity, type)) {
                     return true;
                 }
             }
@@ -64,7 +64,7 @@ namespace Domore.Logs {
                     Subscriptions.Send(entry);
                 }
                 if (Services.Count > 0) {
-                    Services.Log(entry);
+                    Services.Send(entry);
                 }
             }
         }
@@ -73,6 +73,7 @@ namespace Domore.Logs {
             LogEvent = null;
             Services.Complete();
             Subscriptions.Complete();
+            Subscriptions.Clear();
         }
 
         public void Dispose() {

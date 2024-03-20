@@ -4,24 +4,25 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogSubscriptionCollection {
-        private readonly object Locker = new();
-        private readonly HashSet<LogSubscriptionProxy> Set = [];
-        private readonly Dictionary<Type, LogSeverity> ThresholdCache = [];
+        private readonly Dictionary<Type, LogSeverity> Thresholds = [];
         private readonly Dictionary<ILogSubscription, LogSubscriptionProxy> Lookup = [];
 
         private void Item_ThresholdChanged(object sender, EventArgs e) {
-            lock (Locker) {
-                ThresholdCache.Clear();
+            lock (Lookup) {
+                Thresholds.Clear();
             }
         }
 
         private LogSeverity Threshold(Type type) {
+            if (Count == 0) {
+                return LogSeverity.None;
+            }
             if (type == null) {
                 return LogSeverity.None;
             }
-            lock (Locker) {
-                if (ThresholdCache.TryGetValue(type, out var severity) == false) {
-                    ThresholdCache[type] = severity = Set
+            lock (Lookup) {
+                if (Thresholds.TryGetValue(type, out var severity) == false) {
+                    Thresholds[type] = severity = Lookup.Values
                         .Select(item => item.Threshold(type))
                         .Where(s => s != LogSeverity.None)
                         .OrderBy(s => s)
@@ -31,21 +32,28 @@ namespace Domore.Logs {
             }
         }
 
-        public int Count =>
-            Set.Count;
+        public int Count { get; private set; }
 
         public void Complete() {
+            if (Count == 0) {
+                return;
+            }
+            lock (Lookup) {
+                foreach (var item in Lookup.Values) {
+                    item.Complete();
+                }
+            }
         }
 
         public bool Add(ILogSubscription item) {
             if (item == null) {
                 return false;
             }
-            lock (Locker) {
+            lock (Lookup) {
                 if (Lookup.TryGetValue(item, out var proxy) == false) {
                     Lookup[item] = proxy = new LogSubscriptionProxy(item);
-                    Set.Add(proxy);
-                    ThresholdCache.Clear();
+                    Thresholds.Clear();
+                    Count = Lookup.Count;
                     proxy.ThresholdChanged += Item_ThresholdChanged;
                     return true;
                 }
@@ -57,11 +65,14 @@ namespace Domore.Logs {
             if (item == null) {
                 return false;
             }
-            lock (Locker) {
+            if (Count == 0) {
+                return false;
+            }
+            lock (Lookup) {
                 if (Lookup.TryGetValue(item, out var proxy)) {
                     Lookup.Remove(item);
-                    Set.Remove(proxy);
-                    ThresholdCache.Clear();
+                    Thresholds.Clear();
+                    Count = Lookup.Count;
                     proxy.ThresholdChanged -= Item_ThresholdChanged;
                     return true;
                 }
@@ -69,11 +80,25 @@ namespace Domore.Logs {
             return false;
         }
 
+        public void Clear() {
+            if (Count == 0) {
+                return;
+            }
+            lock (Lookup) {
+                foreach (var item in Lookup.Values) {
+                    item.ThresholdChanged -= Item_ThresholdChanged;
+                }
+                Lookup.Clear();
+                Thresholds.Clear();
+                Count = Lookup.Count;
+            }
+        }
+
         public bool Send(LogSeverity severity, Type type) {
-            if (severity == LogSeverity.None) {
+            if (Count == 0) {
                 return false;
             }
-            if (Count == 0) {
+            if (severity == LogSeverity.None) {
                 return false;
             }
             var threshold = Threshold(type);
@@ -84,8 +109,11 @@ namespace Domore.Logs {
         }
 
         public void Send(LogEntry entry) {
-            lock (Locker) {
-                foreach (var item in Set) {
+            if (Count == 0) {
+                return;
+            }
+            lock (Lookup) {
+                foreach (var item in Lookup.Values) {
                     if (item != null) {
                         item.Receive(entry);
                     }
