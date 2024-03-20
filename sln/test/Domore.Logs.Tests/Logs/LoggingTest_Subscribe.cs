@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Domore.Logs {
     partial class LoggingTest {
@@ -164,6 +165,21 @@ namespace Domore.Logs {
             Logging.Subscribe(mock);
             Log.Critical("message");
             Assert.That(ex, Is.Not.Null);
+        }
+
+        [Test]
+        public void SubscribersReceiveEntriesWhileFileLogging() {
+            ConfigFile();
+            var mock = new MockLogSubscription();
+            var entries = new List<ILogEntry>();
+            mock.Threshold = _ => LogSeverity.Info;
+            mock.Receive = entries.Add;
+            Logging.Subscribe(mock);
+            Log.Info("here's some data");
+            Logging.Complete();
+            var actual = entries.SelectMany(e => e.LogList).ToList();
+            var expected = new[] { "here's some data" };
+            CollectionAssert.AreEqual(expected, actual);
         }
     }
 }

@@ -224,5 +224,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Domore.Sharing\Domore.Sharing.projitems*{df8a9e45-ca4f-44a2-8059-7f62e7174553}*SharedItemsImports = 13
+		Domore.Sharing\Domore.Sharing.projitems*{eae5938d-a66b-4da6-ad1f-204063e547cb}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

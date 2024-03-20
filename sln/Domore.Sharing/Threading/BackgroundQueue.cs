@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
@@ -34,7 +34,7 @@ namespace Domore.Threading {
                     catch (Exception ex) {
                         try { Console.WriteLine(ex); } catch { }
                         try { Trace.WriteLine(ex); } catch { }
-                    }                
+                    }
                 }
             }
         }

@@ -69,6 +69,21 @@ namespace Domore.Logs {
         }
 
         [Test]
+        public void FileLogsDataWhileSubscriptionsAreActive() {
+            ConfigFile();
+            var mock = new MockLogSubscription();
+            var entries = new List<ILogEntry>();
+            mock.Threshold = _ => LogSeverity.Info;
+            mock.Receive = entries.Add;
+            Logging.Subscribe(mock);
+            Log.Info("here's some data");
+            Logging.Complete();
+            var actual = ReadFile();
+            var expected = "LoggingTest [inf] here's some data";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
         public void FileDoesNotLogDataIfSeverityNotMet() {
             ConfigFile("log[f].config[LoggingTest].severity = warn");
             Log.Info("here's some data");

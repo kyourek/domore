@@ -10,5 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)IO\PathFormatter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Threading\BackgroundQueue.cs" />
   </ItemGroup>
 </Project>
