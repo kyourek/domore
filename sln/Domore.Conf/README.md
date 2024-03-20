@@ -1,0 +1,1 @@
+﻿Configure POCO objects with simple, forgiving strings from configuration files or anywhere in a program.

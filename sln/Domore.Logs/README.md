@@ -1,0 +1,1 @@
+﻿*Domore.Logs* is a lightweight, simple, and very opinionated logging library.
