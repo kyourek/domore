@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogEntry : ILogEntry {
-        private static readonly Dictionary<LogSeverity, string> Sev = new Dictionary<LogSeverity, string> {
+        private static readonly Dictionary<LogSeverity, string> Sev = new() {
             { LogSeverity.Critical, "crt" },
             { LogSeverity.Debug, "dbg" },
             { LogSeverity.Error, "err" },
@@ -12,15 +12,15 @@ namespace Domore.Logs {
             { LogSeverity.Warn, "wrn" }
         };
 
-        private readonly Dictionary<string, string> Format = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> Format = new();
 
         private string GetFormat(string format) {
             var s = format
                 .Replace("{log}", LogName)
-                .Replace("{sev}", Sev[LogSeverity])
-                .Replace("{dat}", LogDate.ToString("yyyy-MM-dd"))
-                .Replace("{tim}", LogDate.ToString("HH:mm:ss.fff"));
-            var logList = LogList;
+                .Replace("{sev}", Sev[EntrySeverity])
+                .Replace("{dat}", EntryDate.ToString("yyyy-MM-dd"))
+                .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff"));
+            var logList = EntryList;
             if (logList.Length == 1) {
                 return s == ""
                     ? logList[0]
@@ -31,23 +31,21 @@ namespace Domore.Logs {
                 : (s + Environment.NewLine + string.Join(Environment.NewLine, logList.Select(line => $"  {line}")));
         }
 
-        public Type LogType { get; }
-        public DateTime LogDate { get; }
-        public string[] LogList { get; }
-        public LogSeverity LogSeverity { get; }
-
         public string LogName =>
             _LogName ?? (
             _LogName = LogType.Name);
         private string _LogName;
 
-        public LogEntry(Type logType, DateTime logDate, LogSeverity logSeverity, string[] logList) {
-            if (null == logType) throw new ArgumentNullException(nameof(logType));
-            if (null == logList) throw new ArgumentNullException(nameof(logList));
-            LogType = logType;
-            LogDate = logDate;
-            LogList = logList;
-            LogSeverity = logSeverity;
+        public Type LogType { get; }
+        public DateTime EntryDate { get; }
+        public string[] EntryList { get; }
+        public LogSeverity EntrySeverity { get; }
+
+        public LogEntry(Type logType, DateTime entryDate, LogSeverity entrySeverity, string[] entryList) {
+            LogType = logType ?? throw new ArgumentNullException(nameof(logType));
+            EntryList = entryList ?? throw new ArgumentNullException(nameof(entryList));
+            EntryDate = entryDate;
+            EntrySeverity = entrySeverity;
         }
 
         public string LogData(string format) {
@@ -58,7 +56,9 @@ namespace Domore.Logs {
             return value;
         }
 
-        IEnumerable<string> ILogEntry.LogList => 
-            LogList;
+        Type ILogEntry.LogType => LogType;
+        DateTime ILogEntry.LogDate => EntryDate;
+        LogSeverity ILogEntry.LogSeverity => EntrySeverity;
+        IEnumerable<string> ILogEntry.LogList => EntryList;
     }
 }

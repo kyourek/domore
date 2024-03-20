@@ -63,7 +63,7 @@
             if (entry == null) {
                 return;
             }
-            var sev = entry.LogSeverity;
+            var sev = entry.EntrySeverity;
             var name = entry.LogName;
             var limit = Config[name].Threshold ?? Config.Default.Threshold;
             if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {

@@ -44,7 +44,7 @@ namespace Domore.Logs {
                 return;
             }
             var threshold = Threshold(entry.LogType);
-            if (threshold != LogSeverity.None && threshold <= entry.LogSeverity) {
+            if (threshold != LogSeverity.None && threshold <= entry.EntrySeverity) {
                 try {
                     Agent.Receive(entry);
                 }

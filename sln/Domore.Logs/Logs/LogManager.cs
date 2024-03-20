@@ -54,9 +54,9 @@ namespace Domore.Logs {
             if (data != null) {
                 var entry = new LogEntry(
                     logType: type,
-                    logDate: DateTime.UtcNow,
-                    logSeverity: severity,
-                    logList: Formatter.Format(data));
+                    entryDate: DateTime.UtcNow,
+                    entrySeverity: severity,
+                    entryList: Formatter.Format(data));
                 if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
                     LogEvent?.Invoke(this, new LogEventArgs(entry));
                 }

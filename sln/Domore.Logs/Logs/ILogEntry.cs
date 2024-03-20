@@ -10,3 +10,4 @@ namespace Domore.Logs {
         IEnumerable<string> LogList { get; }
     }
 }
+    
