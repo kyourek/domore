@@ -13,12 +13,12 @@ namespace Domore.Conf.IO {
             _File = new FileContentProvider());
         private FileContentProvider _File;
 
-        public ConfContent GetConfContent(object contents) {
-            var file = $"{contents}".Trim();
+        public ConfContent GetConfContent(object source) {
+            var file = $"{source}".Trim();
             if (FILE.Exists(file)) {
                 return File.GetConfContent(file);
             }
-            return Text.GetConfContent(contents, null);
+            return Text.GetConfContent(source, null);
         }
     }
 }
