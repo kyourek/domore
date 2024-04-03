@@ -13,10 +13,11 @@ namespace Domore.Conf {
         private ConfContent MakeContent() {
             var provider = ContentProvider;
             return
-                provider is not ConfContentProviderBase providerBase ? provider.GetConfContent(Source) :
-                providerBase.GetConfContent(Source, null, new ConfContentProviderContext {
-                    ConfigKey = Special
-                });
+                provider is not ConfContentProviderBase providerBase
+                    ? provider.GetConfContent(Source)
+                    : providerBase.GetConfContent(Source, null, new ConfContentProviderContext {
+                        Special = Special
+                    });
         }
 
         public IConfContentProvider ContentProvider {

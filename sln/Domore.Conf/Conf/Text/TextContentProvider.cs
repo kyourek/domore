@@ -14,7 +14,7 @@ namespace Domore.Conf.Text {
 
         private List<IConfPair> ConfigInclude(List<IConfPair> existing, List<object> sources, ConfContentProviderContext context) {
             if (null == existing) throw new ArgumentNullException(nameof(existing));
-            var configKey = context?.ConfigKey?.Trim() ?? "";
+            var configKey = context?.Special?.Trim() ?? "";
             if (configKey == "") {
                 return existing;
             }
