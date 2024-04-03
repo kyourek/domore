@@ -1,6 +1,6 @@
-﻿namespace Domore.Conf.Extensions {
-    using Text;
+﻿using Domore.Conf.Text;
 
+namespace Domore.Conf.Extensions {
     public static class ConfObject {
         private static TextSourceProvider SourceProvider =>
             _SourceProvider ?? (

@@ -31,10 +31,11 @@ namespace Domore.Conf {
             return processPath;
         }
 
-        private string RunProcess() {
+        private string RunProcess(params string[] args) {
             var error = new StringBuilder();
             var output = new StringBuilder();
             using (var process = new Process()) {
+                process.StartInfo.Arguments = string.Join(" ", args);
                 process.StartInfo.FileName = ProcessPath;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.RedirectStandardOutput = true;
@@ -83,6 +84,25 @@ namespace Domore.Conf {
             File.WriteAllText(ConfPath, $"Program.Greeting = {greeting}");
             var output = RunProcess();
             Assert.That(output.Trim(), Is.EqualTo(greeting));
+        }
+
+        [TestCase("Hello, World!", "$")]
+        [TestCase("Hello, World!", "@")]
+        [TestCase("Hello, World!", "@@")]
+        [TestCase("Goodbye, Earth...", "$")]
+        [TestCase("Goodbye, Earth...", "@")]
+        [TestCase("Goodbye, Earth...", "@@")]
+        public void AdditionalConfFileIsIncluded(string greeting, string special) {
+            var tempPath = Path.GetTempFileName();
+            try {
+                File.WriteAllText(tempPath, $"Program.Greeting = {greeting}");
+                File.WriteAllText(ConfPath, $"{special}.include = {tempPath}");
+                var output = RunProcess(special);
+                Assert.That(output.Trim(), Is.EqualTo(greeting));
+            }
+            finally {
+                File.Delete(tempPath);
+            }
         }
     }
 }

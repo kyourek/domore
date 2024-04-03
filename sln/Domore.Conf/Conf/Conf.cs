@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Domore.Conf {
     public sealed class Conf : IConf {
-        private static readonly ConfContainer _Container = new ConfContainer();
+        private static readonly ConfContainer _Container = new();
 
         public static IConfContainer Container => _Container;
 
@@ -18,6 +18,11 @@ namespace Domore.Conf {
         public static IConfContentProvider ContentProvider {
             get => _Container.ContentProvider;
             set => _Container.ContentProvider = value;
+        }
+
+        public static string Special {
+            get => _Container.Special;
+            set => _Container.Special = value;
         }
 
         public static IConfLookup Lookup =>
@@ -36,7 +41,11 @@ namespace Domore.Conf {
         }
 
         public static IConfContainer Contain(object source) {
-            return new ConfContainer { Source = source };
+            return Contain(source, null);
+        }
+
+        public static IConfContainer Contain(object source, string special) {
+            return new ConfContainer { Source = source, Special = special };
         }
 
         object IConf.Source =>

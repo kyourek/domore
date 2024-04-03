@@ -4,15 +4,20 @@ using System.Linq;
 
 namespace Domore.Conf {
     internal sealed class ConfContainer : IConfContainer {
-        private ConfContent Content =>
-            _Content ?? (
-            _Content = ContentProvider.GetConfContent(Source));
+        private ConfContent Content => _Content ??= MakeContent();
         private ConfContent _Content;
 
-        private ConfPopulator Populator =>
-            _Populator ?? (
-            _Populator = ConfPopulator.Cached);
+        private ConfPopulator Populator => _Populator ??= ConfPopulator.Cached;
         private ConfPopulator _Populator;
+
+        private ConfContent MakeContent() {
+            var provider = ContentProvider;
+            return
+                provider is not ConfContentProviderBase providerBase ? provider.GetConfContent(Source) :
+                providerBase.GetConfContent(Source, null, new ConfContentProviderContext {
+                    ConfigKey = Special
+                });
+        }
 
         public IConfContentProvider ContentProvider {
             get => _ContentProvider ?? (_ContentProvider = new ConfContentProvider());
@@ -37,6 +42,18 @@ namespace Domore.Conf {
             }
         }
         private object _Source;
+
+        public string Special {
+            get => _Special;
+            set {
+                if (_Special != value) {
+                    _Special = value;
+                    _Content = null;
+                    _Lookup = null;
+                }
+            }
+        }
+        private string _Special;
 
         public IEnumerable<object> Sources =>
             Content.Sources;

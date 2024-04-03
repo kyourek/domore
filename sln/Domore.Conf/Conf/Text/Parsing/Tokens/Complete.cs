@@ -3,7 +3,7 @@
 namespace Domore.Conf.Text.Parsing.Tokens {
     internal sealed class Complete : Token, IConfPair {
         protected sealed override string Create() {
-            return $"{Key}={Value}";
+            return ConfPair.ToString(this);
         }
 
         public KeyBuilder Key { get; }

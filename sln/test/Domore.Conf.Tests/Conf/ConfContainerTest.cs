@@ -2,11 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 
 namespace Domore.Conf {
     [TestFixture]
     public sealed class ConfContainerTest {
+        private readonly List<string> TempFiles = new();
+
         private object Content;
 
         private ConfContainer Subject {
@@ -19,6 +22,24 @@ namespace Domore.Conf {
         public void SetUp() {
             Content = null;
             Subject = null;
+            TempFiles.Clear();
+        }
+
+        [TearDown]
+        public void TearDown() {
+            foreach (var tempFile in TempFiles) {
+                try {
+                    File.Delete(tempFile);
+                }
+                catch {
+                }
+            }
+        }
+
+        private string TempFile() {
+            var temp = Path.GetTempFileName();
+            TempFiles.Add(temp);
+            return temp;
         }
 
         private class Man {
@@ -816,6 +837,137 @@ namespace Domore.Conf {
             Content = "depth = 25";
             var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
             var expected = 25;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [TestCase('!')]
+        [TestCase('@')]
+        [TestCase('#')]
+        [TestCase('$')]
+        public void SpecialCharsMayBeUsedAsKey(char c) {
+            Content = $"{c}.depth = 25";
+            var actual = Subject.Configure(new Shipwreck(), key: $"{c}").Depth;
+            var expected = 25;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void FileIsIncludedAndUsedAfterDefaultConf() {
+            var temp = Path.GetTempFileName();
+            try {
+                File.WriteAllText(temp, $"depth = 25");
+                Content = $@"
+                    depth = 24
+                    @.INCLUDE = {temp}
+                ";
+                Subject.Special = "@";
+                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+                var expected = 25;
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                File.Delete(temp);
+            }
+        }
+
+        [Test]
+        public void ConfAfterIncludeOverridesInclude() {
+            var temp = Path.GetTempFileName();
+            try {
+                File.WriteAllText(temp, $"depth = 25");
+                Content = $@"
+                    @.INCLUDE = {temp}
+                    depth = 24
+                ";
+                Subject.Special = "@";
+                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+                var expected = 24;
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                File.Delete(temp);
+            }
+        }
+
+        [Test]
+        public void IncludeCanBeAList() {
+            var t1 = TempFile();
+            var t2 = TempFile();
+            var t3 = TempFile();
+            File.WriteAllText(t2, "depth = 26");
+            Content = $@"
+                depth = 24
+                ##.INCLUDE = {{
+                    {t1}
+                    {t2}
+                    {t3}
+                }}
+            ";
+            Subject.Special = "##";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 26;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void LastIncludeInAListOverridesOthers() {
+            var t1 = TempFile();
+            var t2 = TempFile();
+            var t3 = TempFile();
+            File.WriteAllText(t1, "depth = 25");
+            File.WriteAllText(t2, "depth = 26");
+            File.WriteAllText(t3, "depth = 27");
+            Content = $@"
+                depth = 24
+                ##.INCLUDE = {{
+                    {t1}
+                    {t2}
+                    {t3}
+                }}
+            ";
+            Subject.Special = "##";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 27;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void IncludesCanBeNested() {
+            var t1 = TempFile();
+            var t2 = TempFile();
+            File.WriteAllText(t1, "depth = 25");
+            File.WriteAllText(t2, $"##.include = {t1}");
+            Content = $@"
+                depth = 24
+                ##.INCLUDE = {{
+                    {t2}
+                }}
+            ";
+            Subject.Special = "##";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 25;
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void LastIncludeInAListOverridesOthersWhenOthersAreNested() {
+            var t1 = TempFile();
+            var t2 = TempFile();
+            var t3 = TempFile();
+            File.WriteAllText(t1, "depth = 25");
+            File.WriteAllText(t2, $"##.include = {t1}");
+            File.WriteAllText(t3, "depth = 27");
+            Content = $@"
+                depth = 24
+                ##.INCLUDE = {{
+                    {t1}
+                    {t2}
+                    {t3}
+                }}
+            ";
+            Subject.Special = "##";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 27;
             Assert.That(actual, Is.EqualTo(expected));
         }
     }

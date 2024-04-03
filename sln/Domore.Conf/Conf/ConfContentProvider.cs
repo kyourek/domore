@@ -1,17 +1,14 @@
 ﻿using Domore.Conf.IO;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
 namespace Domore.Conf {
-    internal sealed class ConfContentProvider : IConfContentProvider {
-        private FileOrTextContentProvider FileOrText =>
-            _FileOrText ?? (
-            _FileOrText = new FileOrTextContentProvider());
+    internal sealed class ConfContentProvider : ConfContentProviderBase {
+        private FileOrTextContentProvider FileOrText => _FileOrText ??= new();
         private FileOrTextContentProvider _FileOrText;
 
-        private string ConfFile =>
-            _ConfFile ?? (
-            _ConfFile = GetConfFile());
+        private string ConfFile => _ConfFile ??= GetConfFile();
         private string _ConfFile;
 
         private static string GetConfFile() {
@@ -43,11 +40,11 @@ namespace Domore.Conf {
             return "";
         }
 
-        public ConfContent GetConfContent(object source) {
+        public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
             source = string.IsNullOrWhiteSpace(source?.ToString())
                 ? ConfFile
                 : source;
-            return FileOrText.GetConfContent(source);
+            return FileOrText.GetConfContent(source, sources, context);
         }
     }
 }

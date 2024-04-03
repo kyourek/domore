@@ -1,8 +1,9 @@
 ﻿using Domore.Conf.Text;
+using System.Collections.Generic;
 using FILE = System.IO.File;
 
 namespace Domore.Conf.IO {
-    internal sealed class FileOrTextContentProvider : IConfContentProvider {
+    internal sealed class FileOrTextContentProvider : ConfContentProviderBase {
         private TextContentProvider Text =>
             _Text ?? (
             _Text = new TextContentProvider());
@@ -13,12 +14,12 @@ namespace Domore.Conf.IO {
             _File = new FileContentProvider());
         private FileContentProvider _File;
 
-        public ConfContent GetConfContent(object source) {
+        public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
             var file = $"{source}".Trim();
             if (FILE.Exists(file)) {
-                return File.GetConfContent(file);
+                return File.GetConfContent(file, sources, context);
             }
-            return Text.GetConfContent(source, null);
+            return Text.GetConfContent(source, sources, context);
         }
     }
 }

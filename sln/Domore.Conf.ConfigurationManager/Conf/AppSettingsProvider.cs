@@ -42,11 +42,11 @@ namespace Domore.Conf {
             return GetSettings(content?.ToString());
         }
 
-        public ConfContent GetConfContent(object source) {
+        ConfContent IConfContentProvider.GetConfContent(object source) {
             var exePath = $"{source}";
             var settings = GetSettings(exePath);
             var text = string.Join(Environment.NewLine, settings.Select(set => string.Join(" = ", set.Key, set.Value)));
-            var conf = Text.GetConfContent(text, new object[] {
+            var conf = Text.GetConfContent(source: text, context: null, sources: new object[] {
                 string.IsNullOrWhiteSpace(exePath)
                     ? $"{nameof(ConfigurationManager)}.{nameof(ConfigurationManager.AppSettings)}"
                     : exePath

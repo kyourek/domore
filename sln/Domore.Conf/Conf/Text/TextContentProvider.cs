@@ -1,24 +1,57 @@
-﻿using Domore.Conf.Text.Parsing;
+﻿using Domore.Conf.Extensions;
+using Domore.Conf.IO;
+using Domore.Conf.Text.Parsing;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Conf.Text {
-    internal sealed class TextContentProvider : IConfContentProvider {
+    internal sealed class TextContentProvider : ConfContentProviderBase {
         private readonly TokenParser Parse = new();
 
-        public ConfContent GetConfContent(object source, IEnumerable<object> sources) {
-            var s = $"{source}";
-            var p = Parse.Pairs(s);
-            var c = new ConfContent(
-                pairs: p.ToList(),
-                sources: sources?
-                    .Concat(new[] { s })?
-                    .ToArray() ?? new[] { s });
-            return c;
+        private FileOrTextContentProvider FileOrText => _FileOrText ??= new();
+        private FileOrTextContentProvider _FileOrText;
+
+        private List<IConfPair> ConfigInclude(List<IConfPair> existing, List<object> sources, ConfContentProviderContext context) {
+            if (null == existing) throw new ArgumentNullException(nameof(existing));
+            var configKey = context?.ConfigKey?.Trim() ?? "";
+            if (configKey == "") {
+                return existing;
+            }
+            for (var i = 0; i < existing.Count; i++) {
+                var existingPair = existing[i];
+                var existingPairKey = existingPair.Key;
+                if (existingPairKey.StartsWith(configKey)) {
+                    var config = new TextContentConfig().ConfFrom(existingPair.Content, key: configKey);
+                    var includes = config.Include;
+                    if (includes.Count > 0) {
+                        var j = 1;
+                        foreach (var include in includes) {
+                            var includeProvider = FileOrText;
+                            var includeContent = includeProvider.GetConfContent(include, sources, context);
+                            var includePairs = includeContent.Pairs.ToList();
+                            existing.InsertRange(i + j, includePairs);
+                            j += includePairs.Count;
+                        }
+                    }
+                }
+            }
+            return existing;
         }
 
-        ConfContent IConfContentProvider.GetConfContent(object source) {
-            return GetConfContent(source, null);
+        public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
+            var s = $"{source}";
+            var sourceList = sources?.Concat(new[] { s })?.ToList();
+            if (sourceList == null) {
+                sourceList = new List<object>(new[] { s });
+            }
+            var
+            p = Parse.Pairs(s).ToList();
+            p = ConfigInclude(p, sourceList, context);
+            var c = new ConfContent(
+                pairs: p,
+                sources: sourceList);
+            return c;
         }
     }
 }
