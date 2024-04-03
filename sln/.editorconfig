@@ -241,7 +241,7 @@ dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggesti
 dotnet_style_prefer_auto_properties = true:silent
 dotnet_style_object_initializer = true:none
 dotnet_style_prefer_collection_expression = when_types_exactly_match:suggestion
-dotnet_style_collection_initializer = true:suggestion
+dotnet_style_collection_initializer = true:none
 dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
 dotnet_style_prefer_conditional_expression_over_assignment = true:silent
 dotnet_style_prefer_conditional_expression_over_return = true:silent
@@ -260,6 +260,9 @@ dotnet_diagnostic.IDE0017.severity = none
 
 # IDE0074: Use compound assignment
 dotnet_diagnostic.IDE0074.severity = none
+
+# IDE0028: Simplify collection initialization
+dotnet_diagnostic.IDE0028.severity = none
 
 [*.{xml,props,csproj}]
 indent_size = 2
