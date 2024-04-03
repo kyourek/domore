@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <Authors>Ken Yourek</Authors>
-    <Copyright>Copyright © Ken Yourek 2023</Copyright>
+    <Copyright>Copyright © Ken Yourek 2023-2024</Copyright>
     <RootNamespace>Domore</RootNamespace>
     <TargetFrameworks>net40;net45;net46;net47;net48;netstandard2.0;netcoreapp3.1;net6.0;net7.0;net8.0</TargetFrameworks>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
