@@ -1,11 +1,10 @@
-﻿using System;
+﻿using Domore.Conf.Extensions;
+using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Linq;
 
 namespace Domore.Conf.Converters {
-    using Extensions;
-
     public sealed class ConfListItemsAttribute : ConfConverterAttribute {
         internal sealed override ConfValueConverter ConverterInstance =>
             _ConverterInstance ?? (

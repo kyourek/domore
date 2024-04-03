@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Conf.Text {
-    public sealed class TextContentProvider : IConfContentProvider {
-        private readonly TokenParser Parse = new TokenParser();
+    internal sealed class TextContentProvider : IConfContentProvider {
+        private readonly TokenParser Parse = new();
 
         public ConfContent GetConfContent(object source, IEnumerable<object> sources) {
             var s = $"{source}";

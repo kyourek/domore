@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Domore.Conf.Extensions;
+using System;
 
 namespace Domore.Conf.Converters {
-    using Extensions;
-
     public sealed class ConfTextAttribute : ConfConverterAttribute {
         internal sealed override ConfValueConverter ConverterInstance =>
             _ConverterInstance ?? (
