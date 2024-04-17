@@ -1,5 +1,6 @@
 ﻿using Domore.Conf.Extensions;
 using System;
+using System.Linq;
 
 namespace Domore.Conf.Cli {
     public static class Cli {
@@ -39,10 +40,18 @@ namespace Domore.Conf.Cli {
             return Validate(Conf(target, line));
         }
 
-        public static string Display<T>(T target) {
+        public static string Display<T>(T target, CliDisplayOptions options) {
             if (null == target) throw new ArgumentNullException(nameof(target));
             var description = TargetDescription.Describe(target.GetType());
-            return description.Display;
+            var display = description.Display;
+            display = options.HasFlag(CliDisplayOptions.SkipCommandName)
+                ? string.Join(" ", display.Split(' ').Skip(1))
+                : display;
+            return display;
+        }
+
+        public static string Display<T>(T target) {
+            return Display(target, CliDisplayOptions.None);
         }
     }
 }

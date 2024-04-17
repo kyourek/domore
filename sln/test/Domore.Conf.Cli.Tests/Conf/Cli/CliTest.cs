@@ -89,6 +89,13 @@ namespace Domore.Conf.Cli {
             Assert.That(actual, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void Display_ShowsPropertyNamesWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new Bike(), CliDisplayOptions.SkipCommandName);
+            var expected = "move=<up/down/left/right> [speed=<num>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
         private class Blend {
             [CliArgument]
             [CliRequired]
@@ -116,6 +123,13 @@ namespace Domore.Conf.Cli {
         public void Display_ShowsList() {
             var actual = Cli.Display(new Blend());
             var expected = "blend fruits<,> [nuts=<,<peanuts/almonds/cashews>>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_ShowsListWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new Blend(), CliDisplayOptions.SkipCommandName);
+            var expected = "fruits<,> [nuts=<,<peanuts/almonds/cashews>>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -149,6 +163,13 @@ namespace Domore.Conf.Cli {
         public void Display_DisplaysOverrideOnEnumNames() {
             var actual = Cli.Display(new Copy());
             var expected = "copy where<(n)ext/(p)revious>";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_DisplaysOverrideOnEnumNamesWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new Copy(), CliDisplayOptions.SkipCommandName);
+            var expected = "where<(n)ext/(p)revious>";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -214,6 +235,13 @@ namespace Domore.Conf.Cli {
             Assert.That(actual, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void Display_DoesNotIncludeUnincludedEnumMembersWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new ValueWordClass(), CliDisplayOptions.SkipCommandName);
+            var expected = "[word=<none/one>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
         private enum ValueWord2 {
             None = 0,
             [CliDisplay(include: true)]
@@ -256,6 +284,13 @@ namespace Domore.Conf.Cli {
             Assert.That(actual, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void Display_DoesNotIncludeEnumMembersByOverrideWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new ValueWordClass3(), CliDisplayOptions.SkipCommandName);
+            var expected = "[word=<z/s>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
         [Flags]
         private enum FlagsEnum {
             Flag1 = 1,
@@ -285,6 +320,13 @@ namespace Domore.Conf.Cli {
             Assert.That(actual, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void Display_UsesUnderlyingTypeOfNullableWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new NullableFlagsEnumClass(), CliDisplayOptions.SkipCommandName);
+            var expected = "[flags=<flag1|flag2|flag4>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
         private class ClassWithBoolAndStr {
             [CliArgument]
             public string SomeChars { get; set; }
@@ -296,6 +338,13 @@ namespace Domore.Conf.Cli {
         public void Display_DisplaysBooleanSwitchAndOptionalArgument() {
             var actual = Cli.Display(new ClassWithBoolAndStr());
             var expected = "classwithboolandstr [<somechars>] option=<true/false>";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_DisplaysBooleanSwitchAndOptionalArgumentWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new ClassWithBoolAndStr(), CliDisplayOptions.SkipCommandName);
+            var expected = "[<somechars>] option=<true/false>";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -321,6 +370,13 @@ namespace Domore.Conf.Cli {
         public void Display_DoesNotShowReadonlyProperties() {
             var actual = Cli.Display(new ClassWithReadonlyProperties());
             var expected = "classwithreadonlyproperties [readwritelist=<,>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_DoesNotShowReadonlyPropertiesWhenCommandNameIsSkipped() {
+            var actual = Cli.Display(new ClassWithReadonlyProperties(), CliDisplayOptions.SkipCommandName);
+            var expected = "[readwritelist=<,>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -438,6 +494,12 @@ namespace Domore.Conf.Cli {
         public void Display_UsesDisplayOverrideForProperty() {
             var display = Cli.Display(new TargetWithNestedProperties());
             Assert.That(display, Is.EqualTo("targetwithnestedproperties [set.dict[<string>]=<string>]"));
+        }
+
+        [Test]
+        public void Display_UsesDisplayOverrideForPropertyWhenCommandNameIsSkipped() {
+            var display = Cli.Display(new TargetWithNestedProperties(), CliDisplayOptions.SkipCommandName);
+            Assert.That(display, Is.EqualTo("[set.dict[<string>]=<string>]"));
         }
 
         private class HeirarchyBase {
