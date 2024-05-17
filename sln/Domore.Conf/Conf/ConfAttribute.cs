@@ -9,7 +9,7 @@ namespace Domore.Conf {
             Ignore = ignore;
             IgnoreGet = ignoreGet;
             IgnoreSet = ignoreSet;
-            Names = new ReadOnlyCollection<string>(new List<string>(names ?? new string[] { }));
+            Names = new ReadOnlyCollection<string>(new List<string>(names ?? []));
         }
 
         public bool Ignore { get; }

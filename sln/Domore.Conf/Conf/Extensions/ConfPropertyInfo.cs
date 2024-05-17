@@ -4,14 +4,21 @@ using System.Reflection;
 
 namespace Domore.Conf.Extensions {
     internal static class ConfPropertyInfo {
-        public static ConfAttribute GetConfAttribute(this PropertyInfo propertyInfo) {
+        private static T GetAttribute<T>(this PropertyInfo propertyInfo) where T : Attribute {
             if (null == propertyInfo) throw new ArgumentNullException(nameof(propertyInfo));
-            return propertyInfo.GetCustomAttributes(typeof(ConfAttribute), inherit: true)?.FirstOrDefault() as ConfAttribute;
+            return propertyInfo.GetCustomAttributes(typeof(T), inherit: true)?.FirstOrDefault() as T;
+        }
+
+        public static ConfAttribute GetConfAttribute(this PropertyInfo propertyInfo) {
+            return GetAttribute<ConfAttribute>(propertyInfo);
         }
 
         public static ConfConverterAttribute GetConverterAttribute(this PropertyInfo propertyInfo) {
-            if (null == propertyInfo) throw new ArgumentNullException(nameof(propertyInfo));
-            return propertyInfo.GetCustomAttributes(typeof(ConfConverterAttribute), inherit: true)?.FirstOrDefault() as ConfConverterAttribute;
+            return GetAttribute<ConfConverterAttribute>(propertyInfo);
+        }
+
+        public static ConfHelpAttribute GetHelpAttribute(this PropertyInfo propertyInfo) {
+            return GetAttribute<ConfHelpAttribute>(propertyInfo);
         }
     }
 }

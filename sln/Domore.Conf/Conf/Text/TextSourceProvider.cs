@@ -37,7 +37,7 @@ namespace Domore.Conf.Text {
                             value: Multiline($"{v}"));
                     }
                     else {
-                        foreach (var kvp in ConfContents(v, k)) {
+                        foreach (var kvp in ConfContents(v, k, help: false)) {
                             yield return kvp;
                         }
                     }
@@ -68,7 +68,7 @@ namespace Domore.Conf.Text {
                                 value: Multiline($"{v}"));
                         }
                         else {
-                            foreach (var kvp in ConfContents(v, k)) {
+                            foreach (var kvp in ConfContents(v, k, help: false)) {
                                 yield return kvp;
                             }
                         }
@@ -77,7 +77,7 @@ namespace Domore.Conf.Text {
             }
         }
 
-        private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source, string key) {
+        private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source, string key, bool help) {
             var type = source.GetType();
             var properties = type
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -92,6 +92,11 @@ namespace Domore.Conf.Text {
                         if (parameters.Length == 0) {
                             var propertyValue = property.GetValue(source, null);
                             if (propertyValue != null) {
+                                var helpTxt = !help ? null : property.GetHelpAttribute()?.Format("# ");
+                                if (helpTxt != null) {
+                                    yield return new KeyValuePair<string, string>("", null);
+                                    yield return new KeyValuePair<string, string>(helpTxt, null);
+                                }
                                 var propertyValueType = propertyValue.GetType();
                                 if (propertyValueType.IsValueType || propertyValueType == typeof(string)) {
                                     if (property.CanWrite) {
@@ -105,7 +110,10 @@ namespace Domore.Conf.Text {
                                     }
                                 }
                                 else {
-                                    var cc = ConfContents(propertyValue, k(property.Name));
+                                    var cc = ConfContents(
+                                        source: propertyValue,
+                                        key: k(property.Name),
+                                        help: help);
                                     foreach (var item in cc) {
                                         yield return item;
                                     }
@@ -117,7 +125,7 @@ namespace Domore.Conf.Text {
             }
         }
 
-        private IEnumerable<KeyValuePair<string, string>> ConfContents(object source, string key = null) {
+        private IEnumerable<KeyValuePair<string, string>> ConfContents(object source, string key, bool help) {
             if (null == source) throw new ArgumentNullException(nameof(source));
 
             var list = source as IList;
@@ -130,15 +138,19 @@ namespace Domore.Conf.Text {
                 return DictionaryConfContents(dictionary, key);
             }
 
-            return DefaultConfContents(source, key);
+            return DefaultConfContents(source, key, help);
         }
 
         public string GetConfSource(object obj, string key = null, bool? multiline = null) {
             var equals = multiline == false ? "=" : " = ";
             var separator = multiline == false ? ";" : Environment.NewLine;
-            var confContents = ConfContents(obj, key);
-            return string.Join(separator, confContents
-                .Select(pair => string.Join(equals, pair.Key, pair.Value)));
+            var confContents = ConfContents(obj, key, help: multiline != false);
+            return string
+                .Join(separator, confContents
+                    .Select(pair => pair.Value == null
+                        ? pair.Key
+                        : string.Join(equals, pair.Key, pair.Value)))
+                .Trim();
         }
     }
 }

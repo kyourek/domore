@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Domore.Conf.Converters;
+using Domore.Conf.Extensions;
+using System;
 using System.Linq;
 using System.Reflection;
-using Domore.Conf.Converters;
-using Domore.Conf.Extensions;
 
 namespace Domore.Conf {
 
@@ -11,14 +11,12 @@ namespace Domore.Conf {
         public IConfKeyPart Key { get; }
         public ConfPropertyCache Cache { get; }
 
-        private ConfProperty Property =>
-            _Property ?? (
-            _Property = Cache.Get(TargetType, Key.Content));
+        private ConfProperty Property => _Property ??=
+            Cache.Get(TargetType, Key.Content);
         private ConfProperty _Property;
 
-        public string IndexString =>
-            _IndexString ?? (
-            _IndexString = string.Join("", Key.Indices.Select(i => $"[{string.Join(",", i.Parts.Select(p => p.Content))}]")));
+        public string IndexString => _IndexString ??=
+            string.Join("", Key.Indices.Select(i => $"[{string.Join(",", i.Parts.Select(p => p.Content))}]"));
         private string _IndexString;
 
         public object[] Index {
@@ -47,39 +45,28 @@ namespace Domore.Conf {
         }
         private object[] _Index;
 
-        public Type TargetType =>
-            _TargetType ?? (
-            _TargetType = Target.GetType());
+        public Type TargetType => _TargetType ??= Target.GetType();
         private Type _TargetType;
 
-        public PropertyInfo PropertyInfo =>
-            _PropertyInfo ?? (
-            _PropertyInfo = Property.PropertyInfo);
+        public PropertyInfo PropertyInfo => _PropertyInfo ??= Property.PropertyInfo;
         private PropertyInfo _PropertyInfo;
 
-        public Type PropertyType =>
-            _PropertyType ?? (
-            _PropertyType = PropertyInfo.PropertyType);
+        public Type PropertyType => _PropertyType ??= PropertyInfo.PropertyType;
         private Type _PropertyType;
 
-        public ConfAttribute ConfAttribute =>
-            _ConfAttribute ?? (
-            _ConfAttribute = PropertyInfo.GetConfAttribute());
+        public ConfAttribute ConfAttribute => _ConfAttribute ??= PropertyInfo.GetConfAttribute();
         private ConfAttribute _ConfAttribute;
 
-        public ConfConverterAttribute ConverterAttribute =>
-            _ConverterAttribute ?? (
-            _ConverterAttribute = PropertyInfo.GetConverterAttribute());
+        public ConfConverterAttribute ConverterAttribute => _ConverterAttribute ??= PropertyInfo.GetConverterAttribute();
         private ConfConverterAttribute _ConverterAttribute;
 
-        public bool Exists =>
-            _Exists ?? (
-            _Exists = PropertyInfo != null).Value;
+        public ConfHelpAttribute HelpAttribute => _HelpAttribute ??= PropertyInfo.GetHelpAttribute();
+        private ConfHelpAttribute _HelpAttribute;
+
+        public bool Exists => _Exists ??= PropertyInfo != null;
         private bool? _Exists;
 
-        public bool Populate =>
-            _Populate ?? (
-            _Populate = ConfAttribute?.IgnoreSet != true).Value;
+        public bool Populate => _Populate ??= ConfAttribute?.IgnoreSet != true;
         private bool? _Populate;
 
         public ConfItemProperty Item {
