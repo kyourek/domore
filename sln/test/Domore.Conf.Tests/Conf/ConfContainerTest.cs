@@ -910,6 +910,47 @@ namespace Domore.Conf {
         }
 
         [Test]
+        public void IncludeExpandsSpecialFolderName() {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
+            try {
+                Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
+                File.WriteAllText(localInclude, "depth = 27");
+                Content = @"
+                    depth = 24
+                    conf.INCLUDE = {LocalApplicationData}/Domore/Conf/Test/include.conf
+                ";
+                Subject.Special = "conf";
+                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+                var expected = 27;
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                File.Delete(localInclude);
+            }
+        }
+
+        [Test]
+        public void IncludeExpandsEnvironmentVariable() {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
+            try {
+                Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
+                File.WriteAllText(localInclude, "depth = 28");
+                Content = @"
+                    depth = 24
+                    conf.INCLUDE = %LOCALAPPDATA%/Domore/Conf/Test/include.conf";
+                Subject.Special = "conf";
+                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+                var expected = 28;
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                File.Delete(localInclude);
+            }
+        }
+
+        [Test]
         public void LastIncludeInAListOverridesOthers() {
             var t1 = TempFile();
             var t2 = TempFile();

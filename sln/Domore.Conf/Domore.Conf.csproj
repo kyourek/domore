@@ -10,4 +10,5 @@
   <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
+  <Import Project="..\Domore.Sharing\Domore.Sharing.projitems" Label="Shared" />
 </Project>
