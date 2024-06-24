@@ -7,17 +7,17 @@
     <TargetFrameworks>net40;net45;net46;net47;net48;netstandard2.0;netcoreapp3.1;net6.0;net7.0;net8.0</TargetFrameworks>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <LangVersion>12.0</LangVersion>
-    <VersionPrefix>8.2.1.99</VersionPrefix>
+    <VersionPrefix>8.2.1.100</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <AssemblyVersion>8.2.1.99</AssemblyVersion>
-    <InformationalVersion>8.2.1.99</InformationalVersion>
-    <FileVersion>8.2.1.99</FileVersion>
-    <PackageVersion>8.2.1.99</PackageVersion>
+    <AssemblyVersion>8.2.1.100</AssemblyVersion>
+    <InformationalVersion>8.2.1.100</InformationalVersion>
+    <FileVersion>8.2.1.100</FileVersion>
+    <PackageVersion>8.2.1.100</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/kyourek/domore.git</RepositoryUrl>
     <RepositoryBranch>master</RepositoryBranch>
-    <RepositoryCommit>190467491e6b0d71c12f70a27c19bacc72fc7059</RepositoryCommit>
+    <RepositoryCommit>1869aa1b0b671b3ca8ef01e0c194c67db9f22631</RepositoryCommit>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <IncludeSymbols>true</IncludeSymbols>
