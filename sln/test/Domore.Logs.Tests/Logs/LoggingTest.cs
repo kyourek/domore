@@ -332,6 +332,33 @@ namespace Domore.Logs {
         }
 
         [Test]
+        public void FileRecreatesFileIfDeleted() {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var file = Path.Combine(dir, "test.log");
+            try {
+                ConfigFile($@"
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    log[f].service.name = test.log
+                    log[f].service.flush interval = 00:00:00.01
+                    LOG[f].config.default.format = {{sev}}
+                ");
+                Log.Warn("Message 1");
+                Thread.Sleep(100);
+                Directory.Delete(dir, recursive: true);
+                Log.Warn("Message 2");
+                Logging.Complete();
+                var actual = File.ReadAllText(file).Trim();
+                var expected = "wrn Message 2";
+                Assert.That(actual, Is.EqualTo(expected));
+            }
+            finally {
+                if (Directory.Exists(dir)) {
+                    Directory.Delete(dir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void LogEventIsRaised() {
             var message = "";
 #pragma warning disable CS0618 // Type or member is obsolete

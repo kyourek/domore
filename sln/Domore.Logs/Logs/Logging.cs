@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace Domore.Logs {
@@ -40,6 +41,7 @@ namespace Domore.Logs {
         }
 
         [Obsolete($"LogEvent is deprecated. Please use {nameof(Event)} instead.")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static event LogEventHandler LogEvent {
             add => Event += value;
             remove => Event -= value;
@@ -51,6 +53,7 @@ namespace Domore.Logs {
         }
 
         [Obsolete($"LogEventSeverity is deprecated. Please use {nameof(EventThreshold)} instead.")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static LogSeverity LogEventSeverity {
             get => EventThreshold;
             set => EventThreshold = value;

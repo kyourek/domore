@@ -13,17 +13,15 @@ namespace Domore.Logs.Service {
         private readonly ConcurrentQueue<string> Queue = new();
         private readonly PathFormatter PathFormatter = new();
 
-        private FileInfo FileInfo =>
-            _FileInfo ?? (
-            _FileInfo = new FileInfo(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name))));
+        private FileInfo FileInfo => _FileInfo ??=
+            new FileInfo(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
         private FileInfo _FileInfo;
 
-        private DirectoryInfo DirectoryInfo =>
-            _DirectoryInfo ?? (
-            _DirectoryInfo = new DirectoryInfo(
+        private DirectoryInfo DirectoryInfo => _DirectoryInfo ??=
+            new DirectoryInfo(
                 PathFormatter.Format(
                     PathFormatter.Expand(
-                        Environment.ExpandEnvironmentVariables(Directory)))));
+                        Environment.ExpandEnvironmentVariables(Directory))));
         private DirectoryInfo _DirectoryInfo;
 
         private string FileDateName() {
@@ -79,6 +77,10 @@ namespace Domore.Logs.Service {
                 return;
             }
             fileInfo.Refresh();
+            var exists = fileInfo.Exists;
+            if (exists == false) {
+                return;
+            }
             var size = fileInfo.Length;
             if (size < FileSizeLimit) {
                 return;
@@ -134,11 +136,13 @@ namespace Domore.Logs.Service {
                     if (limit <= retry) {
                         throw;
                     }
-                    var delay = IORetryDelay;
-                    if (delay > 0) {
-                        Thread.Sleep(delay);
-                    }
                 }
+                var delay = IORetryDelay;
+                if (delay > 0) {
+                    Thread.Sleep(delay);
+                }
+                DirectoryInfo.Refresh();
+                FileInfo.Refresh();
             }
         }
 
