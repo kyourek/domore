@@ -67,10 +67,12 @@ namespace Domore.Conf.Cli {
         private IEnumerable<TargetMethodValidation> _Validations;
 
         public static TargetDescription Describe(Type targetType) {
-            if (Cache.TryGetValue(targetType, out var targetDescription) == false) {
-                Cache[targetType] = targetDescription = new TargetDescription(targetType);
+            lock (Cache) {
+                if (Cache.TryGetValue(targetType, out var targetDescription) == false) {
+                    Cache[targetType] = targetDescription = new TargetDescription(targetType);
+                }
+                return targetDescription;
             }
-            return targetDescription;
         }
 
         public IEnumerable<string> Conf(string cli) {

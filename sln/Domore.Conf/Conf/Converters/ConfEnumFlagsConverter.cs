@@ -6,7 +6,7 @@ using System.Linq;
 namespace Domore.Conf.Converters {
     internal sealed class ConfEnumFlagsConverter {
         private static readonly string DefaultSeparators = "+|&,/\\";
-        private static readonly Dictionary<Type, Dictionary<string, HashSet<string>>> AliasCache = new Dictionary<Type, Dictionary<string, HashSet<string>>>();
+        private static readonly Dictionary<Type, Dictionary<string, HashSet<string>>> AliasCache = [];
 
         public object Convert(string value, Type toType) {
             if (null == value) throw new ArgumentNullException(nameof(value));

@@ -203,9 +203,11 @@ namespace Domore.Logs.Service {
             set {
                 if (_Directory != value) {
                     lock (Locker) {
-                        _Directory = value;
-                        _DirectoryInfo = null;
-                        _FileInfo = null;
+                        if (_Directory != value) {
+                            _Directory = value;
+                            _DirectoryInfo = null;
+                            _FileInfo = null;
+                        }
                     }
                 }
             }
@@ -217,8 +219,10 @@ namespace Domore.Logs.Service {
             set {
                 if (_Name != value) {
                     lock (Locker) {
-                        _Name = value;
-                        _FileInfo = null;
+                        if (_Name != value) {
+                            _Name = value;
+                            _FileInfo = null;
+                        }
                     }
                 }
             }

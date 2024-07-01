@@ -1,4 +1,6 @@
-﻿namespace Domore.Logs {
+﻿using System.Threading;
+
+namespace Domore.Logs {
     internal sealed class LogServiceProxy {
         private static readonly LogServiceFactory Factory = new();
 
@@ -17,7 +19,9 @@
                 if (_Service == null) {
                     lock (Locker) {
                         if (_Service == null) {
-                            _Service = Factory.Create(Type) ?? new None();
+                            var service = Factory.Create(Type) ?? new None();
+                            Thread.MemoryBarrier();
+                            _Service = service;
                         }
                     }
                 }
@@ -31,7 +35,9 @@
                 if (_Config == null) {
                     lock (Locker) {
                         if (_Config == null) {
-                            _Config = new LogServiceConfig();
+                            var config = new LogServiceConfig();
+                            Thread.MemoryBarrier();
+                            _Config = config;
                         }
                     }
                 }
@@ -41,12 +47,14 @@
         private LogServiceConfig _Config;
 
         public string Type {
-            get => _Type ?? (_Type = Name);
+            get => _Type ??= Name;
             set {
                 if (_Type != value) {
                     lock (Locker) {
-                        _Type = value;
-                        _Service = null;
+                        if (_Type != value) {
+                            _Type = value;
+                            _Service = null;
+                        }
                     }
                 }
             }

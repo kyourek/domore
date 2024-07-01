@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 namespace Domore.Conf {
     internal sealed class ConfValueConverterCache {
-        private readonly ConfValueConverter Default = new ConfValueConverter();
-        private readonly Dictionary<Type, ConfValueConverter> Cache = new Dictionary<Type, ConfValueConverter>();
+        private readonly ConfValueConverter Default = new();
+        private readonly Dictionary<Type, ConfValueConverter> Cache = [];
 
         private static ConfValueConverter Create(Type type) {
             return (ConfValueConverter)Activator.CreateInstance(type);

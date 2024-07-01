@@ -6,8 +6,8 @@ using System.Threading;
 namespace Domore.Threading {
     internal sealed class BackgroundQueue : IDisposable {
         private Thread Thread;
-        private readonly object ThreadLocker = new object();
-        private readonly BlockingCollection<Action> Collection = new BlockingCollection<Action>();
+        private readonly object ThreadLocker = new();
+        private readonly BlockingCollection<Action> Collection = new();
 
         private void ThreadStart() {
             for (; ; ) {
@@ -83,9 +83,12 @@ namespace Domore.Threading {
                 if (Thread == null) {
                     lock (ThreadLocker) {
                         if (Thread == null) {
-                            Thread = new Thread(ThreadStart);
-                            Thread.Name = GetType().Name;
-                            Thread.IsBackground = true;
+                            var thread = new Thread(ThreadStart) {
+                                Name = GetType().Name,
+                                IsBackground = true
+                            };
+                            Thread.MemoryBarrier();
+                            Thread = thread;
                             Thread.Start();
                         }
                     }

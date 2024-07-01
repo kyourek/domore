@@ -6,10 +6,10 @@ using PATH = System.IO.Path;
 
 namespace Domore.Conf {
     public sealed class ConfFile : IDisposable {
-        private readonly object WatcherLocker = new object();
-        private readonly object ConfigureLocker = new object();
-        private readonly DelayedState DelayedState = new DelayedState { Delay = 1000 };
-        private FileSystemWatcher Watcher;
+        private readonly object WatcherLocker = new();
+        private readonly object ConfigureLocker = new();
+        private readonly DelayedState DelayedState = new() { Delay = 1000 };
+        private volatile FileSystemWatcher Watcher;
         private Action CancelDelay;
         private string CanonicalName;
         private bool Disposed;

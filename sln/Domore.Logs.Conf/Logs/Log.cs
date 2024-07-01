@@ -1,8 +1,8 @@
 ﻿namespace Domore.Logs {
     public static class Log {
         public static class Conf {
-            private static readonly object Locker = new object();
-            private static LogConfFile File;
+            private static readonly object Locker = new();
+            private static volatile LogConfFile File;
 
             public static bool Configured =>
                 File != null;

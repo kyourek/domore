@@ -7,7 +7,7 @@ namespace Domore.Threading.Tasks {
         private readonly object Locker = new();
 
         private bool Cached;
-        private Task<TResult> Task;
+        private volatile Task<TResult> Task;
 
         public TResult Result { get; private set; }
         public Func<CancellationToken, Task<TResult>> Factory { get; }
@@ -21,12 +21,12 @@ namespace Domore.Threading.Tasks {
                 if (Task == null) {
                     lock (Locker) {
                         if (Task == null) {
-                            Task = Factory(token);
+                            Task = Factory(token) ?? throw new InvalidOperationException("The returned task from the factory is null.");
                         }
                     }
                 }
                 try {
-                    Result = await Task;
+                    Result = await Task.ConfigureAwait(false);
                 }
                 catch {
                     lock (Locker) {
@@ -43,9 +43,9 @@ namespace Domore.Threading.Tasks {
             public WithRefresh(Func<CancellationToken, Task<TResult>> factory) : base(factory) {
             }
 
-            public async Task<TResult> Refreshed(CancellationToken token) {
+            public Task<TResult> Refreshed(CancellationToken token) {
                 Refresh();
-                return await Ready(token);
+                return Ready(token);
             }
 
             public void Refresh() {

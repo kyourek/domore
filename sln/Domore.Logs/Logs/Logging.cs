@@ -1,19 +1,22 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Domore.Logs {
     public sealed class Logging {
-        private static readonly object ManagerLocker = new object();
-        private static readonly object CompleteLocker = new object();
-        private readonly static Logging Instance = new Logging();
+        private static readonly object ManagerLocker = new();
+        private static readonly object CompleteLocker = new();
+        private static readonly Logging Instance = new();
 
         private LogManager Manager {
             get {
                 if (_Manager == null) {
                     lock (ManagerLocker) {
                         if (_Manager == null) {
-                            _Manager = new LogManager();
+                            var manager = new LogManager();
+                            Thread.MemoryBarrier();
+                            _Manager = manager;
                         }
                     }
                 }

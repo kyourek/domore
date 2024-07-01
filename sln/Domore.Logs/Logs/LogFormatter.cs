@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Domore.Logs {
     internal sealed class LogFormatter {
-        private ConcurrentDictionary<Type, Func<object, string[]>> Lookup { get; } = new ConcurrentDictionary<Type, Func<object, string[]>>();
+        private ConcurrentDictionary<Type, Func<object, string[]>> Lookup { get; } = [];
 
         private IEnumerable<string> Split(string s) {
             return (s ?? "")
@@ -19,7 +19,7 @@ namespace Domore.Logs {
         private IEnumerable<string> Format(object obj, bool expandEnumerable) {
             if (obj == null) return new[] { "" };
             if (obj is string s) return Split(s);
-            if (Lookup.Count > 0) {
+            if (Lookup.IsEmpty == false) {
                 if (Lookup.TryGetValue(obj.GetType(), out var format)) {
                     if (format != null) {
                         return format(obj);

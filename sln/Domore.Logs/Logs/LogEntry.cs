@@ -12,7 +12,7 @@ namespace Domore.Logs {
             { LogSeverity.Warn, "wrn" }
         };
 
-        private readonly Dictionary<string, string> Format = new();
+        private readonly Dictionary<string, string> Format = [];
 
         private string GetFormat(string format) {
             var s = format
