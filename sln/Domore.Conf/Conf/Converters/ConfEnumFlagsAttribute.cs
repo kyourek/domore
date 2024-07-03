@@ -1,12 +1,18 @@
 ﻿using System;
 
 namespace Domore.Conf.Converters {
+    /// <summary>
+    /// Converts conf content to enum flags.
+    /// </summary>
     public sealed class ConfEnumFlagsAttribute : ConfConverterAttribute {
         internal sealed override ConfValueConverter ConverterInstance =>
             _ConverterInstance ?? (
             _ConverterInstance = new ValueConverter { Separators = Separators });
         private ConfValueConverter _ConverterInstance;
 
+        /// <summary>
+        /// Gets or sets the string separators between flags.
+        /// </summary>
         public string Separators {
             get => _Separators;
             set {

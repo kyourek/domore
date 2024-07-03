@@ -1,12 +1,16 @@
 ﻿using System;
 
 namespace Domore.Conf.Converters {
+    /// <summary>
+    /// Conversion occurs from conf identified by a key.
+    /// </summary>
     public sealed class ConfKeyAttribute : ConfConverterAttribute {
-        internal sealed override ConfValueConverter ConverterInstance =>
-            _ConverterInstance ?? (
-            _ConverterInstance = new ValueConverter { PropertySetByKey = PropertySetByKey });
+        internal sealed override ConfValueConverter ConverterInstance => _ConverterInstance ??= new ValueConverter { PropertySetByKey = PropertySetByKey };
         private ConfValueConverter _ConverterInstance;
 
+        /// <summary>
+        /// Gets or sets the key that identifies the conf used in conversion.
+        /// </summary>
         public string PropertySetByKey {
             get => _PropertySetByKey;
             set {

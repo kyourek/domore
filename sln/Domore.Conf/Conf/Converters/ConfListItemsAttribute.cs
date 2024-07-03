@@ -5,19 +5,23 @@ using System.ComponentModel;
 using System.Linq;
 
 namespace Domore.Conf.Converters {
+    /// <summary>
+    /// Conversion of conf text to an instance of a list.
+    /// </summary>
     public sealed class ConfListItemsAttribute : ConfConverterAttribute {
-        internal sealed override ConfValueConverter ConverterInstance =>
-            _ConverterInstance ?? (
-            _ConverterInstance = new ValueConverter {
-                Separator = Separator,
-                ItemConverter = ItemConverter == null
-                    ? null
-                    : Activator.CreateInstance(ItemConverter)
-            });
+        internal sealed override ConfValueConverter ConverterInstance => _ConverterInstance ??= new ValueConverter {
+            Separator = Separator,
+            ItemConverter = ItemConverter == null
+                ? null
+                : Activator.CreateInstance(ItemConverter)
+        };
         private ConfValueConverter _ConverterInstance;
 
+        /// <summary>
+        /// Gets or sets the string separator between items in the list.
+        /// </summary>
         public string Separator {
-            get => _Separator ?? (_Separator = ",");
+            get => _Separator ??= ",";
             set {
                 if (_Separator != value) {
                     _Separator = value;
@@ -27,6 +31,9 @@ namespace Domore.Conf.Converters {
         }
         private string _Separator;
 
+        /// <summary>
+        /// Gets or sets the type of the converter used to convert conf text into the items of the list.
+        /// </summary>
         public Type ItemConverter {
             get => _ItemConverter;
             set {

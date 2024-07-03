@@ -2,6 +2,9 @@
 using System;
 
 namespace Domore.Conf.Converters {
+    /// <summary>
+    /// Conversion is done by considering the value as conf text.
+    /// </summary>
     public sealed class ConfTextAttribute : ConfConverterAttribute {
         internal sealed override ConfValueConverter ConverterInstance =>
             _ConverterInstance ?? (

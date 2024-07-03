@@ -3,6 +3,9 @@ using System;
 using System.Collections;
 
 namespace Domore.Conf {
+    /// <summary>
+    /// A converter of serialized values in conf.
+    /// </summary>
     public class ConfValueConverter {
         private static readonly ConfValueConverter DefaultListItemsConverter = new ConfListItemsAttribute().ConverterInstance;
         private static readonly ConfValueConverter DefaultEnumFlagsConverter = new ConfEnumFlagsAttribute().ConverterInstance;
@@ -32,6 +35,13 @@ namespace Domore.Conf {
             }
         }
 
+        /// <summary>
+        /// Converts <paramref name="value"/> to populate a member.
+        /// </summary>
+        /// <param name="value">The value to be converted.</param>
+        /// <param name="state">The state of the conversion.</param>
+        /// <returns>The converted value.</returns>
+        /// <exception cref="ConfValueConverterException">Thrown if an error occurs during conversion.</exception>
         public virtual object Convert(string value, ConfValueConverterState state) {
             try {
                 return Default(value, state);

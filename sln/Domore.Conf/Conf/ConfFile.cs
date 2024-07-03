@@ -5,6 +5,9 @@ using System.Linq;
 using PATH = System.IO.Path;
 
 namespace Domore.Conf {
+    /// <summary>
+    /// A file with conf content that may populate an object upon file-system events.
+    /// </summary>
     public sealed class ConfFile : IDisposable {
         private readonly object WatcherLocker = new();
         private readonly object ConfigureLocker = new();
@@ -56,11 +59,19 @@ namespace Domore.Conf {
             }
         }
 
+        /// <summary>
+        /// Gets or sets the delay, in milliseconds, between events.
+        /// </summary>
         public int Delay {
             get => DelayedState.Delay;
             set => DelayedState.Delay = value;
         }
 
+        /// <summary>
+        /// Configures <see cref="Target"/> and optionally begins watching for changes.
+        /// </summary>
+        /// <param name="watch">True to watch for changes, otherwise false.</param>
+        /// <exception cref="ObjectDisposedException">Thrown if this object is disposed.</exception>
         public void Configure(bool? watch = null) {
             lock (ConfigureLocker) {
                 if (Disposed) {
@@ -123,16 +134,52 @@ namespace Domore.Conf {
             }
         }
 
+        /// <summary>
+        /// Raised when <see cref="Target"/> is populated.
+        /// </summary>
         public event EventHandler Configured;
+
+        /// <summary>
+        /// Raised if a watch error occurs.
+        /// </summary>
         public event ErrorEventHandler WatchError;
+
+        /// <summary>
+        /// Raised if an error occurs during population triggered by an event.
+        /// </summary>
         public event ErrorEventHandler ConfigureError;
 
+        /// <summary>
+        /// Gets the path of the file.
+        /// </summary>
         public string Path { get; }
+
+        /// <summary>
+        /// Gets the name of the file.
+        /// </summary>
         public string Name { get; }
+
+        /// <summary>
+        /// Gets the directory of the file.
+        /// </summary>
         public string Directory { get; }
+
+        /// <summary>
+        /// Gets the object to be populated.
+        /// </summary>
         public object Target { get; }
+
+        /// <summary>
+        /// Gets the key used to populate the <see cref="Target"/>.
+        /// </summary>
         public string Key { get; }
 
+        /// <summary>
+        /// Creates a new instance of <see cref="ConfFile"/>.
+        /// </summary>
+        /// <param name="path">The path of the file.</param>
+        /// <param name="key">The key used to populate the <paramref name="target"/>.</param>
+        /// <param name="target">The object to be populated.</param>
         public ConfFile(string path, string key, object target) {
             Target = target;
             Key = key;
@@ -141,11 +188,17 @@ namespace Domore.Conf {
             Directory = PATH.GetDirectoryName(Path);
         }
 
+        /// <summary>
+        /// Disposes of resources used by the instance.
+        /// </summary>
         public void Dispose() {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Destructor of <see cref="ConfFile"/>.
+        /// </summary>
         ~ConfFile() {
             Dispose(false);
         }
