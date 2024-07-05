@@ -15,7 +15,7 @@ namespace Domore.Threading.Tasks {
 
         /// <summary>
         /// Gets the value of the result of the task that was cached due to successful completion of the task,
-        /// or the default value of <see cref="TResult"/> if the task has not yet successfully completed.
+        /// or the default value of <typeparamref name="TResult"/> if the task has not yet successfully completed.
         /// </summary>
         public TResult Result { get; private set; }
 
