@@ -1,9 +1,14 @@
 ﻿using Domore.Conf.Extensions;
 using System;
-using System.Linq;
 
 namespace Domore.Conf.Cli {
     public static class Cli {
+        private static CliSetup SetupObject {
+            get => _SetupObject ??= new();
+            set => _SetupObject = value;
+        }
+        private static CliSetup _SetupObject;
+
         private static T Validate<T>(T target) {
             if (null == target) throw new ArgumentNullException(nameof(target));
             var description = TargetDescription.Describe(target.GetType());
@@ -36,6 +41,10 @@ namespace Domore.Conf.Cli {
             return target;
         }
 
+        internal static CliSetup Setup() {
+            return SetupObject;
+        }
+
         public static T Configure<T>(T target, string line) {
             return Validate(Conf(target, line));
         }
@@ -43,15 +52,33 @@ namespace Domore.Conf.Cli {
         public static string Display<T>(T target, CliDisplayOptions options) {
             if (null == target) throw new ArgumentNullException(nameof(target));
             var description = TargetDescription.Describe(target.GetType());
-            var display = description.Display;
-            display = options.HasFlag(CliDisplayOptions.SkipCommandName)
-                ? string.Join(" ", display.Split(' ').Skip(1))
-                : display;
+            var display = description.Display(options);
             return display;
         }
 
         public static string Display<T>(T target) {
             return Display(target, CliDisplayOptions.None);
+        }
+
+        public static string Manual<T>(T target, CliDisplayOptions options) {
+            if (null == target) throw new ArgumentNullException(nameof(target));
+            var description = TargetDescription.Describe(target.GetType());
+            var manual = description.Manual(options);
+            return manual;
+        }
+
+        public static string Manual<T>(T target) {
+            return Manual(target, CliDisplayOptions.None);
+        }
+
+        public static void Setup(Action<CliSetup> set) {
+            if (set == null) {
+                SetupObject = null;
+            }
+            else {
+                set(SetupObject);
+            }
+            TargetDescription.Clear();
         }
     }
 }

@@ -1,14 +1,13 @@
-﻿using System;
+﻿using Domore.Conf.Extensions;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Domore.Conf.Cli {
-    using Extensions;
-
     internal static class TargetPropertyKind {
-        private static readonly HashSet<Type> Numbers = new HashSet<Type>(new[] { typeof(decimal), typeof(double), typeof(float) });
-        private static readonly HashSet<Type> Integers = new HashSet<Type>(new[] { typeof(byte), typeof(sbyte), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(short), typeof(ushort) });
+        private static readonly HashSet<Type> Numbers = new(new[] { typeof(decimal), typeof(double), typeof(float) });
+        private static readonly HashSet<Type> Integers = new(new[] { typeof(byte), typeof(sbyte), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(short), typeof(ushort) });
 
         private static string For(Type type) {
             if (type == null) {

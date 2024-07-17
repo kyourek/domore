@@ -60,9 +60,6 @@ namespace Domore.Conf {
         public ConfConverterAttribute ConverterAttribute => _ConverterAttribute ??= PropertyInfo.GetConverterAttribute();
         private ConfConverterAttribute _ConverterAttribute;
 
-        public ConfHelpAttribute HelpAttribute => _HelpAttribute ??= PropertyInfo.GetHelpAttribute();
-        private ConfHelpAttribute _HelpAttribute;
-
         public bool Exists => _Exists ??= PropertyInfo != null;
         private bool? _Exists;
 

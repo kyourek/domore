@@ -5,53 +5,63 @@ using System.Reflection;
 
 namespace Domore.Conf.Cli {
     internal sealed class TargetDescription {
+        private readonly Dictionary<CliDisplayOptions, string> DisplayCache = new();
+        private readonly Dictionary<CliDisplayOptions, string> ManualCache = new();
+
         private static readonly Dictionary<Type, TargetDescription> Cache = [];
+
+        private IEnumerable<TargetPropertyDescription> DisplayedProperties => _DisplayedProperties ??=
+            Properties
+                .Where(p => p.DisplayAttribute.Include ?? DisplayDefault)
+                .OrderBy(p => p.ArgumentOrder > -1 ? p.ArgumentOrder : int.MaxValue)
+                .ToList();
+        private IEnumerable<TargetPropertyDescription> _DisplayedProperties;
 
         private TargetDescription(Type targetType) {
             TargetType = targetType ?? throw new ArgumentNullException(nameof(targetType));
         }
 
-        private string DisplayFactory() {
-            var propertyDisplayDefault = DisplayDefault;
-            var propertyDisplays = Properties
-                .Where(p => p.DisplayAttribute.Include ?? propertyDisplayDefault)
-                .Select(p => p.Display);
-            var properties = string.Join(" ", propertyDisplays);
-            return string.Join(" ", CommandName, properties);
-        }
-
         public Type TargetType { get; }
 
-        public IEnumerable<TargetPropertyDescription> Properties =>
-            _Properties ?? (
-            _Properties = TargetType
+        public IEnumerable<TargetPropertyDescription> Properties => _Properties ??=
+            TargetType
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(propertyInfo => propertyInfo.CanRead && propertyInfo.CanWrite)
                 .Select(propertyInfo => new TargetPropertyDescription(propertyInfo))
-                .ToList());
+                .ToList();
         private IEnumerable<TargetPropertyDescription> _Properties;
 
-        public string CommandName =>
-            _CommandName ?? (
-            _CommandName = TargetType.Name.ToLowerInvariant());
+        public string Example => _Example ??= new Func<string>(() => {
+            var examples = TargetType
+                .GetCustomAttributes(typeof(CliExampleAttribute), inherit: true)
+                .OfType<CliExampleAttribute>()
+                .Select(attribute => attribute.Format(CommandInvoke));
+            return string.Join(Environment.NewLine, examples).Trim();
+        })();
+        private string _Example;
+
+        public string CommandName => _CommandName ??= (Cli.Setup().CommandName(TargetType) ?? TargetType.Name.ToLowerInvariant());
         private string _CommandName;
 
-        public string Display =>
-            _Display ?? (
-            _Display = DisplayFactory());
-        private string _Display;
+        public string CommandSpace => _CommandSpace ??= (Cli.Setup().CommandSpace(TargetType) ?? "");
+        private string _CommandSpace;
 
-        public bool DisplayDefault =>
-            _DisplayDefault ?? (
-            _DisplayDefault =
-                Properties.Any(p => p.DisplayAttribute.Include == true) ? false :
-                Properties.Any(p => p.DisplayAttribute.Include == false) ? true :
-                true).Value;
+        public string CommandInvoke => _CommandInvoke ??= new Func<string>(() => {
+            var name = CommandName;
+            var space = CommandSpace;
+            var invoke = string.IsNullOrWhiteSpace(space) ? name : $"{space} {name}";
+            return invoke;
+        })();
+        private string _CommandInvoke;
+
+        public bool DisplayDefault => _DisplayDefault ??= (
+            Properties.Any(p => p.DisplayAttribute.Include == true) ? false :
+            Properties.Any(p => p.DisplayAttribute.Include == false) ? true :
+            true);
         private bool? _DisplayDefault;
 
-        public IEnumerable<TargetMethodValidation> Validations =>
-            _Validations ?? (
-            _Validations = TargetType
+        public IEnumerable<TargetMethodValidation> Validations => _Validations ??=
+            TargetType
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance)
                 .Select(method => new {
                     Method = method,
@@ -63,7 +73,7 @@ namespace Domore.Conf.Cli {
                 .Where(item => item.Attribute != null)
                 .OrderBy(item => item.Attribute.Order)
                 .Select(item => new TargetMethodValidation(item.Method, item.Attribute))
-                .ToList());
+                .ToList();
         private IEnumerable<TargetMethodValidation> _Validations;
 
         public static TargetDescription Describe(Type targetType) {
@@ -72,6 +82,51 @@ namespace Domore.Conf.Cli {
                     Cache[targetType] = targetDescription = new TargetDescription(targetType);
                 }
                 return targetDescription;
+            }
+        }
+
+        public static void Clear() {
+            lock (Cache) {
+                Cache.Clear();
+            }
+        }
+
+        public string Display(CliDisplayOptions options) {
+            lock (DisplayCache) {
+                if (DisplayCache.TryGetValue(options, out var value) == false) {
+                    DisplayCache[options] = value = new Func<string>(() => {
+                        var propertyDisplays = DisplayedProperties.Select(p => p.Display);
+                        var propertyDisplay = string.Join(" ", propertyDisplays);
+                        if (options.HasFlag(CliDisplayOptions.SkipCommandName)) {
+                            return propertyDisplay;
+                        }
+                        return string.Join(" ", CommandName, propertyDisplay);
+                    })();
+                }
+                return value;
+            }
+        }
+
+        public string Manual(CliDisplayOptions options) {
+            lock (ManualCache) {
+                if (ManualCache.TryGetValue(options, out var value) == false) {
+                    ManualCache[options] = value = new Func<string>(() => {
+                        var display = Display(options);
+                        var properties = DisplayedProperties;
+                        if (properties.Any() == false) {
+                            return display;
+                        }
+                        var propertyWidth = properties.Max(p => p?.DisplayName?.Length ?? 0);
+                        var propertyManuals = properties
+                            .Select(p => p.Manual(propertyWidth))
+                            .Where(manual => !string.IsNullOrWhiteSpace(manual));
+                        var manual = string.Join(Environment.NewLine, new[] { display }
+                            .Concat(propertyManuals)
+                            .Concat(string.IsNullOrWhiteSpace(Example) ? [] : [Example]));
+                        return manual;
+                    })();
+                }
+                return value;
             }
         }
 

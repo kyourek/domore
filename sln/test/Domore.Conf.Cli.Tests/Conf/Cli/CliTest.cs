@@ -8,12 +8,20 @@ namespace Domore.Conf.Cli {
 
     [TestFixture]
     public partial class CliTest {
+        [SetUp]
+        public void SetUp() {
+            Cli.Setup(null);
+        }
+
         private class Move {
-            [CliRequired]
-            [CliArgument]
+            [CliArgument, CliRequired, ConfHelp(@"
+                The direction of the move.")]
             public MoveDirection Direction { get; set; }
 
             [CliArgument(order: 1)]
+            [ConfHelp(@"
+                The speed of the move.
+                May be fast or slow.")]
             public double Speed { get; set; }
 
             [CliDisplay(false)]
@@ -64,6 +72,37 @@ namespace Domore.Conf.Cli {
         public void Display_DescribesCommand() {
             var actual = Cli.Display(new Move());
             var expected = "move direction<up/down/left/right> [speed<num>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_UsesSetCommandName() {
+            Cli.Setup(set => set.CommandName(t => t == typeof(Move) ? "mv" : null));
+            var actual = Cli.Display(new Move());
+            var expected = "mv direction<up/down/left/right> [speed<num>]";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Manual_ReturnsManual() {
+            var actual = Cli.Manual(new Move());
+            var expected = @"
+move direction<up/down/left/right> [speed<num>]
+    direction    The direction of the move.
+    speed        The speed of the move.
+                 May be fast or slow.".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Manual_UsesSetCommandName() {
+            Cli.Setup(set => set.CommandName(t => t == typeof(Move) ? "mv" : null));
+            var actual = Cli.Manual(new Move());
+            var expected = @"
+mv direction<up/down/left/right> [speed<num>]
+    direction    The direction of the move.
+    speed        The speed of the move.
+                 May be fast or slow.".Trim();
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -136,6 +175,8 @@ namespace Domore.Conf.Cli {
         private class Copy {
             [CliArgument]
             [CliRequired]
+            [ConfHelp(@"
+                Sets next or previous.")]
             public NextOrPrevious Where { get; set; }
         }
 
@@ -170,6 +211,15 @@ namespace Domore.Conf.Cli {
         public void Display_DisplaysOverrideOnEnumNamesWhenCommandNameIsSkipped() {
             var actual = Cli.Display(new Copy(), CliDisplayOptions.SkipCommandName);
             var expected = "where<(n)ext/(p)revious>";
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Manual_DisplaysOverrideOnEnumNames() {
+            var actual = Cli.Manual(new Copy());
+            var expected = @"
+copy where<(n)ext/(p)revious>
+    where    Sets next or previous.".Trim();
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -538,6 +588,91 @@ namespace Domore.Conf.Cli {
             target.TheSwitch = "some-value";
             Cli.Configure(target, "dothis theswitch=''");
             Assert.That(target.TheSwitch, Is.EqualTo(""));
+        }
+
+        [CliExample("foo 1", "Do one to foo.")]
+        private class LongManualBase {
+            [CliArgument, CliRequired, ConfHelp(@"
+            This is a string argument.
+            It's really important.
+            Don't screw it up.")]
+            public string ArgS { get; set; }
+
+            [CliArgument, ConfHelp(@"
+            The number is optional.
+            Include it or don't, I don't care.")]
+            public int ArgI { get; set; }
+
+            [CliDisplay(false)]
+            public string DontShowThis { get; set; }
+        }
+
+        [CliExample("bar names=foo,baz speed=1.2", @"
+            Does alot.
+            You won't need any other commands.")]
+        private class LongManualDerived : LongManualBase {
+            [ConfHelp(@"
+                A list of names.
+                These are separated by the default separator.
+            ")]
+            public List<string> Names { get; set; }
+
+            [CliDisplay(false)]
+            public string DontShowThisEither { get; set; }
+
+            [ConfHelp(@"
+                Fast or slow?
+                Pick one.")]
+            public double Speed { get; set; }
+        }
+
+        [Test]
+        public void Manual_ShowsALongManual() {
+            var actual = Cli.Manual(new LongManualDerived());
+            var expected = @"
+longmanualderived <args> [argi<int>] [names=<,>] [speed=<num>]
+    args     This is a string argument.
+             It's really important.
+             Don't screw it up.
+    argi     The number is optional.
+             Include it or don't, I don't care.
+    names    A list of names.
+             These are separated by the default separator.
+    speed    Fast or slow?
+             Pick one.
+ex. longmanualderived bar names=foo,baz speed=1.2
+    Does alot.
+    You won't need any other commands.
+ex. longmanualderived foo 1
+    Do one to foo.
+".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Manual_ShowsALongManualWithCustomCommandSpaceAndName() {
+            Cli.Setup(set => set
+                .CommandName(t => t == typeof(LongManualDerived) ? "my-cmd" : null)
+                .CommandSpace(_ => "do-it"));
+            var actual = Cli.Manual(new LongManualDerived());
+            var expected = @"
+my-cmd <args> [argi<int>] [names=<,>] [speed=<num>]
+    args     This is a string argument.
+             It's really important.
+             Don't screw it up.
+    argi     The number is optional.
+             Include it or don't, I don't care.
+    names    A list of names.
+             These are separated by the default separator.
+    speed    Fast or slow?
+             Pick one.
+ex. do-it my-cmd bar names=foo,baz speed=1.2
+    Does alot.
+    You won't need any other commands.
+ex. do-it my-cmd foo 1
+    Do one to foo.
+".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
         }
     }
 }

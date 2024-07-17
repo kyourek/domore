@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Domore.Conf {
     /// <summary>
@@ -55,6 +56,30 @@ namespace Domore.Conf {
         /// </summary>
         /// <param name="names">Additional names, or aliases, for the member in conf content.</param>
         public ConfAttribute(params string[] names) : this(ignore: false, ignoreGet: false, ignoreSet: false, names: names) {
+        }
+
+        internal static string Format(string prefix, string text) {
+            if (text == null) {
+                return null;
+            }
+            var lines = text
+                .Replace("\r", "")
+                .TrimStart('\n')
+                .TrimEnd()
+                .Split('\n');
+            var nonWhite = lines.Where(line => !string.IsNullOrWhiteSpace(line));
+            var whiteSpace = nonWhite.Any()
+                ? nonWhite.Min(line => line.TakeWhile(c => char.IsWhiteSpace(c)).Count())
+                : 0;
+            var trimmed = lines
+                .Select(line => string.IsNullOrWhiteSpace(line)
+                    ? line
+                    : line.Substring(whiteSpace, line.Length - whiteSpace));
+            var help = string.Join(Environment.NewLine,
+                trimmed.Select(line => string.IsNullOrWhiteSpace(line)
+                    ? $"{prefix}"
+                    : $"{prefix}{line}"));
+            return help;
         }
     }
 }
