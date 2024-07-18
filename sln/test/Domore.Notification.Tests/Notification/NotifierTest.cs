@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using NUnit.Framework.Constraints;
 using System.Collections.Generic;
 
 namespace Domore.Notification {
@@ -108,6 +109,30 @@ namespace Domore.Notification {
             };
             subject.Bar = 0;
             Assert.That(events, Is.EqualTo(new string[] { }));
+        }
+
+        private class Subject3 : Notifier {
+            public bool FooChanged { get; private set; }
+
+            public double Foo {
+                get => _Foo.Value;
+                set => FooChanged = Change(_Foo, value);
+            }
+            private readonly Notified<double> _Foo = new(nameof(Foo));
+        }
+
+        [Test]
+        public void ChangeReturnsTrueWhenNotifiedObjectChanges() {
+            var subject = new Subject3();
+            subject.Foo = 0.1;
+            Assert.That(subject.FooChanged, Is.True);
+        }
+
+        [Test]
+        public void ChangeReturnsFalseWhenNotifiedObjectDoesNotChange() {
+            var subject = new Subject3();
+            subject.Foo = 0.0;
+            Assert.That(subject.FooChanged, Is.False);
         }
     }
 }
