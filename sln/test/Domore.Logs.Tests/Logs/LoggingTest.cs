@@ -12,13 +12,13 @@ namespace Domore.Logs {
     [TestFixture]
     public sealed partial class LoggingTest {
         private string TempFile {
-            get => _TempFile ?? (_TempFile = Path.GetTempFileName());
+            get => _TempFile ??= Path.GetTempFileName();
             set => _TempFile = value;
         }
         private string _TempFile;
 
         private ILog Log {
-            get => _Log ?? (_Log = Logging.For(typeof(LoggingTest)));
+            get => _Log ??= Logging.For(typeof(LoggingTest));
             set => _Log = value;
         }
         private ILog _Log;
@@ -359,20 +359,6 @@ namespace Domore.Logs {
         }
 
         [Test]
-        public void LogEventIsRaised() {
-            var message = "";
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEventSeverity = LogSeverity.Info;
-            Logging.LogEvent += (_, e) => {
-                message = e.LogList.Single();
-            };
-#pragma warning restore CS0618 // Type or member is obsolete
-            var log = Logging.For(typeof(LoggingTest));
-            log.Info("Here's the log");
-            Assert.That(message, Is.EqualTo("Here's the log"));
-        }
-
-        [Test]
         public void LogEventIsRaised2() {
             var message = "";
             Logging.EventThreshold = LogSeverity.Info;
@@ -382,20 +368,6 @@ namespace Domore.Logs {
             var log = Logging.For(typeof(LoggingTest));
             log.Info("Here's the log");
             Assert.That(message, Is.EqualTo("Here's the log"));
-        }
-
-        [Test]
-        public void LogEventIsNotRaisedIfSeverityIsNotMet() {
-            var message = "";
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEventSeverity = LogSeverity.Warn;
-            Logging.LogEvent += (_, e) => {
-                message = e.LogList.Single();
-            };
-#pragma warning restore CS0618 // Type or member is obsolete
-            var log = Logging.For(typeof(LoggingTest));
-            log.Info("Here's the log");
-            Assert.That(message, Is.EqualTo(""));
         }
 
         [Test]
@@ -411,20 +383,6 @@ namespace Domore.Logs {
         }
 
         [Test]
-        public void LogEventIsRaisedWithManyMessages() {
-            var message = new List<string>();
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEventSeverity = LogSeverity.Info;
-            Logging.LogEvent += (_, e) => {
-                message.AddRange(e.LogList);
-            };
-#pragma warning restore CS0618 // Type or member is obsolete
-            var log = Logging.For(typeof(LoggingTest));
-            log.Info("log1", "log2", "log3");
-            CollectionAssert.AreEqual(new[] { "log1", "log2", "log3" }, message);
-        }
-
-        [Test]
         public void LogEventIsRaisedWithManyMessages2() {
             var message = new List<string>();
             Logging.EventThreshold = LogSeverity.Info;
@@ -434,13 +392,6 @@ namespace Domore.Logs {
             var log = Logging.For(typeof(LoggingTest));
             log.Info("log1", "log2", "log3");
             CollectionAssert.AreEqual(new[] { "log1", "log2", "log3" }, message);
-        }
-
-        [Test]
-        public void DefaultLogEventSeverityIsNone() {
-#pragma warning disable CS0618 // Type or member is obsolete
-            Assert.That(Logging.LogEventSeverity, Is.EqualTo(LogSeverity.None));
-#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         [Test]
@@ -471,19 +422,6 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Warn)]
         [TestCase(LogSeverity.Error)]
         [TestCase(LogSeverity.Critical)]
-        public void EnabledIsTrueIfEventIsSubscribedTo(LogSeverity severity) {
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEvent += (_, __) => { };
-            Logging.LogEventSeverity = severity;
-#pragma warning restore CS0618 // Type or member is obsolete
-            Assert.That(Log.Enabled(severity), Is.True);
-        }
-
-        [TestCase(LogSeverity.Debug)]
-        [TestCase(LogSeverity.Info)]
-        [TestCase(LogSeverity.Warn)]
-        [TestCase(LogSeverity.Error)]
-        [TestCase(LogSeverity.Critical)]
         public void EnabledIsTrueIfEventIsSubscribedTo2(LogSeverity severity) {
             Logging.Event += (_, __) => { };
             Logging.EventThreshold = severity;
@@ -495,36 +433,10 @@ namespace Domore.Logs {
         [TestCase(LogSeverity.Warn)]
         [TestCase(LogSeverity.Error)]
         [TestCase(LogSeverity.Critical)]
-        public void SeverityEnabledIsTrueIfEventIsSubscribedTo(LogSeverity severity) {
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEvent += (_, __) => { };
-            Logging.LogEventSeverity = severity;
-#pragma warning restore CS0618 // Type or member is obsolete
-            Assert.That(Log.GetType().GetMethod($"{severity}", Type.EmptyTypes).Invoke(Log, null), Is.True);
-        }
-
-        [TestCase(LogSeverity.Debug)]
-        [TestCase(LogSeverity.Info)]
-        [TestCase(LogSeverity.Warn)]
-        [TestCase(LogSeverity.Error)]
-        [TestCase(LogSeverity.Critical)]
         public void SeverityEnabledIsTrueIfEventIsSubscribedTo2(LogSeverity severity) {
             Logging.Event += (_, __) => { };
             Logging.EventThreshold = severity;
             Assert.That(Log.GetType().GetMethod($"{severity}", Type.EmptyTypes).Invoke(Log, null), Is.True);
-        }
-
-        [TestCase(LogSeverity.Debug)]
-        [TestCase(LogSeverity.Info)]
-        [TestCase(LogSeverity.Warn)]
-        [TestCase(LogSeverity.Error)]
-        [TestCase(LogSeverity.Critical)]
-        public void SeverityEnabledIsFalseIfEventIsSubscribedToButThresholdNotMet(LogSeverity severity) {
-#pragma warning disable CS0618 // Type or member is obsolete
-            Logging.LogEvent += (_, __) => { };
-            Logging.LogEventSeverity = severity == LogSeverity.Critical ? LogSeverity.None : (severity + 1);
-#pragma warning restore CS0618 // Type or member is obsolete
-            Assert.That(Log.GetType().GetMethod($"{severity}", Type.EmptyTypes).Invoke(Log, null), Is.False);
         }
 
         [TestCase(LogSeverity.Debug)]

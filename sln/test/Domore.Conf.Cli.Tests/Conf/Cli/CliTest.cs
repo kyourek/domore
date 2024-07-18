@@ -88,7 +88,9 @@ namespace Domore.Conf.Cli {
             var actual = Cli.Manual(new Move());
             var expected = @"
 move direction<up/down/left/right> [speed<num>]
+
     direction    The direction of the move.
+
     speed        The speed of the move.
                  May be fast or slow.".Trim();
             Assert.That(actual, Is.EqualTo(expected));
@@ -100,7 +102,9 @@ move direction<up/down/left/right> [speed<num>]
             var actual = Cli.Manual(new Move());
             var expected = @"
 mv direction<up/down/left/right> [speed<num>]
+
     direction    The direction of the move.
+
     speed        The speed of the move.
                  May be fast or slow.".Trim();
             Assert.That(actual, Is.EqualTo(expected));
@@ -129,9 +133,10 @@ mv direction<up/down/left/right> [speed<num>]
         }
 
         [Test]
-        public void Display_ShowsPropertyNamesWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new Bike(), CliDisplayOptions.SkipCommandName);
-            var expected = "move=<up/down/left/right> [speed=<num>]";
+        public void Display_ShowsPropertyNamesWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "go"));
+            var actual = Cli.Display(new Bike());
+            var expected = "go move=<up/down/left/right> [speed=<num>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -166,9 +171,10 @@ mv direction<up/down/left/right> [speed<num>]
         }
 
         [Test]
-        public void Display_ShowsListWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new Blend(), CliDisplayOptions.SkipCommandName);
-            var expected = "fruits<,> [nuts=<,<peanuts/almonds/cashews>>]";
+        public void Display_ShowsListWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "blnd"));
+            var actual = Cli.Display(new Blend());
+            var expected = "blnd fruits<,> [nuts=<,<peanuts/almonds/cashews>>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -208,9 +214,10 @@ mv direction<up/down/left/right> [speed<num>]
         }
 
         [Test]
-        public void Display_DisplaysOverrideOnEnumNamesWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new Copy(), CliDisplayOptions.SkipCommandName);
-            var expected = "where<(n)ext/(p)revious>";
+        public void Display_DisplaysOverrideOnEnumNamesWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(t => t == typeof(Copy) ? "cp" : null));
+            var actual = Cli.Display(new Copy());
+            var expected = "cp where<(n)ext/(p)revious>";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -219,6 +226,7 @@ mv direction<up/down/left/right> [speed<num>]
             var actual = Cli.Manual(new Copy());
             var expected = @"
 copy where<(n)ext/(p)revious>
+
     where    Sets next or previous.".Trim();
             Assert.That(actual, Is.EqualTo(expected));
         }
@@ -265,6 +273,33 @@ copy where<(n)ext/(p)revious>
             Assert.That(member.Address, Is.EqualTo("down the road"));
         }
 
+        [Test]
+        public void Display_DisplaysMultipleCommands() {
+            var commands = new object[] { new ValueWordClass(), new ValueWordClass2(), new ValueWordClass3() };
+            var actual = Cli.Display(commands);
+            var expected = @"
+valuewordclass [word=<none/one>]
+valuewordclass2 [word=<zero/single>]
+valuewordclass3 [word=<z/s>]".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Display_DisplaysMultipleCommandsWithCustomNames() {
+            Cli.Setup(set => set.CommandName(t =>
+                t == typeof(ValueWordClass) ? "foo" :
+                t == typeof(ValueWordClass2) ? "bar" :
+                t == typeof(ValueWordClass3) ? "baz" :
+                null));
+            var commands = new object[] { new ValueWordClass(), new ValueWordClass2(), new ValueWordClass3() };
+            var actual = Cli.Display(commands);
+            var expected = @"
+foo [word=<none/one>]
+bar [word=<zero/single>]
+baz [word=<z/s>]".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
         private enum ValueWord {
             None = 0,
             [CliDisplay(include: false)]
@@ -286,9 +321,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_DoesNotIncludeUnincludedEnumMembersWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new ValueWordClass(), CliDisplayOptions.SkipCommandName);
-            var expected = "[word=<none/one>]";
+        public void Display_DoesNotIncludeUnincludedEnumMembersWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "foo"));
+            var actual = Cli.Display(new ValueWordClass());
+            var expected = "foo [word=<none/one>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -335,9 +371,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_DoesNotIncludeEnumMembersByOverrideWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new ValueWordClass3(), CliDisplayOptions.SkipCommandName);
-            var expected = "[word=<z/s>]";
+        public void Display_DoesNotIncludeEnumMembersByOverrideWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(t => t == typeof(ValueWordClass3) ? "vwc" : null));
+            var actual = Cli.Display(new ValueWordClass3());
+            var expected = "vwc [word=<z/s>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -371,9 +408,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_UsesUnderlyingTypeOfNullableWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new NullableFlagsEnumClass(), CliDisplayOptions.SkipCommandName);
-            var expected = "[flags=<flag1|flag2|flag4>]";
+        public void Display_UsesUnderlyingTypeOfNullableWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "bar"));
+            var actual = Cli.Display(new NullableFlagsEnumClass());
+            var expected = "bar [flags=<flag1|flag2|flag4>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -392,9 +430,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_DisplaysBooleanSwitchAndOptionalArgumentWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new ClassWithBoolAndStr(), CliDisplayOptions.SkipCommandName);
-            var expected = "[<somechars>] option=<true/false>";
+        public void Display_DisplaysBooleanSwitchAndOptionalArgumentWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(t => t == typeof(ClassWithBoolAndStr) ? "cwbas" : null));
+            var actual = Cli.Display(new ClassWithBoolAndStr());
+            var expected = "cwbas [<somechars>] option=<true/false>";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -424,9 +463,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_DoesNotShowReadonlyPropertiesWhenCommandNameIsSkipped() {
-            var actual = Cli.Display(new ClassWithReadonlyProperties(), CliDisplayOptions.SkipCommandName);
-            var expected = "[readwritelist=<,>]";
+        public void Display_DoesNotShowReadonlyPropertiesWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "cmd"));
+            var actual = Cli.Display(new ClassWithReadonlyProperties());
+            var expected = "cmd [readwritelist=<,>]";
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -488,7 +528,8 @@ copy where<(n)ext/(p)revious>
         }
 
         private class TargetWithParameterSet {
-            [CliParameters]
+            [CliParameters, ConfHelp(@"
+                These are all the params.")]
             public object Params {
                 get => _Params ?? (_Params = new Dictionary<string, bool>());
                 set => _Params = value;
@@ -547,9 +588,10 @@ copy where<(n)ext/(p)revious>
         }
 
         [Test]
-        public void Display_UsesDisplayOverrideForPropertyWhenCommandNameIsSkipped() {
-            var display = Cli.Display(new TargetWithNestedProperties(), CliDisplayOptions.SkipCommandName);
-            Assert.That(display, Is.EqualTo("[set.dict[<string>]=<string>]"));
+        public void Display_UsesDisplayOverrideForPropertyWithCustomCommandName() {
+            Cli.Setup(set => set.CommandName(_ => "target"));
+            var display = Cli.Display(new TargetWithNestedProperties());
+            Assert.That(display, Is.EqualTo("target [set.dict[<string>]=<string>]"));
         }
 
         private class HeirarchyBase {
@@ -607,6 +649,9 @@ copy where<(n)ext/(p)revious>
             public string DontShowThis { get; set; }
         }
 
+        [ConfHelp(@"
+            This command has a long manual.
+            The length is important because that's what we're testing, here.")]
         [CliExample("bar names=foo,baz speed=1.2", @"
             Does alot.
             You won't need any other commands.")]
@@ -631,21 +676,30 @@ copy where<(n)ext/(p)revious>
             var actual = Cli.Manual(new LongManualDerived());
             var expected = @"
 longmanualderived <args> [argi<int>] [names=<,>] [speed=<num>]
+
+    This command has a long manual.
+    The length is important because that's what we're testing, here.
+
     args     This is a string argument.
              It's really important.
              Don't screw it up.
+
     argi     The number is optional.
              Include it or don't, I don't care.
+
     names    A list of names.
              These are separated by the default separator.
+
     speed    Fast or slow?
              Pick one.
+
 ex. longmanualderived bar names=foo,baz speed=1.2
     Does alot.
     You won't need any other commands.
+
 ex. longmanualderived foo 1
     Do one to foo.
-".Trim();
+            ".Trim();
             Assert.That(actual, Is.EqualTo(expected));
         }
 
@@ -657,21 +711,68 @@ ex. longmanualderived foo 1
             var actual = Cli.Manual(new LongManualDerived());
             var expected = @"
 my-cmd <args> [argi<int>] [names=<,>] [speed=<num>]
+
+    This command has a long manual.
+    The length is important because that's what we're testing, here.
+
     args     This is a string argument.
              It's really important.
              Don't screw it up.
+
     argi     The number is optional.
              Include it or don't, I don't care.
+
     names    A list of names.
              These are separated by the default separator.
+
     speed    Fast or slow?
              Pick one.
+
 ex. do-it my-cmd bar names=foo,baz speed=1.2
     Does alot.
     You won't need any other commands.
+
 ex. do-it my-cmd foo 1
     Do one to foo.
 ".Trim();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void Manual_ShowsMultipleManuals() {
+            var actual = Cli.Manual(new object[] { new TargetWithParameterSet(), new TypeWithArgumentAndSwitch(), new LongManualDerived() });
+            var expected = @"
+targetwithparameterset [params=<object>]
+
+    params    These are all the params.
+
+typewithargumentandswitch [<thearg>] [theswitch=<str>]
+
+longmanualderived <args> [argi<int>] [names=<,>] [speed=<num>]
+
+    This command has a long manual.
+    The length is important because that's what we're testing, here.
+
+    args     This is a string argument.
+             It's really important.
+             Don't screw it up.
+
+    argi     The number is optional.
+             Include it or don't, I don't care.
+
+    names    A list of names.
+             These are separated by the default separator.
+
+    speed    Fast or slow?
+             Pick one.
+
+ex. longmanualderived bar names=foo,baz speed=1.2
+    Does alot.
+    You won't need any other commands.
+
+ex. longmanualderived foo 1
+    Do one to foo.
+            ".Trim();
             Assert.That(actual, Is.EqualTo(expected));
         }
     }

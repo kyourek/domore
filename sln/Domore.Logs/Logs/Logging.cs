@@ -49,29 +49,9 @@ namespace Domore.Logs {
         /// <summary>
         /// Raised when a log event occurs.
         /// </summary>
-        [Obsolete($"LogEvent is deprecated. Please use {nameof(Event)} instead.")]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static event LogEventHandler LogEvent {
-            add => Event += value;
-            remove => Event -= value;
-        }
-
-        /// <summary>
-        /// Raised when a log event occurs.
-        /// </summary>
         public static event LogEventHandler Event {
             add => Instance.Manager.LogEvent += value;
             remove => Instance.Manager.LogEvent -= value;
-        }
-
-        /// <summary>
-        /// Gets or sets the threshold for log events.
-        /// </summary>
-        [Obsolete($"LogEventSeverity is deprecated. Please use {nameof(EventThreshold)} instead.")]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static LogSeverity LogEventSeverity {
-            get => EventThreshold;
-            set => EventThreshold = value;
         }
 
         /// <summary>

@@ -5,9 +5,6 @@ using System.Reflection;
 
 namespace Domore.Conf.Cli {
     internal sealed class TargetDescription {
-        private readonly Dictionary<CliDisplayOptions, string> DisplayCache = new();
-        private readonly Dictionary<CliDisplayOptions, string> ManualCache = new();
-
         private static readonly Dictionary<Type, TargetDescription> Cache = [];
 
         private IEnumerable<TargetPropertyDescription> DisplayedProperties => _DisplayedProperties ??=
@@ -21,7 +18,17 @@ namespace Domore.Conf.Cli {
             TargetType = targetType ?? throw new ArgumentNullException(nameof(targetType));
         }
 
+        private T Attribute<T>() {
+            return TargetType
+                .GetCustomAttributes(typeof(T), inherit: true)
+                .OfType<T>()
+                .FirstOrDefault();
+        }
+
         public Type TargetType { get; }
+
+        public ConfHelpAttribute ConfHelpAttribute => _ConfHelpAttribute ??= (Attribute<ConfHelpAttribute>() ?? new ConfHelpAttribute(null));
+        private ConfHelpAttribute _ConfHelpAttribute;
 
         public IEnumerable<TargetPropertyDescription> Properties => _Properties ??=
             TargetType
@@ -36,7 +43,7 @@ namespace Domore.Conf.Cli {
                 .GetCustomAttributes(typeof(CliExampleAttribute), inherit: true)
                 .OfType<CliExampleAttribute>()
                 .Select(attribute => attribute.Format(CommandInvoke));
-            return string.Join(Environment.NewLine, examples).Trim();
+            return string.Join(Environment.NewLine + Environment.NewLine, examples).Trim();
         })();
         private string _Example;
 
@@ -59,6 +66,28 @@ namespace Domore.Conf.Cli {
             Properties.Any(p => p.DisplayAttribute.Include == false) ? true :
             true);
         private bool? _DisplayDefault;
+
+        public string Display => _Display ??= string.Join(" ", new[] { CommandName }.Concat(DisplayedProperties.Select(p => p.Display)));
+        private string _Display;
+
+        public string Manual => _Manual ??= new Func<string>(() => {
+            var display = Display;
+            var properties = DisplayedProperties;
+            if (properties.Any() == false) {
+                return display;
+            }
+            var help = ConfHelpAttribute.Format("    ");
+            var propertyWidth = properties.Max(p => p?.DisplayName?.Length ?? 0);
+            var propertyManuals = properties
+                .Select(p => p.Manual(propertyWidth))
+                .Where(manual => !string.IsNullOrWhiteSpace(manual));
+            var manual = string.Join(Environment.NewLine + Environment.NewLine, new[] { display }
+                .Concat(string.IsNullOrWhiteSpace(help) ? [] : [help])
+                .Concat(propertyManuals)
+                .Concat(string.IsNullOrWhiteSpace(Example) ? [] : [Example]));
+            return manual;
+        })();
+        private string _Manual;
 
         public IEnumerable<TargetMethodValidation> Validations => _Validations ??=
             TargetType
@@ -88,45 +117,6 @@ namespace Domore.Conf.Cli {
         public static void Clear() {
             lock (Cache) {
                 Cache.Clear();
-            }
-        }
-
-        public string Display(CliDisplayOptions options) {
-            lock (DisplayCache) {
-                if (DisplayCache.TryGetValue(options, out var value) == false) {
-                    DisplayCache[options] = value = new Func<string>(() => {
-                        var propertyDisplays = DisplayedProperties.Select(p => p.Display);
-                        var propertyDisplay = string.Join(" ", propertyDisplays);
-                        if (options.HasFlag(CliDisplayOptions.SkipCommandName)) {
-                            return propertyDisplay;
-                        }
-                        return string.Join(" ", CommandName, propertyDisplay);
-                    })();
-                }
-                return value;
-            }
-        }
-
-        public string Manual(CliDisplayOptions options) {
-            lock (ManualCache) {
-                if (ManualCache.TryGetValue(options, out var value) == false) {
-                    ManualCache[options] = value = new Func<string>(() => {
-                        var display = Display(options);
-                        var properties = DisplayedProperties;
-                        if (properties.Any() == false) {
-                            return display;
-                        }
-                        var propertyWidth = properties.Max(p => p?.DisplayName?.Length ?? 0);
-                        var propertyManuals = properties
-                            .Select(p => p.Manual(propertyWidth))
-                            .Where(manual => !string.IsNullOrWhiteSpace(manual));
-                        var manual = string.Join(Environment.NewLine, new[] { display }
-                            .Concat(propertyManuals)
-                            .Concat(string.IsNullOrWhiteSpace(Example) ? [] : [Example]));
-                        return manual;
-                    })();
-                }
-                return value;
             }
         }
 

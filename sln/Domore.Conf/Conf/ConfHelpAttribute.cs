@@ -4,7 +4,7 @@ namespace Domore.Conf {
     /// <summary>
     /// Text used as help info in conf contexts for the decorated property.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class ConfHelpAttribute : Attribute {
         internal string Format(string prefix) {
             return ConfAttribute.Format(prefix, Text);

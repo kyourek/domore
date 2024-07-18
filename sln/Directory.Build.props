@@ -11,7 +11,7 @@
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>8.3.0.103</AssemblyVersion>
     <InformationalVersion>8.3.0.103</InformationalVersion>
-    <FileVersion>8.3.0.103</FileVersion>
+    <FileVersion>9.0.0.103</FileVersion>
     <PackageVersion>8.3.0.103</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

@@ -1,5 +1,7 @@
 ﻿using Domore.Conf.Extensions;
 using System;
+using System.Collections;
+using System.Linq;
 
 namespace Domore.Conf.Cli {
     public static class Cli {
@@ -49,26 +51,36 @@ namespace Domore.Conf.Cli {
             return Validate(Conf(target, line));
         }
 
-        public static string Display<T>(T target, CliDisplayOptions options) {
-            if (null == target) throw new ArgumentNullException(nameof(target));
-            var description = TargetDescription.Describe(target.GetType());
-            var display = description.Display(options);
-            return display;
+        public static string Display(object target) {
+            return target is null
+                ? null
+                : TargetDescription
+                    .Describe(target.GetType())
+                    .Display;
         }
 
-        public static string Display<T>(T target) {
-            return Display(target, CliDisplayOptions.None);
+        public static string Display(IEnumerable targets) {
+            return targets is null
+                ? null
+                : string.Join(Environment.NewLine, targets
+                    .OfType<object>()
+                    .Select(Display));
         }
 
-        public static string Manual<T>(T target, CliDisplayOptions options) {
-            if (null == target) throw new ArgumentNullException(nameof(target));
-            var description = TargetDescription.Describe(target.GetType());
-            var manual = description.Manual(options);
-            return manual;
+        public static string Manual(object target) {
+            return target is null
+                ? null
+                : TargetDescription
+                    .Describe(target.GetType())
+                    .Manual;
         }
 
-        public static string Manual<T>(T target) {
-            return Manual(target, CliDisplayOptions.None);
+        public static string Manual(IEnumerable targets) {
+            return targets is null
+                ? null
+                : string.Join(Environment.NewLine + Environment.NewLine, targets
+                    .OfType<object>()
+                    .Select(Manual));
         }
 
         public static void Setup(Action<CliSetup> set) {
