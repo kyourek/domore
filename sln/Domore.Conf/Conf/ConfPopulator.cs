@@ -38,13 +38,13 @@ namespace Domore.Conf {
                                 var keys = key.Skip();
                                 var propertyValue = property.PropertyValue;
                                 if (propertyValue == null) {
-                                    propertyValue = property.PropertyValue = Activator.CreateInstance(property.PropertyType);
+                                    propertyValue = property.PropertyValue = Activator.CreateInstance(property.PropertyType, nonPublic: true);
                                 }
                                 var propertyItem = property.Item;
                                 if (propertyItem != null) {
                                     var itemValue = propertyItem.PropertyValue;
                                     if (itemValue == null) {
-                                        itemValue = propertyItem.PropertyValue = Activator.CreateInstance(propertyItem.PropertyType);
+                                        itemValue = propertyItem.PropertyValue = Activator.CreateInstance(propertyItem.PropertyType, nonPublic: true);
                                     }
                                     propertyValue = itemValue;
                                 }

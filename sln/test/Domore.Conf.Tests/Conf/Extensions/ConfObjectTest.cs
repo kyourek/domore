@@ -584,5 +584,26 @@ more lines{
             var expected = "";
             Assert.That(actual, Is.EqualTo(expected));
         }
+
+        private sealed class ConfFrom_CanInstantiateItemsWithPrivateConstructor_Object {
+            public List<MyItem> ItemList { get; set; }
+
+            public sealed class MyItem {
+                private MyItem() {
+                }
+                public string Foo { get; private set; }
+            }
+        }
+
+        [Test]
+        public void Foo() {
+            var text = @"
+                ItemList[0].Foo = Bar
+                ItemList[1].Foo = Baz
+            ";
+            var actual = new ConfFrom_CanInstantiateItemsWithPrivateConstructor_Object().ConfFrom(text, key: "").ItemList.Select(item => item.Foo).ToList();
+            var expected = new[] { "Bar", "Baz" };
+            Assert.That(actual, Is.EqualTo(expected));
+        }
     }
 }
