@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using TASK = System.Threading.Tasks.Task;
 
 namespace Domore.Threading.Tasks {
     /// <summary>
@@ -8,10 +9,57 @@ namespace Domore.Threading.Tasks {
     /// </summary>
     /// <typeparam name="TResult">The type of the result of the task.</typeparam>
     public class TaskCache<TResult> {
-        private readonly object Locker = new();
+        private readonly SemaphoreSlim Locker = new(1, 1);
 
-        private bool Cached;
+        private TASK Wait(CancellationToken token) {
+#if NET40
+            if (token.IsCancellationRequested) {
+                return new TASK(() => { }, token);
+            }
+            var taskSource = new TaskCompletionSource<bool>();
+            ThreadPool.QueueUserWorkItem(_ => {
+                try {
+                    Locker.Wait(token);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) {
+                    taskSource.SetCanceled();
+                }
+                catch (Exception ex) {
+                    taskSource.SetException(ex);
+                }
+                finally {
+                    taskSource.TrySetResult(true);
+                }
+            });
+            return taskSource.Task;
+#else
+            return Locker.WaitAsync(token);
+#endif
+        }
+
+        private void Release() {
+            Locker.Release();
+        }
+
+        private async Task<T> Lock<T>(Func<CancellationToken, Task<T>> task, CancellationToken token) {
+            if (null == task) throw new ArgumentNullException(nameof(task));
+            await Wait(token).ConfigureAwait(ContinueOnCapturedContext);
+            try {
+                return await task(token).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally {
+                Release();
+            }
+        }
+
+        private volatile bool Working;
+        private volatile bool Cached;
         private volatile Task<TResult> Task;
+
+        /// <summary>
+        /// Gets a flag that indicates whether or not awaited tasks are continued on the captured context.
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; }
 
         /// <summary>
         /// Gets the value of the result of the task that was cached due to successful completion of the task,
@@ -28,10 +76,20 @@ namespace Domore.Threading.Tasks {
         /// <summary>
         /// Creates a new instance of a task cache.
         /// </summary>
+        /// <param name="continueOnCapturedContext">Whether or not to continue awaited tasks on the captured context.</param>
         /// <param name="factory">The callback used to create the instance of <see cref="System.Threading.Tasks.Task"/> whose result is cached.</param>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
-        public TaskCache(Func<CancellationToken, Task<TResult>> factory) {
+        public TaskCache(bool continueOnCapturedContext, Func<CancellationToken, Task<TResult>> factory) {
             Factory = factory ?? throw new ArgumentNullException(nameof(factory));
+            ContinueOnCapturedContext = continueOnCapturedContext;
+        }
+
+        /// <summary>
+        /// Creates a new instance of a task cache.
+        /// </summary>
+        /// <param name="factory">The callback used to create the instance of <see cref="System.Threading.Tasks.Task"/> whose result is cached.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
+        public TaskCache(Func<CancellationToken, Task<TResult>> factory) : this(false, factory) {
         }
 
         /// <summary>
@@ -44,27 +102,24 @@ namespace Domore.Threading.Tasks {
         /// the task completes with a fault or cancellation.
         /// </returns>
         /// <exception cref="InvalidOperationException">Thrown if the <see cref="Factory"/> callback returns null.</exception>
-        public async Task<TResult> Ready(CancellationToken token) {
-            if (Cached == false) {
+        public Task<TResult> Ready(CancellationToken token) {
+            return Lock(token: token, task: async token => {
+                if (Cached) {
+                    return Result;
+                }
                 if (Task == null) {
-                    lock (Locker) {
-                        if (Task == null) {
-                            Task = Factory(token) ?? throw new InvalidOperationException("The returned task from the factory is null.");
-                        }
-                    }
+                    Task = Factory(token) ?? throw new InvalidOperationException("The returned task from the factory is null.");
                 }
                 try {
-                    Result = await Task.ConfigureAwait(false);
+                    Result = await Task.ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch {
-                    lock (Locker) {
-                        Task = null;
-                    }
+                    Task = null;
                     throw;
                 }
-            }
-            Cached = true;
-            return Result;
+                Cached = true;
+                return Result;
+            });
         }
 
         /// <summary>
@@ -87,20 +142,25 @@ namespace Domore.Threading.Tasks {
             /// of the task returned from the <see cref="Factory"/> callback, or the most recent instance returned from the callback if
             /// the task completes with a fault or cancellation.
             /// </returns>
-            public Task<TResult> Refreshed(CancellationToken token) {
-                Refresh();
-                return Ready(token);
+            public async Task<TResult> Refreshed(CancellationToken token) {
+                await Refresh(token).ConfigureAwait(ContinueOnCapturedContext);
+                return await Ready(token).ConfigureAwait(ContinueOnCapturedContext);
             }
 
             /// <summary>
             /// Clears the cache, meaning the next call to <see cref="Ready"/> or <see cref="Refreshed"/> will call the <see cref="Factory"/> callback again.
             /// </summary>
-            public void Refresh() {
-                lock (Locker) {
+            public TASK Refresh(CancellationToken token) {
+                return Lock(token: token, task: _ => {
                     Task = null;
                     Cached = false;
                     Result = default;
-                }
+#if NET40
+                    return new Task<object>(() => default);
+#else
+                    return TASK.FromResult(default(object));
+#endif
+                });
             }
         }
     }
