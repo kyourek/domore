@@ -13,11 +13,16 @@ namespace Domore.Threading.Tasks {
 
         private TASK Wait(CancellationToken token) {
 #if NET40
+            static TASK canceled() {
+                var source = new TaskCompletionSource<object>();
+                source.SetCanceled();
+                return source.Task;
+            }
             if (token.IsCancellationRequested) {
-                return new TASK(() => { }, token);
+                return canceled();
             }
             var taskSource = new TaskCompletionSource<bool>();
-            ThreadPool.QueueUserWorkItem(_ => {
+            var workQueued = ThreadPool.QueueUserWorkItem(_ => {
                 try {
                     Locker.Wait(token);
                 }
@@ -31,6 +36,9 @@ namespace Domore.Threading.Tasks {
                     taskSource.TrySetResult(true);
                 }
             });
+            if (workQueued == false) {
+                throw new InvalidOperationException("Thread pool work could not be queued.");
+            }
             return taskSource.Task;
 #else
             return Locker.WaitAsync(token);
@@ -156,7 +164,12 @@ namespace Domore.Threading.Tasks {
                     Cached = false;
                     Result = default;
 #if NET40
-                    return new Task<object>(() => default);
+                    static Task<object> complete() {
+                        var source = new TaskCompletionSource<object>();
+                        source.SetResult(default);
+                        return source.Task;
+                    }
+                    return complete();
 #else
                     return TASK.FromResult(default(object));
 #endif

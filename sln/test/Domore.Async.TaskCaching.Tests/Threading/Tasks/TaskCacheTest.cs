@@ -102,8 +102,35 @@ namespace Domore.Threading.Tasks {
                 catch (OperationCanceledException ex) {
                     actual = ex;
                 }
+#if NET40
+                Assert.That(actual, Is.Not.Null);
+#else
                 Assert.That(actual.CancellationToken, Is.EqualTo(tokenSource.Token));
+#endif
             }
+        }
+
+        [Test]
+        public async Task Refresh_ResetsState() {
+            var n = 0;
+            var actual = new List<object>();
+            var expected = new[] { new object(), new object() };
+            var subject = new TaskCache<object>.WithRefresh(async _ => await Get(expected[n++]));
+            actual.Add(await subject.Ready(CancellationToken.None));
+            await subject.Refresh(CancellationToken.None);
+            actual.Add(await subject.Ready(CancellationToken.None));
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public async Task Refreshed_CallsFactoryAgain() {
+            var n = 0;
+            var actual = new List<object>();
+            var expected = new[] { new object(), new object() };
+            var subject = new TaskCache<object>.WithRefresh(async _ => await Get(expected[n++]));
+            actual.Add(await subject.Ready(CancellationToken.None));
+            actual.Add(await subject.Refreshed(CancellationToken.None));
+            CollectionAssert.AreEqual(expected, actual);
         }
     }
 }
