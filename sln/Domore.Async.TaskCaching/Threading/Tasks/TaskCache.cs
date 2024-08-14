@@ -11,6 +11,9 @@ namespace Domore.Threading.Tasks {
     public class TaskCache<TResult> {
         private readonly SemaphoreSlim Locker = new(1, 1);
 
+        private bool Cached;
+        private Task<TResult> Task;
+
         private TASK Wait(CancellationToken token) {
 #if NET40
             static TASK canceled() {
@@ -59,10 +62,6 @@ namespace Domore.Threading.Tasks {
                 Release();
             }
         }
-
-        private volatile bool Working;
-        private volatile bool Cached;
-        private volatile Task<TResult> Task;
 
         /// <summary>
         /// Gets a flag that indicates whether or not awaited tasks are continued on the captured context.
