@@ -11,7 +11,7 @@
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>9.1.1.106</AssemblyVersion>
     <InformationalVersion>9.1.1.106</InformationalVersion>
-    <FileVersion>9.1.1.106</FileVersion>
+    <FileVersion>9.1.2.106</FileVersion>
     <PackageVersion>9.1.1.106</PackageVersion>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
