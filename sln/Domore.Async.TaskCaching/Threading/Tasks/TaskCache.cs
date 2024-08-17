@@ -12,6 +12,7 @@ namespace Domore.Threading.Tasks {
         private readonly SemaphoreSlim Locker = new(1, 1);
 
         private bool Cached;
+        private bool CacheResets;
         private Task<TResult> Task;
 
         private TASK Wait(CancellationToken token) {
@@ -109,8 +110,11 @@ namespace Domore.Threading.Tasks {
         /// the task completes with a fault or cancellation.
         /// </returns>
         /// <exception cref="InvalidOperationException">Thrown if the <see cref="Factory"/> callback returns null.</exception>
-        public Task<TResult> Ready(CancellationToken token) {
-            return Lock(token: token, task: async token => {
+        public async Task<TResult> Ready(CancellationToken token) {
+            if (Cached && !CacheResets) {
+                return Result;
+            }
+            async Task<TResult> ready(CancellationToken token) {
                 if (Cached) {
                     return Result;
                 }
@@ -126,7 +130,8 @@ namespace Domore.Threading.Tasks {
                 }
                 Cached = true;
                 return Result;
-            });
+            }
+            return await Lock(ready, token).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -136,8 +141,17 @@ namespace Domore.Threading.Tasks {
             /// <summary>
             /// Creates a new instance of a <see cref="TaskCache{TResult}"/> that allows resetting state.
             /// </summary>
+            /// <param name="continueOnCapturedContext">Whether or not to continue awaited tasks on the captured context.</param>
             /// <param name="factory">The callback used to create the instance of <see cref="System.Threading.Tasks.Task"/> whose result is cached.</param>
-            public WithRefresh(Func<CancellationToken, Task<TResult>> factory) : base(factory) {
+            public WithRefresh(bool continueOnCapturedContext, Func<CancellationToken, Task<TResult>> factory) : base(continueOnCapturedContext, factory) {
+                CacheResets = true;
+            }
+
+            /// <summary>
+            /// Creates a new instance of a <see cref="TaskCache{TResult}"/> that allows resetting state.
+            /// </summary>
+            /// <param name="factory">The callback used to create the instance of <see cref="System.Threading.Tasks.Task"/> whose result is cached.</param>
+            public WithRefresh(Func<CancellationToken, Task<TResult>> factory) : this(false, factory) {
             }
 
             /// <summary>
