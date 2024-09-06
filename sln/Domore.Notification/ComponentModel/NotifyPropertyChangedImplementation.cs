@@ -12,7 +12,7 @@ namespace Domore.ComponentModel {
 #if !NET40
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        protected internal virtual void OnPropertyChanged(PropertyChangedEventArgs e) {
+        protected virtual void OnPropertyChanged(PropertyChangedEventArgs e) {
             PropertyChanged?.Invoke(this, e);
         }
 

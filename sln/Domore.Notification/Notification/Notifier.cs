@@ -1,6 +1,11 @@
 ﻿using Domore.ComponentModel;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+
+
+
 #if !NET40
 using System.Runtime.CompilerServices;
 #endif
@@ -24,7 +29,7 @@ namespace Domore.Notification {
 #if !NET40
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        protected internal override void OnPropertyChanged(PropertyChangedEventArgs e) {
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
             if (NotifyState) {
                 base.OnPropertyChanged(e);
             }
@@ -89,7 +94,7 @@ namespace Domore.Notification {
 #endif
         protected void NotifyPropertyChanged(Notified notified) {
             if (null == notified) throw new ArgumentNullException(nameof(notified));
-            NotifyPropertyChanged(notified.Event);
+            NotifyPropertyChanged(notified.PropertyChangedEventArgs);
         }
 
         /// <summary>
@@ -118,12 +123,163 @@ namespace Domore.Notification {
 
         protected bool Change<T>(Notified<T> notified, T value, params Notified[] dependents) {
             if (notified is null) throw new ArgumentNullException(nameof(notified));
-            if (notified.Same(value)) {
-                return false;
+            if (notified.Change(value)) {
+                NotifyPropertyChanged(notified, dependents);
+                return true;
             }
-            notified.Value = value;
-            NotifyPropertyChanged(notified, dependents);
-            return true;
+            return false;
         }
+
+#if NET45_OR_GREATER || NETCOREAPP
+        /// <summary>
+        /// An implementation of <see cref="INotifyDataErrorInfo"/>.
+        /// </summary>
+        public abstract class WithErrorInfo : Notifier, INotifyDataErrorInfo {
+            private event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
+
+            private readonly Dictionary<string, HashSet<object>> Errors = [];
+
+            private void NotifyErrorsChanged(DataErrorsChangedEventArgs e) {
+                OnErrorsChanged(e);
+            }
+
+            private void NotifyErrorsChanged(string propertyName) {
+                NotifyErrorsChanged(new DataErrorsChangedEventArgs(propertyName));
+            }
+
+            /// <summary>
+            /// Gets a flag that indicates whether or not any errors are present.
+            /// </summary>
+            protected bool HasErrors {
+                get {
+                    lock (Errors) {
+                        return Errors.Count > 0;
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Gets the errors associated with <paramref name="propertyName"/>.
+            /// </summary>
+            /// <param name="propertyName">The name of the property whose associated errors should be returned.</param>
+            /// <returns>The errors associated with the specified property.</returns>
+            protected IEnumerable GetErrors(string propertyName) {
+                propertyName = string.IsNullOrWhiteSpace(propertyName)
+                    ? ""
+                    : propertyName;
+                lock (Errors) {
+                    return Errors.TryGetValue(propertyName, out var list)
+                        ? list
+                        : null;
+                }
+            }
+
+            /// <summary>
+            /// Adds an error associated with <paramref name="propertyName"/>.
+            /// </summary>
+            /// <param name="propertyName">The name of the property to which the error is associated.</param>
+            /// <param name="error">The error to be added.</param>
+            /// <returns>True if the error was added. Otherwise, false.</returns>
+            protected bool AddError(string propertyName, object error) {
+                propertyName = string.IsNullOrWhiteSpace(propertyName)
+                    ? ""
+                    : propertyName;
+                lock (Errors) {
+                    if (Errors.TryGetValue(propertyName, out var list) == false) {
+                        Errors[propertyName] = list = [];
+                    }
+                    var added = list.Add(error);
+                    if (added == false) {
+                        return false;
+                    }
+                }
+                NotifyErrorsChanged(propertyName);
+                return true;
+            }
+            
+            /// <summary>
+            /// Removes an error associated with <paramref name="propertyName"/>.
+            /// </summary>
+            /// <param name="propertyName">The name of the property to which the error is associated.</param>
+            /// <param name="error">The error to be removed.</param>
+            /// <returns>True if an error was removed. Otherwise, false.</returns>
+            protected bool RemoveError(string propertyName, object error) {
+                propertyName = string.IsNullOrWhiteSpace(propertyName)
+                    ? ""
+                    : propertyName;
+                lock (Errors) {
+                    if (Errors.TryGetValue(propertyName, out var list) == false) {
+                        return false;
+                    }
+                    var removed = list.Remove(error);
+                    if (removed == false) {
+                        return false;
+                    }
+                    if (list.Count == 0) {
+                        Errors.Remove(propertyName);
+                    }
+                }
+                NotifyErrorsChanged(propertyName);
+                return true;
+            }
+
+            /// <summary>
+            /// Clears all errors associated with <paramref name="propertyName"/>.
+            /// </summary>
+            /// <param name="propertyName">The name of the property to which the errors are associated.</param>
+            /// <returns>True if any errors were cleared. Otherwise, false.</returns>
+            protected bool ClearErrors(string propertyName) {
+                propertyName = string.IsNullOrWhiteSpace(propertyName)
+                    ? ""
+                    : propertyName;
+                lock (Errors) {
+                    var removed = Errors.Remove(propertyName);
+                    if (removed == false) {
+                        return false;
+                    }
+                }
+                NotifyErrorsChanged(propertyName);
+                return true;
+            }
+
+            /// <summary>
+            /// Clears all errors.
+            /// </summary>
+            /// <returns>True if any errors were cleared. Otherwise, false.</returns>
+            protected bool ClearErrors() {
+                lock (Errors) {
+                    if (Errors.Count == 0) {
+                        return false;
+                    }
+                    Errors.Clear();
+                }
+                NotifyErrorsChanged("");
+                return true;
+            }
+
+            /// <summary>
+            /// Raises the <see cref="INotifyDataErrorInfo.ErrorsChanged"/> event.
+            /// </summary>
+            /// <param name="e">The event arguments.</param>
+            protected virtual void OnErrorsChanged(DataErrorsChangedEventArgs e) {
+                ErrorsChanged?.Invoke(this, e);
+            }
+
+            event EventHandler<DataErrorsChangedEventArgs> INotifyDataErrorInfo.ErrorsChanged {
+                add {
+                    ErrorsChanged += value;
+                }
+                remove {
+                    ErrorsChanged -= value;
+                }
+            }
+
+            bool INotifyDataErrorInfo.HasErrors => HasErrors;
+
+            IEnumerable INotifyDataErrorInfo.GetErrors(string propertyName) {
+                return GetErrors(propertyName);
+            }
+        }
+#endif
     }
 }

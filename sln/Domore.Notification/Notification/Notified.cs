@@ -7,14 +7,13 @@ namespace Domore.Notification {
     /// Wraps a value for notification.
     /// </summary>
     public abstract class Notified {
-        private static readonly ConcurrentDictionary<string, PropertyChangedEventArgs> EventCache = new();
+        private static readonly ConcurrentDictionary<string, PropertyChangedEventArgs> PropertyChangedEventArgsCache = new();
+        internal PropertyChangedEventArgs PropertyChangedEventArgs { get; }
 
-        internal PropertyChangedEventArgs Event { get; }
-
-        internal Notified(string name, bool eventCache) {
+        internal Notified(string name, bool eventArgsCache) {
             Name = name;
-            Event = eventCache
-                ? EventCache.GetOrAdd(Name, n => new(n))
+            PropertyChangedEventArgs = eventArgsCache
+                ? PropertyChangedEventArgsCache.GetOrAdd(Name, n => new(n))
                 : new(Name);
         }
 
@@ -34,14 +33,18 @@ namespace Domore.Notification {
     public sealed class Notified<T> : Notified {
         private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
 
-        internal bool Same(T value) {
-            return Comparer.Equals(Value, value);
+        internal bool Change(T value) {
+            if (Comparer.Equals(Value, value)) {
+                return false;
+            }
+            Value = value;
+            return true;
         }
 
         /// <summary>
         /// Gets the wrapped value.
         /// </summary>
-        public T Value { get; internal set; }
+        public T Value { get; private set; }
 
         /// <summary>
         /// Creates a new wrapper with the specified name.
