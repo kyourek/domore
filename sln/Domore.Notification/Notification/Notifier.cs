@@ -3,9 +3,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-
-
-
 #if !NET40
 using System.Runtime.CompilerServices;
 #endif
@@ -16,6 +13,10 @@ namespace Domore.Notification {
     /// </summary>
     public partial class Notifier : NotifyPropertyChangedImplementation {
         private static readonly PropertyChangedEventArgs EmptyEventArgs = new PropertyChangedEventArgs(string.Empty);
+
+        internal bool PreviewPropertyChange(string propertyName) {
+            return PreviewPropertyChange(new PropertyChangedEventArgs(propertyName));
+        }
 
         /// <summary>
         /// Gets or sets a value that indicates whether or not <see cref="INotifyPropertyChanged.PropertyChanged"/> events will be raised.
@@ -121,9 +122,23 @@ namespace Domore.Notification {
             NotifyPropertyChanged(EmptyEventArgs);
         }
 
+        /// <summary>
+        /// Called before the equality check in the various Change methods. When overridden, the method is called once for every call of
+        /// any of the Change methods, regardless of whether or not a change will occur.
+        /// </summary>
+        /// <param name="e">The argument that contains the name of the property that may change.</param>
+        protected virtual bool PreviewPropertyChange(PropertyChangedEventArgs e) {
+            return true;
+        }
+
         protected bool Change<T>(Notified<T> notified, T value, params Notified[] dependents) {
-            if (notified is null) throw new ArgumentNullException(nameof(notified));
-            if (notified.Change(value)) {
+            if (null == notified) throw new ArgumentNullException(nameof(notified));
+            var prev = PreviewPropertyChange(notified.PropertyChangedEventArgs);
+            if (prev == false) {
+                return false;
+            }
+            var changed = notified.Change(value);
+            if (changed) {
                 NotifyPropertyChanged(notified, dependents);
                 return true;
             }
@@ -196,7 +211,7 @@ namespace Domore.Notification {
                 NotifyErrorsChanged(propertyName);
                 return true;
             }
-            
+
             /// <summary>
             /// Removes an error associated with <paramref name="propertyName"/>.
             /// </summary>

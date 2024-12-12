@@ -6,7 +6,7 @@
   <Namespace>System.Threading.Tasks</Namespace>
 </Query>
 
- var types = new[] {
+var types = new[] {
     "byte",
     "byte?",
     "sbyte",
@@ -168,7 +168,25 @@ foreach (var type in types) {
     m(@"    var actual = Subject.Change(ref field, $O, """");");
     m(@"    Assert.That(actual, Is.True);");
     m(@"}");
-    file.Append(methods.ToString()
+	m(@"");
+	m(@"[Test]");
+	m(@"public void Change_T_1_ReturnsFalseIfPrevented() {");
+	m(@"    var subject = new NotifierSubject1();");
+	m(@"    subject.PreviewPropertyChangeLookup[""P_T_""] = false;");	
+	m(@"    var field = $Z;");
+	m(@"    var actual = subject.Change(ref field, $O, ""P_T_"");");
+	m(@"    Assert.That(actual, Is.False);");
+	m(@"}");
+	m(@"");
+	m(@"[Test]");
+	m(@"public void Change_T_1_ReturnsTrueIfNotPrevented() {");
+	m(@"    var subject = new NotifierSubject1();");
+	m(@"    subject.PreviewPropertyChangeLookup[""P_T_""] = true;");
+	m(@"    var field = $Z;");
+	m(@"    var actual = subject.Change(ref field, $O, ""P_T_"");");
+	m(@"    Assert.That(actual, Is.True);");
+	m(@"}");
+	file.Append(methods.ToString()
         .Replace("_T_", $"_{type.T}_".Replace("?", "n"))
         .Replace("$Z", $"{type.Z}")
         .Replace("$O", $"{type.O}"));

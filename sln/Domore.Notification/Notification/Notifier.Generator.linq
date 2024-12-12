@@ -64,6 +64,7 @@ foreach (var type in types) {
     m(@"        [CallerMemberName] string propertyName = null");
     m(@"    #endif");
     m(@"    )$W{");
+    m(@"    if (PreviewPropertyChange(propertyName) == false) return false;");
     m(@"    if ($E) return false;");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(propertyName);");
@@ -80,6 +81,7 @@ foreach (var type in types) {
     m(@"    #endif");
     m(@"    params string[] dependentPropertyNames");
     m(@"    )$W{");
+    m(@"    if (PreviewPropertyChange(propertyName) == false) return false;");
     m(@"    if ($E) return false;");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(propertyName, dependentPropertyNames);");
@@ -87,6 +89,7 @@ foreach (var type in types) {
     m(@"}");
     m(@"");
     m(@"protected internal bool Change$G(ref T field, T value, PropertyChangedEventArgs e)$W{");
+    m(@"    if (PreviewPropertyChange(e) == false) return false;");
     m(@"    if ($E) return false;");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(e);");
@@ -94,6 +97,7 @@ foreach (var type in types) {
     m(@"}");
     m(@"");
     m(@"protected internal bool Change$G(ref T field, T value, PropertyChangedEventArgs e, params PropertyChangedEventArgs[] dependents)$W{");
+    m(@"    if (PreviewPropertyChange(e) == false) return false;");
     m(@"    if ($E) return false;");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(e, dependents);");

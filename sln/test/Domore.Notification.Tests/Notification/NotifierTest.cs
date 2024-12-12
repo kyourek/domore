@@ -137,6 +137,58 @@ namespace Domore.Notification {
             Assert.That(subject.FooChanged, Is.False);
         }
 
+        [Test]
+        public void Change_DoesNotRaisePropertyChangedIfPrevented() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.P_int_)] = false;
+            subject.P_int_ = 1;
+            subject.P_int_ = 2;
+            Assert.That(count, Is.Zero);
+        }
+
+        [Test]
+        public void Change_RaisesPropertyChangedIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.P_int_)] = true;
+            subject.P_int_ = 1;
+            subject.P_int_ = 2;
+            Assert.That(count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Change_DoesNotRaisePropertyChangedIfPreventedWhenChangingNotified() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.N_string_)] = false;
+            subject.N_string_ = "1";
+            subject.N_string_ = "2";
+            Assert.That(count, Is.Zero);
+        }
+
+        [Test]
+        public void Change_RaisesPropertyChangedIfNotPreventedWhenChangingNotified() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.N_string_)] = true;
+            subject.N_string_ = "1";
+            subject.N_string_ = "2";
+            Assert.That(count, Is.EqualTo(2));
+        }
+
 #if NET45_OR_GREATER || NETCOREAPP
         private class Subject4 : Notifier.WithErrorInfo {
             private void ValidateMyNum() {

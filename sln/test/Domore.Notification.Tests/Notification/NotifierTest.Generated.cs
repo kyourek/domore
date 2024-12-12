@@ -118,6 +118,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (byte)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_byte_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_byte_"] = false;
+            var field = (byte)0;
+            var actual = subject.Change(ref field, (byte)1, "P_byte_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_byte_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_byte_"] = true;
+            var field = (byte)0;
+            var actual = subject.Change(ref field, (byte)1, "P_byte_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_byten_1_RaisesPropertyChanged() {
             var actual = "";
@@ -229,6 +247,24 @@ namespace Domore.Notification {
         public void Change_byten_1_ReturnsTrue() {
             var field = (byte?)0;
             var actual = Subject.Change(ref field, (byte?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_byten_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_byten_"] = false;
+            var field = (byte?)0;
+            var actual = subject.Change(ref field, (byte?)1, "P_byten_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_byten_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_byten_"] = true;
+            var field = (byte?)0;
+            var actual = subject.Change(ref field, (byte?)1, "P_byten_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -344,6 +380,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (sbyte)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_sbyte_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_sbyte_"] = false;
+            var field = (sbyte)0;
+            var actual = subject.Change(ref field, (sbyte)1, "P_sbyte_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_sbyte_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_sbyte_"] = true;
+            var field = (sbyte)0;
+            var actual = subject.Change(ref field, (sbyte)1, "P_sbyte_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_sbyten_1_RaisesPropertyChanged() {
             var actual = "";
@@ -455,6 +509,24 @@ namespace Domore.Notification {
         public void Change_sbyten_1_ReturnsTrue() {
             var field = (sbyte?)0;
             var actual = Subject.Change(ref field, (sbyte?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_sbyten_"] = false;
+            var field = (sbyte?)0;
+            var actual = subject.Change(ref field, (sbyte?)1, "P_sbyten_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_sbyten_"] = true;
+            var field = (sbyte?)0;
+            var actual = subject.Change(ref field, (sbyte?)1, "P_sbyten_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -570,6 +642,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (char)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_char_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_char_"] = false;
+            var field = (char)0;
+            var actual = subject.Change(ref field, (char)1, "P_char_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_char_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_char_"] = true;
+            var field = (char)0;
+            var actual = subject.Change(ref field, (char)1, "P_char_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_charn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -681,6 +771,24 @@ namespace Domore.Notification {
         public void Change_charn_1_ReturnsTrue() {
             var field = (char?)0;
             var actual = Subject.Change(ref field, (char?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_charn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_charn_"] = false;
+            var field = (char?)0;
+            var actual = subject.Change(ref field, (char?)1, "P_charn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_charn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_charn_"] = true;
+            var field = (char?)0;
+            var actual = subject.Change(ref field, (char?)1, "P_charn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -796,6 +904,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (decimal)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_decimal_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_decimal_"] = false;
+            var field = (decimal)0;
+            var actual = subject.Change(ref field, (decimal)1, "P_decimal_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_decimal_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_decimal_"] = true;
+            var field = (decimal)0;
+            var actual = subject.Change(ref field, (decimal)1, "P_decimal_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_decimaln_1_RaisesPropertyChanged() {
             var actual = "";
@@ -907,6 +1033,24 @@ namespace Domore.Notification {
         public void Change_decimaln_1_ReturnsTrue() {
             var field = (decimal?)0;
             var actual = Subject.Change(ref field, (decimal?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_decimaln_"] = false;
+            var field = (decimal?)0;
+            var actual = subject.Change(ref field, (decimal?)1, "P_decimaln_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_decimaln_"] = true;
+            var field = (decimal?)0;
+            var actual = subject.Change(ref field, (decimal?)1, "P_decimaln_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -1022,6 +1166,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (double)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_double_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_double_"] = false;
+            var field = (double)0;
+            var actual = subject.Change(ref field, (double)1, "P_double_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_double_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_double_"] = true;
+            var field = (double)0;
+            var actual = subject.Change(ref field, (double)1, "P_double_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_doublen_1_RaisesPropertyChanged() {
             var actual = "";
@@ -1133,6 +1295,24 @@ namespace Domore.Notification {
         public void Change_doublen_1_ReturnsTrue() {
             var field = (double?)0;
             var actual = Subject.Change(ref field, (double?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_doublen_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_doublen_"] = false;
+            var field = (double?)0;
+            var actual = subject.Change(ref field, (double?)1, "P_doublen_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_doublen_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_doublen_"] = true;
+            var field = (double?)0;
+            var actual = subject.Change(ref field, (double?)1, "P_doublen_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -1248,6 +1428,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (float)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_float_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_float_"] = false;
+            var field = (float)0;
+            var actual = subject.Change(ref field, (float)1, "P_float_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_float_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_float_"] = true;
+            var field = (float)0;
+            var actual = subject.Change(ref field, (float)1, "P_float_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_floatn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -1359,6 +1557,24 @@ namespace Domore.Notification {
         public void Change_floatn_1_ReturnsTrue() {
             var field = (float?)0;
             var actual = Subject.Change(ref field, (float?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_floatn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_floatn_"] = false;
+            var field = (float?)0;
+            var actual = subject.Change(ref field, (float?)1, "P_floatn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_floatn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_floatn_"] = true;
+            var field = (float?)0;
+            var actual = subject.Change(ref field, (float?)1, "P_floatn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -1474,6 +1690,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (int)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_int_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_int_"] = false;
+            var field = (int)0;
+            var actual = subject.Change(ref field, (int)1, "P_int_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_int_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_int_"] = true;
+            var field = (int)0;
+            var actual = subject.Change(ref field, (int)1, "P_int_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_intn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -1585,6 +1819,24 @@ namespace Domore.Notification {
         public void Change_intn_1_ReturnsTrue() {
             var field = (int?)0;
             var actual = Subject.Change(ref field, (int?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_intn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_intn_"] = false;
+            var field = (int?)0;
+            var actual = subject.Change(ref field, (int?)1, "P_intn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_intn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_intn_"] = true;
+            var field = (int?)0;
+            var actual = subject.Change(ref field, (int?)1, "P_intn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -1700,6 +1952,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (uint)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_uint_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_uint_"] = false;
+            var field = (uint)0;
+            var actual = subject.Change(ref field, (uint)1, "P_uint_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_uint_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_uint_"] = true;
+            var field = (uint)0;
+            var actual = subject.Change(ref field, (uint)1, "P_uint_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_uintn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -1811,6 +2081,24 @@ namespace Domore.Notification {
         public void Change_uintn_1_ReturnsTrue() {
             var field = (uint?)0;
             var actual = Subject.Change(ref field, (uint?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_uintn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_uintn_"] = false;
+            var field = (uint?)0;
+            var actual = subject.Change(ref field, (uint?)1, "P_uintn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_uintn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_uintn_"] = true;
+            var field = (uint?)0;
+            var actual = subject.Change(ref field, (uint?)1, "P_uintn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -1926,6 +2214,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (nint)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_nint_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nint_"] = false;
+            var field = (nint)0;
+            var actual = subject.Change(ref field, (nint)1, "P_nint_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_nint_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nint_"] = true;
+            var field = (nint)0;
+            var actual = subject.Change(ref field, (nint)1, "P_nint_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_nintn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -2037,6 +2343,24 @@ namespace Domore.Notification {
         public void Change_nintn_1_ReturnsTrue() {
             var field = (nint?)0;
             var actual = Subject.Change(ref field, (nint?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_nintn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nintn_"] = false;
+            var field = (nint?)0;
+            var actual = subject.Change(ref field, (nint?)1, "P_nintn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_nintn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nintn_"] = true;
+            var field = (nint?)0;
+            var actual = subject.Change(ref field, (nint?)1, "P_nintn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -2152,6 +2476,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (nuint)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_nuint_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nuint_"] = false;
+            var field = (nuint)0;
+            var actual = subject.Change(ref field, (nuint)1, "P_nuint_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_nuint_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nuint_"] = true;
+            var field = (nuint)0;
+            var actual = subject.Change(ref field, (nuint)1, "P_nuint_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_nuintn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -2263,6 +2605,24 @@ namespace Domore.Notification {
         public void Change_nuintn_1_ReturnsTrue() {
             var field = (nuint?)0;
             var actual = Subject.Change(ref field, (nuint?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nuintn_"] = false;
+            var field = (nuint?)0;
+            var actual = subject.Change(ref field, (nuint?)1, "P_nuintn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_nuintn_"] = true;
+            var field = (nuint?)0;
+            var actual = subject.Change(ref field, (nuint?)1, "P_nuintn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -2378,6 +2738,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (long)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_long_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_long_"] = false;
+            var field = (long)0;
+            var actual = subject.Change(ref field, (long)1, "P_long_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_long_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_long_"] = true;
+            var field = (long)0;
+            var actual = subject.Change(ref field, (long)1, "P_long_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_longn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -2489,6 +2867,24 @@ namespace Domore.Notification {
         public void Change_longn_1_ReturnsTrue() {
             var field = (long?)0;
             var actual = Subject.Change(ref field, (long?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_longn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_longn_"] = false;
+            var field = (long?)0;
+            var actual = subject.Change(ref field, (long?)1, "P_longn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_longn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_longn_"] = true;
+            var field = (long?)0;
+            var actual = subject.Change(ref field, (long?)1, "P_longn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -2604,6 +3000,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (ulong)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_ulong_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ulong_"] = false;
+            var field = (ulong)0;
+            var actual = subject.Change(ref field, (ulong)1, "P_ulong_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_ulong_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ulong_"] = true;
+            var field = (ulong)0;
+            var actual = subject.Change(ref field, (ulong)1, "P_ulong_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_ulongn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -2715,6 +3129,24 @@ namespace Domore.Notification {
         public void Change_ulongn_1_ReturnsTrue() {
             var field = (ulong?)0;
             var actual = Subject.Change(ref field, (ulong?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ulongn_"] = false;
+            var field = (ulong?)0;
+            var actual = subject.Change(ref field, (ulong?)1, "P_ulongn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ulongn_"] = true;
+            var field = (ulong?)0;
+            var actual = subject.Change(ref field, (ulong?)1, "P_ulongn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -2830,6 +3262,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (short)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_short_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_short_"] = false;
+            var field = (short)0;
+            var actual = subject.Change(ref field, (short)1, "P_short_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_short_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_short_"] = true;
+            var field = (short)0;
+            var actual = subject.Change(ref field, (short)1, "P_short_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_shortn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -2941,6 +3391,24 @@ namespace Domore.Notification {
         public void Change_shortn_1_ReturnsTrue() {
             var field = (short?)0;
             var actual = Subject.Change(ref field, (short?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_shortn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_shortn_"] = false;
+            var field = (short?)0;
+            var actual = subject.Change(ref field, (short?)1, "P_shortn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_shortn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_shortn_"] = true;
+            var field = (short?)0;
+            var actual = subject.Change(ref field, (short?)1, "P_shortn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -3056,6 +3524,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (ushort)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_ushort_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ushort_"] = false;
+            var field = (ushort)0;
+            var actual = subject.Change(ref field, (ushort)1, "P_ushort_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_ushort_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ushort_"] = true;
+            var field = (ushort)0;
+            var actual = subject.Change(ref field, (ushort)1, "P_ushort_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_ushortn_1_RaisesPropertyChanged() {
             var actual = "";
@@ -3167,6 +3653,24 @@ namespace Domore.Notification {
         public void Change_ushortn_1_ReturnsTrue() {
             var field = (ushort?)0;
             var actual = Subject.Change(ref field, (ushort?)1, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ushortn_"] = false;
+            var field = (ushort?)0;
+            var actual = subject.Change(ref field, (ushort?)1, "P_ushortn_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_ushortn_"] = true;
+            var field = (ushort?)0;
+            var actual = subject.Change(ref field, (ushort?)1, "P_ushortn_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -3282,6 +3786,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, (object)1, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_object_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_object_"] = false;
+            var field = (object)0;
+            var actual = subject.Change(ref field, (object)1, "P_object_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_object_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_object_"] = true;
+            var field = (object)0;
+            var actual = subject.Change(ref field, (object)1, "P_object_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_bool_1_RaisesPropertyChanged() {
             var actual = "";
@@ -3393,6 +3915,24 @@ namespace Domore.Notification {
         public void Change_bool_1_ReturnsTrue() {
             var field = false;
             var actual = Subject.Change(ref field, true , "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_bool_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_bool_"] = false;
+            var field = false;
+            var actual = subject.Change(ref field, true , "P_bool_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_bool_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_bool_"] = true;
+            var field = false;
+            var actual = subject.Change(ref field, true , "P_bool_");
             Assert.That(actual, Is.True);
         }
         [Test]
@@ -3508,6 +4048,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, "1", "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_string_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_string_"] = false;
+            var field = "0";
+            var actual = subject.Change(ref field, "1", "P_string_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_string_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_string_"] = true;
+            var field = "0";
+            var actual = subject.Change(ref field, "1", "P_string_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_DateTime_1_RaisesPropertyChanged() {
             var actual = "";
@@ -3621,6 +4179,24 @@ namespace Domore.Notification {
             var actual = Subject.Change(ref field, DateTime.MaxValue, "");
             Assert.That(actual, Is.True);
         }
+        
+        [Test]
+        public void Change_DateTime_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_DateTime_"] = false;
+            var field = DateTime.MinValue;
+            var actual = subject.Change(ref field, DateTime.MaxValue, "P_DateTime_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_DateTime_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_DateTime_"] = true;
+            var field = DateTime.MinValue;
+            var actual = subject.Change(ref field, DateTime.MaxValue, "P_DateTime_");
+            Assert.That(actual, Is.True);
+        }
         [Test]
         public void Change_TimeSpan_1_RaisesPropertyChanged() {
             var actual = "";
@@ -3732,6 +4308,24 @@ namespace Domore.Notification {
         public void Change_TimeSpan_1_ReturnsTrue() {
             var field = TimeSpan.Zero;
             var actual = Subject.Change(ref field, TimeSpan.MaxValue, "");
+            Assert.That(actual, Is.True);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_ReturnsFalseIfPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_TimeSpan_"] = false;
+            var field = TimeSpan.Zero;
+            var actual = subject.Change(ref field, TimeSpan.MaxValue, "P_TimeSpan_");
+            Assert.That(actual, Is.False);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_ReturnsTrueIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            subject.PreviewPropertyChangeLookup["P_TimeSpan_"] = true;
+            var field = TimeSpan.Zero;
+            var actual = subject.Change(ref field, TimeSpan.MaxValue, "P_TimeSpan_");
             Assert.That(actual, Is.True);
         }
     }
