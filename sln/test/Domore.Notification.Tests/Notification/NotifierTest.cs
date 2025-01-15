@@ -59,10 +59,51 @@ namespace Domore.Notification {
         }
 
         [Test]
+        public void NotifiedPropertyRaisesPropertyChanging() {
+            var subject = new Subject1();
+            var entered = 0;
+            subject.PropertyChanging += (s, e) => {
+                if (e.PropertyName == nameof(subject.Foo)) {
+                    entered++;
+                }
+            };
+            subject.Foo = "bar";
+            Assert.That(entered, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void NotifiedPropertyRaisesPropertyChangingBeforePropertyChanged() {
+            var subject = new Subject1();
+            var entered = 0;
+            subject.PropertyChanged += (s, e) => {
+                Assert.That(entered, Is.EqualTo(1));
+            };
+            subject.PropertyChanging += (s, e) => {
+                if (e.PropertyName == nameof(subject.Foo)) {
+                    entered++;
+                }
+            };
+            subject.Foo = "bar";            
+        }
+
+        [Test]
         public void NotifiedPropertyDoesNotRaisePropertyChanged() {
             var subject = new Subject1();
             var entered = 0;
             subject.PropertyChanged += (s, e) => {
+                if (e.PropertyName == nameof(subject.Foo)) {
+                    entered++;
+                }
+            };
+            subject.Foo = null;
+            Assert.That(entered, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void NotifiedPropertyDoesNotRaisePropertyChanging() {
+            var subject = new Subject1();
+            var entered = 0;
+            subject.PropertyChanging += (s, e) => {
                 if (e.PropertyName == nameof(subject.Foo)) {
                     entered++;
                 }
@@ -103,10 +144,45 @@ namespace Domore.Notification {
         }
 
         [Test]
+        public void NotifiedPropertyRaisesPropertyChangingForDependents() {
+            var events = new List<string>();
+            var subject = new Subject2();
+            subject.PropertyChanging += (s, e) => {
+                events.Add(e.PropertyName);
+            };
+            subject.Bar = 1;
+            Assert.That(events, Is.EqualTo(new[] { "Bar", "Foo" }));
+        }
+
+        [Test]
+        public void NotifiedPropertyRaisesPropertyChangingForDependentsBeforePropertyChanged() {
+            var events = new List<string>();
+            var subject = new Subject2();
+            subject.PropertyChanged += (s, e) => {
+                Assert.That(events, Has.One.EqualTo(e.PropertyName));
+            };
+            subject.PropertyChanging += (s, e) => {
+                events.Add(e.PropertyName);
+            };
+            subject.Bar = 1;
+        }
+
+        [Test]
         public void NotifiedPropertyDoesNotRaisesPropertyChangedIfValueDoesNotChange() {
             var events = new List<string>();
             var subject = new Subject2();
             subject.PropertyChanged += (s, e) => {
+                events.Add(e.PropertyName);
+            };
+            subject.Bar = 0;
+            Assert.That(events, Is.EqualTo(new string[] { }));
+        }
+
+        [Test]
+        public void NotifiedPropertyDoesNotRaisesPropertyChangingIfValueDoesNotChange() {
+            var events = new List<string>();
+            var subject = new Subject2();
+            subject.PropertyChanging += (s, e) => {
                 events.Add(e.PropertyName);
             };
             subject.Bar = 0;
@@ -151,10 +227,36 @@ namespace Domore.Notification {
         }
 
         [Test]
+        public void Change_DoesNotRaisePropertyChangingIfPrevented() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanging += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.P_int_)] = false;
+            subject.P_int_ = 1;
+            subject.P_int_ = 2;
+            Assert.That(count, Is.Zero);
+        }
+
+        [Test]
         public void Change_RaisesPropertyChangedIfNotPrevented() {
             var subject = new NotifierSubject1();
             var count = 0;
             subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.P_int_)] = true;
+            subject.P_int_ = 1;
+            subject.P_int_ = 2;
+            Assert.That(count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Change_RaisesPropertyChangingIfNotPrevented() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanging += (s, e) => {
                 count++;
             };
             subject.PreviewPropertyChangeLookup[nameof(subject.P_int_)] = true;
@@ -177,10 +279,36 @@ namespace Domore.Notification {
         }
 
         [Test]
+        public void Change_DoesNotRaisePropertyChangingIfPreventedWhenChangingNotified() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanging += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.N_string_)] = false;
+            subject.N_string_ = "1";
+            subject.N_string_ = "2";
+            Assert.That(count, Is.Zero);
+        }
+
+        [Test]
         public void Change_RaisesPropertyChangedIfNotPreventedWhenChangingNotified() {
             var subject = new NotifierSubject1();
             var count = 0;
             subject.PropertyChanged += (s, e) => {
+                count++;
+            };
+            subject.PreviewPropertyChangeLookup[nameof(subject.N_string_)] = true;
+            subject.N_string_ = "1";
+            subject.N_string_ = "2";
+            Assert.That(count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Change_RaisesPropertyChangingIfNotPreventedWhenChangingNotified() {
+            var subject = new NotifierSubject1();
+            var count = 0;
+            subject.PropertyChanging += (s, e) => {
                 count++;
             };
             subject.PreviewPropertyChangeLookup[nameof(subject.N_string_)] = true;

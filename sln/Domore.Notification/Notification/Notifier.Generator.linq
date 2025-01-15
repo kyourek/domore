@@ -46,6 +46,7 @@ var file = new StringBuilder();
 var f = new Action<string>(l => file.AppendLine(l));
 f(@"using System.Collections.Generic;");
 f(@"using System.ComponentModel;");
+f(@"using System.Linq;");
 f(@"#if !NET40");
 f(@"using System.Runtime.CompilerServices;");
 f(@"#endif");
@@ -66,6 +67,7 @@ foreach (var type in types) {
     m(@"    )$W{");
     m(@"    if (PreviewPropertyChange(propertyName) == false) return false;");
     m(@"    if ($E) return false;");
+	m(@"    NotifyPropertyChanging(propertyName);");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(propertyName);");
     m(@"    return true;");
@@ -83,6 +85,7 @@ foreach (var type in types) {
     m(@"    )$W{");
     m(@"    if (PreviewPropertyChange(propertyName) == false) return false;");
     m(@"    if ($E) return false;");
+    m(@"    NotifyPropertyChanging(propertyName, dependentPropertyNames);");	
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(propertyName, dependentPropertyNames);");
     m(@"    return true;");
@@ -91,6 +94,7 @@ foreach (var type in types) {
     m(@"protected internal bool Change$G(ref T field, T value, PropertyChangedEventArgs e)$W{");
     m(@"    if (PreviewPropertyChange(e) == false) return false;");
     m(@"    if ($E) return false;");
+	m(@"    if (PropertyChanging != null) NotifyPropertyChanging(new PropertyChangingEventArgs(e?.PropertyName));");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(e);");
     m(@"    return true;");
@@ -99,6 +103,7 @@ foreach (var type in types) {
     m(@"protected internal bool Change$G(ref T field, T value, PropertyChangedEventArgs e, params PropertyChangedEventArgs[] dependents)$W{");
     m(@"    if (PreviewPropertyChange(e) == false) return false;");
     m(@"    if ($E) return false;");
+	m(@"    if (PropertyChanging != null) NotifyPropertyChanging(new PropertyChangingEventArgs(e?.PropertyName), dependents?.Select(d => new PropertyChangingEventArgs(d?.PropertyName)).ToArray());");
     m(@"    field = value;");
     m(@"    NotifyPropertyChanged(e, dependents);");
     m(@"    return true;");

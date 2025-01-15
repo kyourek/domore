@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 
 namespace Domore.Notification {
     public partial class NotifierTest {
@@ -17,9 +18,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byte_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_byte_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, "expected");
+        }
+        
+        [Test]
         public void Change_byte_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_byte_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (byte)0;
             Subject.Change(ref field, (byte)0, "expected");
@@ -40,10 +73,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byte_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_byte_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_byte_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_byte_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (byte)0;
             Subject.Change(ref field, (byte)0, expected[0], expected[1], expected[2]);
@@ -64,9 +132,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byte_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_byte_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_byte_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_byte_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (byte)0;
             Subject.Change(ref field, (byte)0, new PropertyChangedEventArgs("fail"));
@@ -87,10 +189,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byte_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_byte_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_byte_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (byte)0;
+            Subject.Change(ref field, (byte)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_byte_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (byte)0;
             Subject.Change(ref field, (byte)0, expected[0], expected[1], expected[2]);
@@ -148,9 +285,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byten_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_byten_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, "expected");
+        }
+        
+        [Test]
         public void Change_byten_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_byten_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (byte?)0;
             Subject.Change(ref field, (byte?)0, "expected");
@@ -171,10 +340,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byten_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_byten_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_byten_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_byten_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (byte?)0;
             Subject.Change(ref field, (byte?)0, expected[0], expected[1], expected[2]);
@@ -195,9 +399,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byten_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_byten_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_byten_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_byten_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (byte?)0;
             Subject.Change(ref field, (byte?)0, new PropertyChangedEventArgs("fail"));
@@ -218,10 +456,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_byten_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_byten_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_byten_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (byte?)0;
+            Subject.Change(ref field, (byte?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_byten_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (byte?)0;
             Subject.Change(ref field, (byte?)0, expected[0], expected[1], expected[2]);
@@ -279,9 +552,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyte_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, "expected");
+        }
+        
+        [Test]
         public void Change_sbyte_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_sbyte_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (sbyte)0;
             Subject.Change(ref field, (sbyte)0, "expected");
@@ -302,10 +607,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_sbyte_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_sbyte_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (sbyte)0;
             Subject.Change(ref field, (sbyte)0, expected[0], expected[1], expected[2]);
@@ -326,9 +666,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_sbyte_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_sbyte_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (sbyte)0;
             Subject.Change(ref field, (sbyte)0, new PropertyChangedEventArgs("fail"));
@@ -349,10 +723,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_sbyte_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_sbyte_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (sbyte)0;
+            Subject.Change(ref field, (sbyte)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_sbyte_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (sbyte)0;
             Subject.Change(ref field, (sbyte)0, expected[0], expected[1], expected[2]);
@@ -410,9 +819,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyten_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, "expected");
+        }
+        
+        [Test]
         public void Change_sbyten_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_sbyten_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (sbyte?)0;
             Subject.Change(ref field, (sbyte?)0, "expected");
@@ -433,10 +874,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_sbyten_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (sbyte?)0;
             Subject.Change(ref field, (sbyte?)0, expected[0], expected[1], expected[2]);
@@ -457,9 +933,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_sbyten_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (sbyte?)0;
             Subject.Change(ref field, (sbyte?)0, new PropertyChangedEventArgs("fail"));
@@ -480,10 +990,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_sbyten_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_sbyten_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (sbyte?)0;
+            Subject.Change(ref field, (sbyte?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_sbyten_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (sbyte?)0;
             Subject.Change(ref field, (sbyte?)0, expected[0], expected[1], expected[2]);
@@ -541,9 +1086,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_char_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_char_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, "expected");
+        }
+        
+        [Test]
         public void Change_char_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_char_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (char)0;
             Subject.Change(ref field, (char)0, "expected");
@@ -564,10 +1141,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_char_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_char_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_char_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_char_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (char)0;
             Subject.Change(ref field, (char)0, expected[0], expected[1], expected[2]);
@@ -588,9 +1200,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_char_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_char_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_char_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_char_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (char)0;
             Subject.Change(ref field, (char)0, new PropertyChangedEventArgs("fail"));
@@ -611,10 +1257,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_char_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_char_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_char_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (char)0;
+            Subject.Change(ref field, (char)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_char_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (char)0;
             Subject.Change(ref field, (char)0, expected[0], expected[1], expected[2]);
@@ -672,9 +1353,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_charn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_charn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, "expected");
+        }
+        
+        [Test]
         public void Change_charn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_charn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (char?)0;
             Subject.Change(ref field, (char?)0, "expected");
@@ -695,10 +1408,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_charn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_charn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_charn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_charn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (char?)0;
             Subject.Change(ref field, (char?)0, expected[0], expected[1], expected[2]);
@@ -719,9 +1467,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_charn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_charn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_charn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_charn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (char?)0;
             Subject.Change(ref field, (char?)0, new PropertyChangedEventArgs("fail"));
@@ -742,10 +1524,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_charn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_charn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_charn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (char?)0;
+            Subject.Change(ref field, (char?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_charn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (char?)0;
             Subject.Change(ref field, (char?)0, expected[0], expected[1], expected[2]);
@@ -803,9 +1620,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimal_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_decimal_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, "expected");
+        }
+        
+        [Test]
         public void Change_decimal_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_decimal_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (decimal)0;
             Subject.Change(ref field, (decimal)0, "expected");
@@ -826,10 +1675,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimal_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_decimal_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_decimal_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_decimal_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (decimal)0;
             Subject.Change(ref field, (decimal)0, expected[0], expected[1], expected[2]);
@@ -850,9 +1734,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimal_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_decimal_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_decimal_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_decimal_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (decimal)0;
             Subject.Change(ref field, (decimal)0, new PropertyChangedEventArgs("fail"));
@@ -873,10 +1791,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimal_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_decimal_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_decimal_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (decimal)0;
+            Subject.Change(ref field, (decimal)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_decimal_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (decimal)0;
             Subject.Change(ref field, (decimal)0, expected[0], expected[1], expected[2]);
@@ -934,9 +1887,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimaln_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, "expected");
+        }
+        
+        [Test]
         public void Change_decimaln_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_decimaln_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (decimal?)0;
             Subject.Change(ref field, (decimal?)0, "expected");
@@ -957,10 +1942,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_decimaln_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (decimal?)0;
             Subject.Change(ref field, (decimal?)0, expected[0], expected[1], expected[2]);
@@ -981,9 +2001,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_decimaln_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (decimal?)0;
             Subject.Change(ref field, (decimal?)0, new PropertyChangedEventArgs("fail"));
@@ -1004,10 +2058,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_decimaln_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_decimaln_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (decimal?)0;
+            Subject.Change(ref field, (decimal?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_decimaln_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (decimal?)0;
             Subject.Change(ref field, (decimal?)0, expected[0], expected[1], expected[2]);
@@ -1065,9 +2154,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_double_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_double_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, "expected");
+        }
+        
+        [Test]
         public void Change_double_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_double_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (double)0;
             Subject.Change(ref field, (double)0, "expected");
@@ -1088,10 +2209,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_double_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_double_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_double_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_double_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (double)0;
             Subject.Change(ref field, (double)0, expected[0], expected[1], expected[2]);
@@ -1112,9 +2268,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_double_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_double_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_double_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_double_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (double)0;
             Subject.Change(ref field, (double)0, new PropertyChangedEventArgs("fail"));
@@ -1135,10 +2325,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_double_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_double_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_double_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (double)0;
+            Subject.Change(ref field, (double)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_double_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (double)0;
             Subject.Change(ref field, (double)0, expected[0], expected[1], expected[2]);
@@ -1196,9 +2421,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_doublen_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_doublen_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, "expected");
+        }
+        
+        [Test]
         public void Change_doublen_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_doublen_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (double?)0;
             Subject.Change(ref field, (double?)0, "expected");
@@ -1219,10 +2476,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_doublen_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_doublen_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_doublen_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_doublen_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (double?)0;
             Subject.Change(ref field, (double?)0, expected[0], expected[1], expected[2]);
@@ -1243,9 +2535,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_doublen_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_doublen_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_doublen_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_doublen_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (double?)0;
             Subject.Change(ref field, (double?)0, new PropertyChangedEventArgs("fail"));
@@ -1266,10 +2592,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_doublen_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_doublen_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_doublen_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (double?)0;
+            Subject.Change(ref field, (double?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_doublen_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (double?)0;
             Subject.Change(ref field, (double?)0, expected[0], expected[1], expected[2]);
@@ -1327,9 +2688,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_float_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_float_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, "expected");
+        }
+        
+        [Test]
         public void Change_float_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_float_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (float)0;
             Subject.Change(ref field, (float)0, "expected");
@@ -1350,10 +2743,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_float_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_float_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_float_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_float_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (float)0;
             Subject.Change(ref field, (float)0, expected[0], expected[1], expected[2]);
@@ -1374,9 +2802,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_float_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_float_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_float_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_float_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (float)0;
             Subject.Change(ref field, (float)0, new PropertyChangedEventArgs("fail"));
@@ -1397,10 +2859,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_float_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_float_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_float_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (float)0;
+            Subject.Change(ref field, (float)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_float_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (float)0;
             Subject.Change(ref field, (float)0, expected[0], expected[1], expected[2]);
@@ -1458,9 +2955,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_floatn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_floatn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, "expected");
+        }
+        
+        [Test]
         public void Change_floatn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_floatn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (float?)0;
             Subject.Change(ref field, (float?)0, "expected");
@@ -1481,10 +3010,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_floatn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_floatn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_floatn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_floatn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (float?)0;
             Subject.Change(ref field, (float?)0, expected[0], expected[1], expected[2]);
@@ -1505,9 +3069,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_floatn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_floatn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_floatn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_floatn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (float?)0;
             Subject.Change(ref field, (float?)0, new PropertyChangedEventArgs("fail"));
@@ -1528,10 +3126,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_floatn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_floatn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_floatn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (float?)0;
+            Subject.Change(ref field, (float?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_floatn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (float?)0;
             Subject.Change(ref field, (float?)0, expected[0], expected[1], expected[2]);
@@ -1589,9 +3222,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_int_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_int_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, "expected");
+        }
+        
+        [Test]
         public void Change_int_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_int_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (int)0;
             Subject.Change(ref field, (int)0, "expected");
@@ -1612,10 +3277,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_int_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_int_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_int_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_int_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (int)0;
             Subject.Change(ref field, (int)0, expected[0], expected[1], expected[2]);
@@ -1636,9 +3336,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_int_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_int_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_int_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_int_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (int)0;
             Subject.Change(ref field, (int)0, new PropertyChangedEventArgs("fail"));
@@ -1659,10 +3393,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_int_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_int_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_int_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (int)0;
+            Subject.Change(ref field, (int)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_int_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (int)0;
             Subject.Change(ref field, (int)0, expected[0], expected[1], expected[2]);
@@ -1720,9 +3489,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_intn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_intn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, "expected");
+        }
+        
+        [Test]
         public void Change_intn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_intn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (int?)0;
             Subject.Change(ref field, (int?)0, "expected");
@@ -1743,10 +3544,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_intn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_intn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_intn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_intn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (int?)0;
             Subject.Change(ref field, (int?)0, expected[0], expected[1], expected[2]);
@@ -1767,9 +3603,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_intn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_intn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_intn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_intn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (int?)0;
             Subject.Change(ref field, (int?)0, new PropertyChangedEventArgs("fail"));
@@ -1790,10 +3660,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_intn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_intn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_intn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (int?)0;
+            Subject.Change(ref field, (int?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_intn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (int?)0;
             Subject.Change(ref field, (int?)0, expected[0], expected[1], expected[2]);
@@ -1851,9 +3756,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uint_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_uint_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, "expected");
+        }
+        
+        [Test]
         public void Change_uint_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_uint_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (uint)0;
             Subject.Change(ref field, (uint)0, "expected");
@@ -1874,10 +3811,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uint_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_uint_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_uint_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_uint_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (uint)0;
             Subject.Change(ref field, (uint)0, expected[0], expected[1], expected[2]);
@@ -1898,9 +3870,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uint_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_uint_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_uint_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_uint_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (uint)0;
             Subject.Change(ref field, (uint)0, new PropertyChangedEventArgs("fail"));
@@ -1921,10 +3927,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uint_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_uint_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_uint_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (uint)0;
+            Subject.Change(ref field, (uint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_uint_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (uint)0;
             Subject.Change(ref field, (uint)0, expected[0], expected[1], expected[2]);
@@ -1982,9 +4023,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uintn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_uintn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, "expected");
+        }
+        
+        [Test]
         public void Change_uintn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_uintn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (uint?)0;
             Subject.Change(ref field, (uint?)0, "expected");
@@ -2005,10 +4078,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uintn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_uintn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_uintn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_uintn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (uint?)0;
             Subject.Change(ref field, (uint?)0, expected[0], expected[1], expected[2]);
@@ -2029,9 +4137,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uintn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_uintn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_uintn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_uintn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (uint?)0;
             Subject.Change(ref field, (uint?)0, new PropertyChangedEventArgs("fail"));
@@ -2052,10 +4194,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_uintn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_uintn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_uintn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (uint?)0;
+            Subject.Change(ref field, (uint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_uintn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (uint?)0;
             Subject.Change(ref field, (uint?)0, expected[0], expected[1], expected[2]);
@@ -2113,9 +4290,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nint_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_nint_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, "expected");
+        }
+        
+        [Test]
         public void Change_nint_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_nint_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (nint)0;
             Subject.Change(ref field, (nint)0, "expected");
@@ -2136,10 +4345,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nint_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_nint_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_nint_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nint_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (nint)0;
             Subject.Change(ref field, (nint)0, expected[0], expected[1], expected[2]);
@@ -2160,9 +4404,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nint_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nint_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_nint_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_nint_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (nint)0;
             Subject.Change(ref field, (nint)0, new PropertyChangedEventArgs("fail"));
@@ -2183,10 +4461,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nint_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nint_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_nint_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (nint)0;
+            Subject.Change(ref field, (nint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nint_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (nint)0;
             Subject.Change(ref field, (nint)0, expected[0], expected[1], expected[2]);
@@ -2244,9 +4557,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nintn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_nintn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, "expected");
+        }
+        
+        [Test]
         public void Change_nintn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_nintn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (nint?)0;
             Subject.Change(ref field, (nint?)0, "expected");
@@ -2267,10 +4612,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nintn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_nintn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_nintn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nintn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (nint?)0;
             Subject.Change(ref field, (nint?)0, expected[0], expected[1], expected[2]);
@@ -2291,9 +4671,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nintn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nintn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_nintn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_nintn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (nint?)0;
             Subject.Change(ref field, (nint?)0, new PropertyChangedEventArgs("fail"));
@@ -2314,10 +4728,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nintn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nintn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_nintn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (nint?)0;
+            Subject.Change(ref field, (nint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nintn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (nint?)0;
             Subject.Change(ref field, (nint?)0, expected[0], expected[1], expected[2]);
@@ -2375,9 +4824,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuint_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_nuint_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, "expected");
+        }
+        
+        [Test]
         public void Change_nuint_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_nuint_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (nuint)0;
             Subject.Change(ref field, (nuint)0, "expected");
@@ -2398,10 +4879,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuint_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_nuint_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_nuint_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nuint_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (nuint)0;
             Subject.Change(ref field, (nuint)0, expected[0], expected[1], expected[2]);
@@ -2422,9 +4938,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuint_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nuint_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_nuint_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_nuint_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (nuint)0;
             Subject.Change(ref field, (nuint)0, new PropertyChangedEventArgs("fail"));
@@ -2445,10 +4995,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuint_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nuint_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_nuint_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (nuint)0;
+            Subject.Change(ref field, (nuint)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nuint_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (nuint)0;
             Subject.Change(ref field, (nuint)0, expected[0], expected[1], expected[2]);
@@ -2506,9 +5091,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuintn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, "expected");
+        }
+        
+        [Test]
         public void Change_nuintn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_nuintn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (nuint?)0;
             Subject.Change(ref field, (nuint?)0, "expected");
@@ -2529,10 +5146,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_nuintn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (nuint?)0;
             Subject.Change(ref field, (nuint?)0, expected[0], expected[1], expected[2]);
@@ -2553,9 +5205,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_nuintn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (nuint?)0;
             Subject.Change(ref field, (nuint?)0, new PropertyChangedEventArgs("fail"));
@@ -2576,10 +5262,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_nuintn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_nuintn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (nuint?)0;
+            Subject.Change(ref field, (nuint?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_nuintn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (nuint?)0;
             Subject.Change(ref field, (nuint?)0, expected[0], expected[1], expected[2]);
@@ -2637,9 +5358,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_long_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_long_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, "expected");
+        }
+        
+        [Test]
         public void Change_long_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_long_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (long)0;
             Subject.Change(ref field, (long)0, "expected");
@@ -2660,10 +5413,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_long_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_long_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_long_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_long_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (long)0;
             Subject.Change(ref field, (long)0, expected[0], expected[1], expected[2]);
@@ -2684,9 +5472,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_long_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_long_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_long_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_long_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (long)0;
             Subject.Change(ref field, (long)0, new PropertyChangedEventArgs("fail"));
@@ -2707,10 +5529,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_long_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_long_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_long_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (long)0;
+            Subject.Change(ref field, (long)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_long_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (long)0;
             Subject.Change(ref field, (long)0, expected[0], expected[1], expected[2]);
@@ -2768,9 +5625,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_longn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_longn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, "expected");
+        }
+        
+        [Test]
         public void Change_longn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_longn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (long?)0;
             Subject.Change(ref field, (long?)0, "expected");
@@ -2791,10 +5680,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_longn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_longn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_longn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_longn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (long?)0;
             Subject.Change(ref field, (long?)0, expected[0], expected[1], expected[2]);
@@ -2815,9 +5739,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_longn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_longn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_longn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_longn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (long?)0;
             Subject.Change(ref field, (long?)0, new PropertyChangedEventArgs("fail"));
@@ -2838,10 +5796,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_longn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_longn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_longn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (long?)0;
+            Subject.Change(ref field, (long?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_longn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (long?)0;
             Subject.Change(ref field, (long?)0, expected[0], expected[1], expected[2]);
@@ -2899,9 +5892,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulong_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_ulong_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, "expected");
+        }
+        
+        [Test]
         public void Change_ulong_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_ulong_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (ulong)0;
             Subject.Change(ref field, (ulong)0, "expected");
@@ -2922,10 +5947,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulong_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_ulong_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_ulong_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ulong_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (ulong)0;
             Subject.Change(ref field, (ulong)0, expected[0], expected[1], expected[2]);
@@ -2946,9 +6006,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulong_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ulong_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_ulong_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_ulong_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (ulong)0;
             Subject.Change(ref field, (ulong)0, new PropertyChangedEventArgs("fail"));
@@ -2969,10 +6063,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulong_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ulong_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_ulong_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (ulong)0;
+            Subject.Change(ref field, (ulong)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ulong_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (ulong)0;
             Subject.Change(ref field, (ulong)0, expected[0], expected[1], expected[2]);
@@ -3030,9 +6159,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulongn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, "expected");
+        }
+        
+        [Test]
         public void Change_ulongn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_ulongn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (ulong?)0;
             Subject.Change(ref field, (ulong?)0, "expected");
@@ -3053,10 +6214,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_ulongn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (ulong?)0;
             Subject.Change(ref field, (ulong?)0, expected[0], expected[1], expected[2]);
@@ -3077,9 +6273,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_ulongn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (ulong?)0;
             Subject.Change(ref field, (ulong?)0, new PropertyChangedEventArgs("fail"));
@@ -3100,10 +6330,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ulongn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_ulongn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (ulong?)0;
+            Subject.Change(ref field, (ulong?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ulongn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (ulong?)0;
             Subject.Change(ref field, (ulong?)0, expected[0], expected[1], expected[2]);
@@ -3161,9 +6426,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_short_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_short_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, "expected");
+        }
+        
+        [Test]
         public void Change_short_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_short_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (short)0;
             Subject.Change(ref field, (short)0, "expected");
@@ -3184,10 +6481,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_short_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_short_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_short_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_short_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (short)0;
             Subject.Change(ref field, (short)0, expected[0], expected[1], expected[2]);
@@ -3208,9 +6540,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_short_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_short_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_short_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_short_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (short)0;
             Subject.Change(ref field, (short)0, new PropertyChangedEventArgs("fail"));
@@ -3231,10 +6597,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_short_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_short_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_short_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (short)0;
+            Subject.Change(ref field, (short)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_short_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (short)0;
             Subject.Change(ref field, (short)0, expected[0], expected[1], expected[2]);
@@ -3292,9 +6693,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_shortn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_shortn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, "expected");
+        }
+        
+        [Test]
         public void Change_shortn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_shortn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (short?)0;
             Subject.Change(ref field, (short?)0, "expected");
@@ -3315,10 +6748,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_shortn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_shortn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_shortn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_shortn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (short?)0;
             Subject.Change(ref field, (short?)0, expected[0], expected[1], expected[2]);
@@ -3339,9 +6807,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_shortn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_shortn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_shortn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_shortn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (short?)0;
             Subject.Change(ref field, (short?)0, new PropertyChangedEventArgs("fail"));
@@ -3362,10 +6864,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_shortn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_shortn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_shortn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (short?)0;
+            Subject.Change(ref field, (short?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_shortn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (short?)0;
             Subject.Change(ref field, (short?)0, expected[0], expected[1], expected[2]);
@@ -3423,9 +6960,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushort_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_ushort_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, "expected");
+        }
+        
+        [Test]
         public void Change_ushort_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_ushort_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (ushort)0;
             Subject.Change(ref field, (ushort)0, "expected");
@@ -3446,10 +7015,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushort_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_ushort_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_ushort_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ushort_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (ushort)0;
             Subject.Change(ref field, (ushort)0, expected[0], expected[1], expected[2]);
@@ -3470,9 +7074,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushort_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ushort_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_ushort_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_ushort_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (ushort)0;
             Subject.Change(ref field, (ushort)0, new PropertyChangedEventArgs("fail"));
@@ -3493,10 +7131,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushort_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ushort_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_ushort_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (ushort)0;
+            Subject.Change(ref field, (ushort)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ushort_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (ushort)0;
             Subject.Change(ref field, (ushort)0, expected[0], expected[1], expected[2]);
@@ -3554,9 +7227,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushortn_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, "expected");
+        }
+        
+        [Test]
         public void Change_ushortn_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_ushortn_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (ushort?)0;
             Subject.Change(ref field, (ushort?)0, "expected");
@@ -3577,10 +7282,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_ushortn_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (ushort?)0;
             Subject.Change(ref field, (ushort?)0, expected[0], expected[1], expected[2]);
@@ -3601,9 +7341,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_ushortn_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (ushort?)0;
             Subject.Change(ref field, (ushort?)0, new PropertyChangedEventArgs("fail"));
@@ -3624,10 +7398,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_ushortn_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_ushortn_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (ushort?)0;
+            Subject.Change(ref field, (ushort?)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_ushortn_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (ushort?)0;
             Subject.Change(ref field, (ushort?)0, expected[0], expected[1], expected[2]);
@@ -3685,9 +7494,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_object_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_object_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, "expected");
+        }
+        
+        [Test]
         public void Change_object_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)0, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_object_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = (object)0;
             Subject.Change(ref field, (object)0, "expected");
@@ -3708,10 +7549,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_object_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_object_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_object_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_object_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = (object)0;
             Subject.Change(ref field, (object)0, expected[0], expected[1], expected[2]);
@@ -3732,9 +7608,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_object_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_object_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_object_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)0, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_object_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = (object)0;
             Subject.Change(ref field, (object)0, new PropertyChangedEventArgs("fail"));
@@ -3755,10 +7665,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_object_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_object_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)1, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_object_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = (object)0;
+            Subject.Change(ref field, (object)0, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_object_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = (object)0;
             Subject.Change(ref field, (object)0, expected[0], expected[1], expected[2]);
@@ -3816,9 +7761,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_bool_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = false;
+            Subject.Change(ref field, true , "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_bool_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = false;
+            Subject.Change(ref field, true , "expected");
+        }
+        
+        [Test]
         public void Change_bool_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = false;
+            Subject.Change(ref field, false, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_bool_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = false;
             Subject.Change(ref field, false, "expected");
@@ -3839,10 +7816,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_bool_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = false;
+            Subject.Change(ref field, true , expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_bool_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = false;
+            Subject.Change(ref field, true , expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_bool_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = false;
+            Subject.Change(ref field, false, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_bool_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = false;
             Subject.Change(ref field, false, expected[0], expected[1], expected[2]);
@@ -3863,9 +7875,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_bool_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = false;
+            Subject.Change(ref field, true , new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_bool_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = false;
+            Subject.Change(ref field, true , new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_bool_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = false;
+            Subject.Change(ref field, false, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_bool_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = false;
             Subject.Change(ref field, false, new PropertyChangedEventArgs("fail"));
@@ -3886,10 +7932,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_bool_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = false;
+            Subject.Change(ref field, true , new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_bool_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = false;
+            Subject.Change(ref field, true , new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_bool_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = false;
+            Subject.Change(ref field, false, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_bool_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = false;
             Subject.Change(ref field, false, expected[0], expected[1], expected[2]);
@@ -3947,9 +8028,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_string_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = "0";
+            Subject.Change(ref field, "1", "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_string_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = "0";
+            Subject.Change(ref field, "1", "expected");
+        }
+        
+        [Test]
         public void Change_string_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = "0";
+            Subject.Change(ref field, "0", "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_string_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = "0";
             Subject.Change(ref field, "0", "expected");
@@ -3970,10 +8083,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_string_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = "0";
+            Subject.Change(ref field, "1", expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_string_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = "0";
+            Subject.Change(ref field, "1", expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_string_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = "0";
+            Subject.Change(ref field, "0", expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_string_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = "0";
             Subject.Change(ref field, "0", expected[0], expected[1], expected[2]);
@@ -3994,9 +8142,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_string_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = "0";
+            Subject.Change(ref field, "1", new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_string_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = "0";
+            Subject.Change(ref field, "1", new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_string_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = "0";
+            Subject.Change(ref field, "0", new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_string_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = "0";
             Subject.Change(ref field, "0", new PropertyChangedEventArgs("fail"));
@@ -4017,10 +8199,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_string_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = "0";
+            Subject.Change(ref field, "1", new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_string_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = "0";
+            Subject.Change(ref field, "1", new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_string_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = "0";
+            Subject.Change(ref field, "0", expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_string_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = "0";
             Subject.Change(ref field, "0", expected[0], expected[1], expected[2]);
@@ -4078,9 +8295,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_DateTime_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, "expected");
+        }
+        
+        [Test]
         public void Change_DateTime_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MinValue, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_DateTime_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = DateTime.MinValue;
             Subject.Change(ref field, DateTime.MinValue, "expected");
@@ -4101,10 +8350,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_DateTime_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MinValue, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_DateTime_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = DateTime.MinValue;
             Subject.Change(ref field, DateTime.MinValue, expected[0], expected[1], expected[2]);
@@ -4125,9 +8409,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_DateTime_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MinValue, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_DateTime_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = DateTime.MinValue;
             Subject.Change(ref field, DateTime.MinValue, new PropertyChangedEventArgs("fail"));
@@ -4148,10 +8466,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_DateTime_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MaxValue, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_DateTime_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = DateTime.MinValue;
+            Subject.Change(ref field, DateTime.MinValue, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_DateTime_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = DateTime.MinValue;
             Subject.Change(ref field, DateTime.MinValue, expected[0], expected[1], expected[2]);
@@ -4209,9 +8562,41 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = e.PropertyName;
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, "expected");
+        
+            Assert.That(actual, Is.EqualTo("expected"));
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingBeforePropertyChanged() {
+            var actual = "";
+            Subject.PropertyChanged += (s, e) => actual = e.PropertyName;
+            Subject.PropertyChanging += (s, e) => Assert.That(actual, Is.Empty);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, "expected");
+        }
+        
+        [Test]
         public void Change_TimeSpan_1_DoesNotRaisePropertyChanged() {
             var actual = "";
             Subject.PropertyChanged += (s, e) => actual = "fail";
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.Zero, "expected");
+        
+            Assert.That(actual, Is.EqualTo(""));
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_DoesNotRaisePropertyChanging() {
+            var actual = "";
+            Subject.PropertyChanging += (s, e) => actual = "fail";
         
             var field = TimeSpan.Zero;
             Subject.Change(ref field, TimeSpan.Zero, "expected");
@@ -4232,10 +8617,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.AreEqual(expected, actual);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingDependentsBeforePropertyChanged() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.Contains(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, expected[0], expected[1], expected[2]);
+        }
+        
+        [Test]
         public void Change_TimeSpan_1_DoesNotRaisePropertyChangedDependents() {
             var actual = new List<string>();
             var expected = new List<string> { "1", "2", "3" };
             Subject.PropertyChanged += (s, e) => actual.Add(e.PropertyName);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.Zero, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_DoesNotRaisePropertyChangingDependents() {
+            var actual = new List<string>();
+            var expected = new List<string> { "1", "2", "3" };
+            Subject.PropertyChanging += (s, e) => actual.Add(e.PropertyName);
         
             var field = TimeSpan.Zero;
             Subject.Change(ref field, TimeSpan.Zero, expected[0], expected[1], expected[2]);
@@ -4256,9 +8676,43 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, new PropertyChangedEventArgs(expected.PropertyName));
+        
+            Assert.That(actual.PropertyName, Is.SameAs(expected.PropertyName));
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingEventArgsBeforePropertyChanged() {
+            var actual = default(PropertyChangingEventArgs);
+            var expected = new PropertyChangingEventArgs("expected");
+            Subject.PropertyChanged += (s, e) => Assert.That(actual.PropertyName, Is.EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual = e;
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, new PropertyChangedEventArgs(expected.PropertyName));
+        }
+        
+        [Test]
         public void Change_TimeSpan_1_DoesNotRaisePropertyChangedEventArgs() {
             var actual = default(PropertyChangedEventArgs);
             Subject.PropertyChanged += (s, e) => actual = e;
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.Zero, new PropertyChangedEventArgs("fail"));
+        
+            Assert.That(actual, Is.Null);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_DoesNotRaisePropertyChangingEventArgs() {
+            var actual = default(PropertyChangingEventArgs);
+            Subject.PropertyChanging += (s, e) => actual = e;
         
             var field = TimeSpan.Zero;
             Subject.Change(ref field, TimeSpan.Zero, new PropertyChangedEventArgs("fail"));
@@ -4279,10 +8733,45 @@ namespace Domore.Notification {
         }
         
         [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        
+            CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_RaisesPropertyChangingEventArgsDependentsBeforePropertyChanged() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangingEventArgs("1"), new PropertyChangingEventArgs("2"), new PropertyChangingEventArgs("3") };
+            Subject.PropertyChanged += (s, e) => Assert.That(actual, Has.One.Property("PropertyName").EqualTo(e.PropertyName));
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.MaxValue, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));
+        }
+        
+        [Test]
         public void Change_TimeSpan_1_DoesNotRaisePropertyChangedEventArgsDependents() {
             var actual = new List<PropertyChangedEventArgs>();
             var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
             Subject.PropertyChanged += (s, e) => actual.Add(e);
+        
+            var field = TimeSpan.Zero;
+            Subject.Change(ref field, TimeSpan.Zero, expected[0], expected[1], expected[2]);
+        
+            CollectionAssert.IsEmpty(actual);
+        }
+        
+        [Test]
+        public void Change_TimeSpan_1_DoesNotRaisePropertyChangingEventArgsDependents() {
+            var actual = new List<PropertyChangingEventArgs>();
+            var expected = new[] { new PropertyChangedEventArgs("1"), new PropertyChangedEventArgs("2"), new PropertyChangedEventArgs("3") };
+            Subject.PropertyChanging += (s, e) => actual.Add(e);
         
             var field = TimeSpan.Zero;
             Subject.Change(ref field, TimeSpan.Zero, expected[0], expected[1], expected[2]);

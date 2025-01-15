@@ -11,15 +11,15 @@ namespace Domore.Notification {
     /// <summary>
     /// Base of types that raise <see cref="INotifyPropertyChanged.PropertyChanged"/> events.
     /// </summary>
-    public partial class Notifier : NotifyPropertyChangedImplementation {
-        private static readonly PropertyChangedEventArgs EmptyEventArgs = new PropertyChangedEventArgs(string.Empty);
+    public partial class Notifier : NotifyPropertyChangedImplementation, INotifyPropertyChanging {
+        private static readonly PropertyChangedEventArgs EmptyEventArgs = new(string.Empty);
 
         internal bool PreviewPropertyChange(string propertyName) {
             return PreviewPropertyChange(new PropertyChangedEventArgs(propertyName));
         }
 
         /// <summary>
-        /// Gets or sets a value that indicates whether or not <see cref="INotifyPropertyChanged.PropertyChanged"/> events will be raised.
+        /// Gets or sets a value that indicates whether or not <see cref="INotifyPropertyChanged.PropertyChanged"/> and <see cref="INotifyPropertyChanging.PropertyChanging"/> events will be raised.
         /// </summary>
         protected internal bool NotifyState { get; set; } = true;
 
@@ -33,6 +33,19 @@ namespace Domore.Notification {
         protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
             if (NotifyState) {
                 base.OnPropertyChanged(e);
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="e">The arguments passed to the event invocation.</param>
+#if !NET40
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+        protected virtual void OnPropertyChanging(PropertyChangingEventArgs e) {
+            if (NotifyState) {
+                PropertyChanging?.Invoke(this, e);
             }
         }
 
@@ -62,6 +75,35 @@ namespace Domore.Notification {
         }
 
         /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="propertyName">The value of <see cref="PropertyChangingEventArgs.PropertyName"/> raised with the event.</param>
+#if !NET40
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+        protected void NotifyPropertyChanging(string propertyName) {
+            if (PropertyChanging != null) {
+                OnPropertyChanging(new PropertyChangingEventArgs(propertyName));
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.
+        /// </summary>
+        /// <param name="propertyName">The value of <see cref="PropertyChangedEventArgs.PropertyName"/> raised with the event.</param>
+        /// <param name="dependentPropertyNames">The names of additional properties for which <see cref="INotifyPropertyChanged.PropertyChanged"/> events will be raised.</param>
+        protected void NotifyPropertyChanging(string propertyName, params string[] dependentPropertyNames) {
+            if (PropertyChanging != null) {
+                OnPropertyChanging(new PropertyChangingEventArgs(propertyName));
+                if (dependentPropertyNames != null && dependentPropertyNames.Length > 0) {
+                    foreach (var dependentPropertyName in dependentPropertyNames) {
+                        OnPropertyChanging(new PropertyChangingEventArgs(dependentPropertyName));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Raises the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.
         /// </summary>
         /// <param name="e">The arguments passed to the event invocation.</param>
@@ -82,6 +124,33 @@ namespace Domore.Notification {
             if (dependents != null && dependents.Length > 0) {
                 foreach (var dependent in dependents) {
                     OnPropertyChanged(dependent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="e">The arguments passed to the event invocation.</param>
+#if !NET40
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+        protected void NotifyPropertyChanging(PropertyChangingEventArgs e) {
+            OnPropertyChanging(e);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="e">The arguments passed to the event invocation.</param>
+        /// <param name="dependents">Additional arguments for which <see cref="INotifyPropertyChanging.PropertyChanging"/> events will be raised.</param>
+        protected void NotifyPropertyChanging(PropertyChangingEventArgs e, params PropertyChangingEventArgs[] dependents) {
+            if (PropertyChanging != null) {
+                OnPropertyChanging(e);
+                if (dependents != null && dependents.Length > 0) {
+                    foreach (var dependent in dependents) {
+                        OnPropertyChanging(dependent);
+                    }
                 }
             }
         }
@@ -113,6 +182,34 @@ namespace Domore.Notification {
         }
 
         /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="notified">The object that changed.</param>
+#if !NET40
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+        protected void NotifyPropertyChanging(Notified notified) {
+            if (null == notified) throw new ArgumentNullException(nameof(notified));
+            NotifyPropertyChanging(notified.PropertyChangingEventArgs);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="INotifyPropertyChanging.PropertyChanging"/> event.
+        /// </summary>
+        /// <param name="notified">The object that changed.</param>
+        /// <param name="dependents">Additional arguments for which <see cref="INotifyPropertyChanging.PropertyChanging"/> events will be raised.</param>
+        protected void NotifyPropertyChanging(Notified notified, params Notified[] dependents) {
+            if (PropertyChanging != null) {
+                NotifyPropertyChanging(notified);
+                if (dependents != null && dependents.Length > 0) {
+                    foreach (var dependent in dependents) {
+                        NotifyPropertyChanging(dependent);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Raises the <see cref="INotifyPropertyChanged.PropertyChanged"/> event with an empty <see cref="PropertyChangedEventArgs.PropertyName"/>.
         /// </summary>
 #if !NET40
@@ -137,13 +234,15 @@ namespace Domore.Notification {
             if (prev == false) {
                 return false;
             }
-            var changed = notified.Change(value);
+            var changed = notified.Change(value, _ => NotifyPropertyChanging(notified, dependents));
             if (changed) {
                 NotifyPropertyChanged(notified, dependents);
                 return true;
             }
             return false;
         }
+
+        public event PropertyChangingEventHandler PropertyChanging;
 
 #if NET45_OR_GREATER || NETCOREAPP
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 
@@ -7,13 +8,19 @@ namespace Domore.Notification {
     /// Wraps a value for notification.
     /// </summary>
     public abstract class Notified {
-        private static readonly ConcurrentDictionary<string, PropertyChangedEventArgs> PropertyChangedEventArgsCache = new();
+        private static readonly ConcurrentDictionary<string, PropertyChangedEventArgs> PropertyChangedEventArgsCache = [];
+        private static readonly ConcurrentDictionary<string, PropertyChangingEventArgs> PropertyChangingEventArgsCache = [];
+
         internal PropertyChangedEventArgs PropertyChangedEventArgs { get; }
+        internal PropertyChangingEventArgs PropertyChangingEventArgs { get; }
 
         internal Notified(string name, bool eventArgsCache) {
             Name = name;
             PropertyChangedEventArgs = eventArgsCache
                 ? PropertyChangedEventArgsCache.GetOrAdd(Name, n => new(n))
+                : new(Name);
+            PropertyChangingEventArgs = eventArgsCache
+                ? PropertyChangingEventArgsCache.GetOrAdd(Name, n => new(n))
                 : new(Name);
         }
 
@@ -33,9 +40,12 @@ namespace Domore.Notification {
     public sealed class Notified<T> : Notified {
         private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
 
-        internal bool Change(T value) {
+        internal bool Change(T value, Action<Notified> changing) {
             if (Comparer.Equals(Value, value)) {
                 return false;
+            }
+            if (changing != null) {
+                changing(this);
             }
             Value = value;
             return true;
