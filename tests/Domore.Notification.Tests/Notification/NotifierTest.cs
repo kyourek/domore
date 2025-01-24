@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -83,7 +84,7 @@ namespace Domore.Notification {
                     entered++;
                 }
             };
-            subject.Foo = "bar";            
+            subject.Foo = "bar";
         }
 
         [Test]

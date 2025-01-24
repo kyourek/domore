@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Domore.Conf.Converters {
     using Extensions;
+    using NUnit.Framework.Legacy;
 
     [TestFixture]
     public sealed class ConfKeyTest {

@@ -6,6 +6,7 @@ using System.Linq;
 
 namespace Domore.Conf.Converters {
     using Extensions;
+    using NUnit.Framework.Legacy;
 
     [TestFixture]
     public sealed class ConfListItemsTest {

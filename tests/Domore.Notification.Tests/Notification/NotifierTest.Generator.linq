@@ -46,6 +46,7 @@ var types = new[] {
 var file = new StringBuilder();
 var f = new Action<string>(l => file.AppendLine(l));
 f(@"using NUnit.Framework;");
+f(@"using NUnit.Framework.Legacy;");
 f(@"using System;");
 f(@"using System.Collections.Generic;");
 f(@"using System.ComponentModel;");

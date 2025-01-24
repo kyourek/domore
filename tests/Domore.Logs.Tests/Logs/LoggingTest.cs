@@ -1,5 +1,6 @@
 ﻿using Domore.Conf.Logs;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -139,10 +140,10 @@ namespace Domore.Logs {
             Logging.Complete();
 
             var datedLog = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly).Single();
-            Assert.AreEqual("crt Some data that will be in a dated log" + Environment.NewLine, File.ReadAllText(datedLog));
+            Assert.That("crt Some data that will be in a dated log" + Environment.NewLine, Is.EqualTo(File.ReadAllText(datedLog)));
 
             var originalLog = Path.Combine(fileDir, fileName);
-            Assert.AreEqual("crt More data that will be in the original log" + Environment.NewLine, File.ReadAllText(originalLog));
+            Assert.That("crt More data that will be in the original log" + Environment.NewLine, Is.EqualTo(File.ReadAllText(originalLog)));
 
             File.Delete(Path.Combine(fileDir, fileName));
             Directory

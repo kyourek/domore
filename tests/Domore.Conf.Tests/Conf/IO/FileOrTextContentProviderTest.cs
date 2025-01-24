@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;

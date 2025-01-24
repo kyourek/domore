@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -64,7 +65,7 @@ namespace Domore.Conf {
                 Man.Best friend = Penny
             ";
             var man = Subject.Configure(new Man());
-            Assert.AreEqual("red", man.BestFriend.Color);
+            Assert.That("red", Is.EqualTo(man.BestFriend.Color));
         }
 
         [TestCase("penny.Color")]
@@ -115,7 +116,7 @@ namespace Domore.Conf {
                 Man.Cat.Color = black
             ";
             var man = Subject.Configure(new ManWithCat(), "Man");
-            Assert.AreEqual("black", man.Cat.Color);
+            Assert.That("black", Is.EqualTo(man.Cat.Color));
         }
 
         private class ManWithIgnoredCat : Man {
@@ -131,7 +132,7 @@ namespace Domore.Conf {
                 Man.Cat.Color = black
             ";
             var man = Subject.Configure(new ManWithIgnoredCat(), "Man");
-            Assert.IsNull(man.Cat);
+            Assert.That(man.Cat, Is.Null);
         }
 
         private class ManWithIgnoredCat2 : Man {
@@ -147,7 +148,7 @@ namespace Domore.Conf {
                 Man.Cat.Color = black
             ";
             var man = Subject.Configure(new ManWithIgnoredCat2(), "Man");
-            Assert.IsNull(man.Cat);
+            Assert.That(man.Cat, Is.Null);
         }
 
         private class ObjWithIgnoredProp {
@@ -164,7 +165,7 @@ namespace Domore.Conf {
                 Obj.YesIgnored = 1
             ";
             var obj = Subject.Configure(new ObjWithIgnoredProp(), "Obj");
-            Assert.IsNull(obj.YesIgnored);
+            Assert.That(obj.YesIgnored, Is.Null);
         }
 
         private class Kid { public Pet Pet { get; set; } }

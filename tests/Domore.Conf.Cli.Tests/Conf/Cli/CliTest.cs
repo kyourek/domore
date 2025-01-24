@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace Domore.Conf.Cli {
     using Converters;
+    using NUnit.Framework.Legacy;
 
     [TestFixture]
     public partial class CliTest {

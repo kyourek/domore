@@ -5,22 +5,22 @@ namespace Domore.Logs {
     public sealed class LogSeverityTest {
         [Test]
         public void InfoIsGreaterThanDebug() {
-            Assert.IsTrue(LogSeverity.Info > LogSeverity.Debug);
+            Assert.That(LogSeverity.Info > LogSeverity.Debug);
         }
 
         [Test]
         public void WarnIsGreaterThanInfo() {
-            Assert.IsTrue(LogSeverity.Warn > LogSeverity.Info);
+            Assert.That(LogSeverity.Warn > LogSeverity.Info);
         }
 
         [Test]
         public void ErrorIsGreaterThanWarn() {
-            Assert.IsTrue(LogSeverity.Error > LogSeverity.Warn);
+            Assert.That(LogSeverity.Error > LogSeverity.Warn);
         }
 
         [Test]
         public void CriticalIsGreaterThanError() {
-            Assert.IsTrue(LogSeverity.Critical > LogSeverity.Error);
+            Assert.That(LogSeverity.Critical > LogSeverity.Error);
         }
     }
 }
