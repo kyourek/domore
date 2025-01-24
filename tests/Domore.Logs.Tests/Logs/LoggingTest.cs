@@ -12,8 +12,28 @@ using CONF = Domore.Conf.Conf;
 namespace Domore.Logs {
     [TestFixture]
     public sealed partial class LoggingTest {
-        private string TempFile {
-            get => _TempFile ??= Path.GetTempFileName();
+        private string Id {
+            get => _Id ??= Guid.NewGuid().ToString();
+            set => _Id = value;
+        }
+        private string _Id;
+
+        private string TempDir {
+            get => _TempDir ??= Path.Combine(Path.GetTempPath(), "domore.logs.loggingtest", Id);
+            set => _TempDir = value;
+        }
+        private string _TempDir;
+
+        public string TempFile {
+            get => _TempFile ??= new Func<string>(() => {
+                if (Directory.Exists(TempDir) == false) {
+                    Directory.CreateDirectory(TempDir);
+                }
+                var path = Path.Combine(TempDir, "domore.logs.loggingtest");
+                using (File.Create(path)) {
+                    return path;
+                }
+            })();
             set => _TempFile = value;
         }
         private string _TempFile;
@@ -33,7 +53,7 @@ namespace Domore.Logs {
         private void ConfigFile(string config = null) {
             Config = $@"
                 Log[f].type = file
-                Log[f].service.directory = {Path.GetDirectoryName(TempFile)}
+                Log[f].service.directory = {TempDir}
                 log[f].service.name = {Path.GetFileName(TempFile)}
                 log[f].service.flush interval = 00:00:00.1
                 log[f].config.default.severity = info
@@ -48,15 +68,25 @@ namespace Domore.Logs {
 
         [SetUp]
         public void SetUp() {
+            Id = null;
+            TempDir = null;
             TempFile = null;
             Log = null;
             Config = null;
+            if (Directory.Exists(TempDir)) {
+                Directory.Delete(TempDir, recursive: true);
+            }
         }
 
         [TearDown]
         public void TearDown() {
             Logging.Complete();
-            File.Delete(TempFile);
+            if (File.Exists(TempFile)) {
+                File.Delete(TempFile);
+            }
+            if (Directory.Exists(TempDir)) {
+                Directory.Delete(TempDir, recursive: true);
+            }
         }
 
         [Test]
@@ -119,14 +149,9 @@ namespace Domore.Logs {
 
         [Test]
         public void FileRotatesLogFile() {
-            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileDir = TempDir;
             var fileName = $"domore.logs.loggingtest.{nameof(FileRotatesLogFile)}";
-            var fileSearchPattern = $"{fileName}_*";
-            File.Delete(Path.Combine(fileDir, fileName));
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
+            var fileSearchPattern = $"domore.logs.loggingtest_*{nameof(FileRotatesLogFile)}";
             ConfigFile(@$"
                 log[f].service.name = {fileName}
                 log[f].service.file size limit = 1
@@ -144,23 +169,13 @@ namespace Domore.Logs {
 
             var originalLog = Path.Combine(fileDir, fileName);
             Assert.That("crt More data that will be in the original log" + Environment.NewLine, Is.EqualTo(File.ReadAllText(originalLog)));
-
-            File.Delete(Path.Combine(fileDir, fileName));
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
         }
 
         [Test]
         public void FileRotatesLogsManyTimes() {
-            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileDir = TempDir;
             var fileName = $"domore.logs.loggingtest.{nameof(FileRotatesLogsManyTimes)}";
-            var fileSearchPattern = $"{fileName}_*";
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
+            var fileSearchPattern = $"domore.logs.loggingtest_*.{nameof(FileRotatesLogsManyTimes)}";
             ConfigFile(@$"
                 log[f].service.name = {fileName}
                 log[f].service.file size limit = 1
@@ -175,21 +190,12 @@ namespace Domore.Logs {
             var expected = 10;
             var actual = files.Length;
             Assert.That(actual, Is.EqualTo(expected));
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
         }
 
         [Test]
         public void FileRespectsTotalSizeLimit() {
-            var fileDir = Path.GetDirectoryName(TempFile);
-            var fileName = $"domore.logs.loggingtest.{nameof(FileRespectsTotalSizeLimit)}";
-            var fileSearchPattern = $"{fileName}_*";
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
+            var fileDir = TempDir;
+            var fileName = TempFile = Path.Combine(fileDir, $"domore.logs.loggingtest.{nameof(FileRespectsTotalSizeLimit)}");
             ConfigFile(@$"
                 log[f].service.name = {fileName}
                 log[f].service.file size limit = 1
@@ -201,25 +207,15 @@ namespace Domore.Logs {
                 Thread.Sleep(100);
             }
             Logging.Complete();
-            var files = Directory.GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly);
-            var expected = 0;
-            var actual = files.Length;
-            Assert.That(actual, Is.EqualTo(expected));
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
+            var files = Directory.GetFiles(fileDir);
+            Assert.That(files.Length, Is.Zero);
         }
 
         [Test]
         public void FileRemovesLogsGreaterThanAgeLimit() {
-            var fileDir = Path.GetDirectoryName(TempFile);
+            var fileDir = TempDir;
             var fileName = $"domore.logs.loggingtest.{nameof(FileRemovesLogsGreaterThanAgeLimit)}";
-            var fileSearchPattern = $"{fileName}_*";
-            Directory
-                .GetFiles(fileDir, fileSearchPattern, SearchOption.TopDirectoryOnly)
-                .ToList()
-                .ForEach(File.Delete);
+            var fileSearchPattern = $"domore.logs.loggingtest_*.{nameof(FileRemovesLogsGreaterThanAgeLimit)}";
             ConfigFile(@$"
                 log[f].service.name = {fileName}
                 log[f].service.file size limit = 1
@@ -243,10 +239,11 @@ namespace Domore.Logs {
 
         [Test]
         public void FileLogsToSpecialFolderPath() {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var id = Guid.NewGuid();
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", id.ToString());
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{id}
                     log[f].service.name = test.log
                     LOG[f].config.default.format = {{sev}}
                 ");
@@ -263,10 +260,11 @@ namespace Domore.Logs {
 
         [Test]
         public void FileLogsToFormattedPath() {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", AppDomain.CurrentDomain?.FriendlyName);
+            var id = Guid.NewGuid();
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", id.ToString(), AppDomain.CurrentDomain?.FriendlyName);
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{{appDomain.friendlyName}}
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{id}/{{appDomain.friendlyName}}
                     log[f].service.name = test-{{thread.ManagedThreadID}}.log
                     LOG[f].config.default.format = {{sev}}
                 ");
@@ -277,17 +275,17 @@ namespace Domore.Logs {
                 Assert.That(actual, Is.EqualTo(expected));
             }
             finally {
-                Directory.Delete(dir, recursive: true);
+                Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest"), recursive: true);
             }
         }
 
         [Test]
         public void FileRetriesOnIOException() {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", Id);
             var file = Path.Combine(dir, "test.log");
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{Id}
                     log[f].service.name = test.log
                     LOG[f].config.default.format = {{sev}}
                     log[f].service.io retry delay = 250
@@ -309,11 +307,11 @@ namespace Domore.Logs {
 
         [Test]
         public void FileDoesNotThrowIfInUse() {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", Id);
             var file = Path.Combine(dir, "test.log");
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{Id}
                     log[f].service.name = test.log
                     log[f].service.io retry limit = 0
                 ");
@@ -334,11 +332,11 @@ namespace Domore.Logs {
 
         [Test]
         public void FileRecreatesFileIfDeleted() {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest");
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", Id);
             var file = Path.Combine(dir, "test.log");
             try {
                 ConfigFile($@"
-                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest
+                    Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{Id}
                     log[f].service.name = test.log
                     log[f].service.flush interval = 00:00:00.01
                     LOG[f].config.default.format = {{sev}}

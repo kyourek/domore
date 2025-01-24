@@ -13,38 +13,48 @@ namespace Domore.Logs.Service {
         private readonly ConcurrentQueue<string> Queue = new();
         private readonly PathFormatter PathFormatter = new();
 
-        private FileInfo FileInfo => _FileInfo ??=
-            new FileInfo(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
+        private Timer Timer;
+
+        public string FileName => _FileName ??= FileInfo.Name;
+        private string _FileName;
+
+        public string FileNameWithoutExtension => _FileNameWithoutExtension ??= Path.GetFileNameWithoutExtension(FileName);
+        private string _FileNameWithoutExtension;
+
+        public string FileExtension => _FileExtension ??= Path.GetExtension(FileName);
+        private string _FileExtension;
+
+        private FileInfo FileInfo => _FileInfo ??= new(
+            Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
         private FileInfo _FileInfo;
 
-        private DirectoryInfo DirectoryInfo => _DirectoryInfo ??=
-            new DirectoryInfo(
-                PathFormatter.Format(
-                    PathFormatter.Expand(
-                        Environment.ExpandEnvironmentVariables(Directory))));
+        private DirectoryInfo DirectoryInfo => _DirectoryInfo ??= new(
+            PathFormatter.Format(
+                PathFormatter.Expand(
+                    Environment.ExpandEnvironmentVariables(Directory))));
         private DirectoryInfo _DirectoryInfo;
 
         private string FileDateName() {
-            var d = DateTime.UtcNow;
-            return $"{FileInfo.Name}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}.{d.Millisecond:000}";
+            var d = DateTime.Now;
+            return $"{FileNameWithoutExtension}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}-{d.Millisecond:000}{FileExtension}";
         }
 
         private DateTime? FileDate(string name) {
             if (name == null) {
                 return null;
             }
-            var prefix = $"{FileInfo.Name}_";
-            if (prefix.Length >= name.Length) {
+            var prefix = $"{FileNameWithoutExtension}_";
+            if (prefix.Length + FileExtension.Length >= name.Length) {
                 return null;
             }
-            var date = name.Substring(prefix.Length);
+            var date = name.Substring(prefix.Length).Substring(0, name.Length - prefix.Length - FileExtension.Length);
             if (date.Length != 19) {
                 return null;
             }
             if (date[8] != '-') {
                 return null;
             }
-            if (date[15] != '.') {
+            if (date[15] != '-') {
                 return null;
             }
             if (!int.TryParse(date.Substring(0, 4), out var year)) {
@@ -87,11 +97,18 @@ namespace Domore.Logs.Service {
             }
             var nextName = FileDateName();
             var nextPath = Path.Combine(DirectoryInfo.FullName, nextName);
-            fileInfo.MoveTo(nextPath);
+            try {
+                fileInfo.MoveTo(nextPath);
+            }
+            catch {
+                if (File.Exists(nextPath)) {
+                    return;
+                }
+                throw;
+            }
             _FileInfo = null;
-
             var now = DateTime.UtcNow;
-            var fileSearchPattern = $"{FileInfo.Name}_*";
+            var fileSearchPattern = $"{FileNameWithoutExtension}_*{FileExtension}";
             var files = DirectoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
             var items = files
                 .Select(file => new { File = file, Date = FileDate(file.Name) })
@@ -146,48 +163,48 @@ namespace Domore.Logs.Service {
             }
         }
 
-        private void Start() {
-            if (Complete) {
-                return;
-            }
-            var
-            timer = default(Timer);
-            timer = new Timer(state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite, callback: _ => {
-                using (timer) {
-                    for (; ; ) {
-                        lock (Locker) {
-                            if (Complete) {
+        private void TimerCallback(object _) {
+            using (Timer) {
+                for (; ; ) {
+                    lock (Locker) {
+                        if (Complete) {
+                            break;
+                        }
+                        if (Queue.Count == 0) {
+                            break;
+                        }
+                        var limit = LogCountLimit;
+                        var lines = new List<string>(capacity: limit);
+                        for (; ; ) {
+                            if (lines.Count >= limit) {
                                 break;
                             }
-                            if (Queue.Count == 0) {
+                            var dequeued = Queue.TryDequeue(out var line);
+                            if (dequeued == false) {
                                 break;
                             }
-                            var limit = LogCountLimit;
-                            var lines = new List<string>(capacity: limit);
-                            for (; ; ) {
-                                if (lines.Count >= limit) {
-                                    break;
-                                }
-                                var dequeued = Queue.TryDequeue(out var line);
-                                if (dequeued == false) {
-                                    break;
-                                }
-                                lines.Add(line);
+                            lines.Add(line);
+                        }
+                        if (lines.Count > 0) {
+                            try {
+                                Log(lines);
+                                Rotate();
                             }
-                            if (lines.Count > 0) {
-                                try {
-                                    Log(lines);
-                                    Rotate();
-                                }
-                                catch (Exception ex) {
-                                    Logging.Notify(ex);
-                                }
+                            catch (Exception ex) {
+                                Logging.Notify(ex);
                             }
                         }
                     }
                 }
-                Start();
-            });
+            }
+            Start();
+        }
+
+        private void Start() {
+            if (Complete) {
+                return;
+            }
+            Timer = new(TimerCallback, state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite);
         }
 
         public int IORetryLimit { get; set; } = 5;
@@ -207,6 +224,9 @@ namespace Domore.Logs.Service {
                             _Directory = value;
                             _DirectoryInfo = null;
                             _FileInfo = null;
+                            _FileName = null;
+                            _FileNameWithoutExtension = null;
+                            _FileExtension = null;
                         }
                     }
                 }
@@ -222,6 +242,9 @@ namespace Domore.Logs.Service {
                         if (_Name != value) {
                             _Name = value;
                             _FileInfo = null;
+                            _FileName = null;
+                            _FileNameWithoutExtension = null;
+                            _FileExtension = null;
                         }
                     }
                 }
