@@ -1,8 +1,0 @@
-{
-    "profiles": {
-        "Domore.Release.Console": {
-            "commandName": "Project",
-            "commandLineArgs": ""
-        }
-    }
-}

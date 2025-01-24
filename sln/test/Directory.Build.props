@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project>
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
-  <PropertyGroup>  
-    <TargetFrameworks>net40;net45;net46;netcoreapp3.1;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
-  </PropertyGroup>
-</Project>

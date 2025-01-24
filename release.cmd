@@ -1,1 +1,1 @@
-.\sln\Domore.Release.Console\bin\Debug\net45\Domore.Release.Console.exe %*
+.\out\tools\Domore.Release.Console\bin\Debug\net45\Domore.Release.Console.exe %*
