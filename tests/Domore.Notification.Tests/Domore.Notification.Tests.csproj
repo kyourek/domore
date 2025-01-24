@@ -6,7 +6,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
-    <ProjectReference Include="..\..\Domore.Notification\Domore.Notification.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Notification\Domore.Notification.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />

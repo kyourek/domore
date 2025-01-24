@@ -3,8 +3,8 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
-    <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Logs\Domore.Logs.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />

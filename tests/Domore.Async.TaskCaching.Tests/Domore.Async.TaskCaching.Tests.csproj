@@ -5,7 +5,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Domore.Async.TaskCaching\Domore.Async.TaskCaching.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Async.TaskCaching\Domore.Async.TaskCaching.csproj" />
     <ProjectReference Include="..\Domore.Tests\Domore.Tests.csproj" />
   </ItemGroup>
   <ItemGroup>

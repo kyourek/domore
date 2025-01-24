@@ -3,8 +3,8 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domore.Conf.ConfigurationManager\Domore.Conf.ConfigurationManager.csproj" />
-    <ProjectReference Include="..\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Conf.ConfigurationManager\Domore.Conf.ConfigurationManager.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
     <ProjectReference Include="..\Domore.Release.Core\Domore.Release.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

@@ -5,7 +5,7 @@
     <RootNamespace>Domore</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
+    <ProjectReference Include="..\..\source\Domore.Conf\Domore.Conf.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Domore.Conf.Sample.conf">
