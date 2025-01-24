@@ -2,6 +2,7 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..\'))" />
   <PropertyGroup>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <ArtifactsPath>..\..\out\tools</ArtifactsPath>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
