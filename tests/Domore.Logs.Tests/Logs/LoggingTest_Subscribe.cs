@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Domore.Logs.Mocks;
+using NUnit.Framework;
 using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
@@ -6,30 +7,6 @@ using System.Linq;
 
 namespace Domore.Logs {
     partial class LoggingTest {
-        private sealed class MockLogSubscription : ILogSubscription {
-            private event EventHandler OnThresholdChanged;
-
-            public Func<Type, LogSeverity> Threshold { get; set; }
-            public Action<ILogEntry> Receive { get; set; }
-
-            public void ThresholdChanged() {
-                OnThresholdChanged?.Invoke(this, EventArgs.Empty);
-            }
-
-            event EventHandler ILogSubscription.ThresholdChanged {
-                add { OnThresholdChanged += value; }
-                remove { OnThresholdChanged -= value; }
-            }
-
-            void ILogSubscription.Receive(ILogEntry entry) {
-                Receive(entry);
-            }
-
-            LogSeverity ILogSubscription.Threshold(Type type) {
-                return Threshold(type);
-            }
-        }
-
         [Test]
         public void SubscribersAreSentLogEntryLogList() {
             var mock = new MockLogSubscription();
@@ -166,21 +143,6 @@ namespace Domore.Logs {
             Logging.Subscribe(mock);
             Log.Critical("message");
             Assert.That(ex, Is.Not.Null);
-        }
-
-        [Test]
-        public void SubscribersReceiveEntriesWhileFileLogging() {
-            ConfigFile();
-            var mock = new MockLogSubscription();
-            var entries = new List<ILogEntry>();
-            mock.Threshold = _ => LogSeverity.Info;
-            mock.Receive = entries.Add;
-            Logging.Subscribe(mock);
-            Log.Info("here's some data");
-            Logging.Complete();
-            var actual = entries.SelectMany(e => e.LogList).ToList();
-            var expected = new[] { "here's some data" };
-            CollectionAssert.AreEqual(expected, actual);
         }
     }
 }

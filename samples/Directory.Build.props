@@ -2,7 +2,7 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..\'))" />
   <PropertyGroup>
-    <TargetFrameworks>net462;net47;net471;net472;net48;net481;netcoreapp3.1;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net40;net462;net8.0</TargetFrameworks>
     <ArtifactsPath>..\..\out\samples</ArtifactsPath>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
