@@ -13,7 +13,7 @@ env:
   DOTNET_VERSION: '8.0.404'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
-  DOMORE_PACK_OUTPUT: ${{ github.workspace }}/pack-output
+  CUSTOM_PACK_OUTPUT: ${{ github.workspace }}/pack-output
 
 jobs:
   workflow:
@@ -37,11 +37,11 @@ jobs:
 
     - name: Pack
       if: github.event_name == 'release'
-      run: dotnet pack --no-restore --configuration Release --no-build --output ${{ env.DOMORE_PACK_OUTPUT }}
+      run: dotnet pack --no-restore --configuration Release --no-build --output ${{ env.CUSTOM_PACK_OUTPUT }}
 
     - name: Push
       if: github.event_name == 'release'
       run: |
-           foreach($file in (Get-ChildItem "${{ env.DOMORE_PACK_OUTPUT }}" -Recurse -Include *.nupkg)) {
+           foreach($file in (Get-ChildItem "${{ env.CUSTOM_PACK_OUTPUT }}" -Recurse -Include *.nupkg)) {
              dotnet nuget push $file --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
            }
