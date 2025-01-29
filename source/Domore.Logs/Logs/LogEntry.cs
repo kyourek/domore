@@ -14,12 +14,17 @@ namespace Domore.Logs {
 
         private readonly Dictionary<string, string> Format = [];
 
-        private string GetFormat(string format) {
+        private DateTime LocalDate => _LocalDate ??= EntryDate.ToLocalTime();
+        private DateTime? _LocalDate;
+
+        private string GetFormat(string format) {            
             var s = format
                 .Replace("{log}", LogName)
                 .Replace("{sev}", Sev[EntrySeverity])
                 .Replace("{dat}", EntryDate.ToString("yyyy-MM-dd"))
-                .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff"));
+                .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff"))
+                .Replace("{loc.dat}", LocalDate.ToString("yyyy-MM-dd"))
+                .Replace("{loc.tim}", LocalDate.ToString("HH:mm:ss.fff"));
             var logList = EntryList;
             if (logList.Length == 1) {
                 return s == ""

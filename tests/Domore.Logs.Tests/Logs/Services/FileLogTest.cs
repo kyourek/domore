@@ -10,6 +10,7 @@ using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs.Services {
     [TestFixture]
+    [NonParallelizable]
     internal sealed class FileLogTest {
         private string Id {
             get => _Id ??= Guid.NewGuid().ToString();
@@ -451,6 +452,34 @@ namespace Domore.Logs.Services {
             var actual = entries.SelectMany(e => e.LogList).ToList();
             var expected = new[] { "here's some data" };
             CollectionAssert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void FormatCanContainDateAndTimeInUtc() {
+            ConfigFile("log[f].config.default.format = {dat} {tim}");
+            var now = DateTime.UtcNow;
+            Log.Critical("What time is it?");
+            Logging.Complete();
+            var text = ReadFile();
+            var parts = text.Split([' '], 3);
+            var date = DateTime.Parse(parts[0]);
+            var time = TimeSpan.Parse(parts[1]);
+            var then = date + time;
+            Assert.That(then, Is.EqualTo(now).Within(TimeSpan.FromSeconds(1)));
+        }
+
+        [Test]
+        public void FormatCanContainDateAndTimeInLocal() {
+            ConfigFile("log[f].config.default.format = {loc.dat} {loc.tim}");
+            var now = DateTime.Now;
+            Log.Critical("What time is it?");
+            Logging.Complete();
+            var text = ReadFile();
+            var parts = text.Split([' '], 3);
+            var date = DateTime.Parse(parts[0]);
+            var time = TimeSpan.Parse(parts[1]);
+            var then = date + time;
+            Assert.That(then, Is.EqualTo(now).Within(TimeSpan.FromSeconds(1)));
         }
     }
 }
