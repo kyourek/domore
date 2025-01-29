@@ -210,6 +210,48 @@ namespace Domore.Logs.Services {
             Assert.That(datedLogs.Length, Is.EqualTo(3));
         }
 
+        [TestCase("the_log")]
+        [TestCase("the(log)")]
+        public void DeletesLogFilesWithoutExtension(string name) {
+            ConfigFile(@$"
+                log[f].service.name = {name}
+                log[f].service.file size limit = 1
+                log[f].service.total size limit = 25
+                log[f].service.flush interval = 00:00:00.01
+                log[f].config.default.format = {{sev}}
+            ");
+            Log.Critical("Some data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("More data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("That's all");
+            Thread.Sleep(100);
+            Logging.Complete();
+            var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+            Assert.That(datedLogs.Length, Is.EqualTo(1));
+        }
+
+        [TestCase("the", "log")]
+        [TestCase("the", "(log)")]
+        public void DeletesLogFilesWithExtension(string name, string extension) {
+            ConfigFile(@$"
+                log[f].service.name = {name}.{extension}
+                log[f].service.file size limit = 1
+                log[f].service.total size limit = 25
+                log[f].service.flush interval = 00:00:00.01
+                log[f].config.default.format = {{sev}}
+            ");
+            Log.Critical("Some data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("More data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("That's all");
+            Thread.Sleep(100);
+            Logging.Complete();
+            var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+            Assert.That(datedLogs.Length, Is.EqualTo(1));
+        }
+
         [Test]
         public void RotatesLogsManyTimes() {
             var fileDir = TempDir;
