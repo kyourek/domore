@@ -56,8 +56,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2B812D49-4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{8C470728-E416-4D43-84F8-8F580EA3C988}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{FE1FB9FF-B518-488B-9C49-6BBE66F7C5FB}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "async", "async", "{003E5404-5686-414F-A16F-2700D765EC53}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domore.Async.TaskCaching", "source\Domore.Async.TaskCaching\Domore.Async.TaskCaching.csproj", "{4EB2E64C-4525-4444-9B31-5F60BE957FF5}"
