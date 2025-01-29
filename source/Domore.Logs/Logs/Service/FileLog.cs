@@ -35,8 +35,8 @@ namespace Domore.Logs.Service {
         private DirectoryInfo _DirectoryInfo;
 
         private string FileDateName() {
-            var d = DateTime.Now;
-            return $"{FileNameWithoutExtension}_{d.Year}{d.Month:00}{d.Day:00}-{d.Hour:00}{d.Minute:00}{d.Second:00}-{d.Millisecond:000}{FileExtension}";
+            var dt = DateTime.Now;
+            return $"{FileNameWithoutExtension}_{dt.Year}{dt.Month:00}{dt.Day:00}-{dt.Hour:00}{dt.Minute:00}{dt.Second:00}-{dt.Millisecond:000}{FileExtension}";
         }
 
         private DateTime? FileDate(string name) {

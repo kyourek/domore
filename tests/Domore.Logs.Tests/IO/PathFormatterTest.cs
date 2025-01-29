@@ -6,7 +6,7 @@ using System.Threading;
 namespace Domore.IO {
     public sealed class PathFormatterTest {
         private PathFormatter Subject {
-            get => _Subject ?? (_Subject = new PathFormatter());
+            get => _Subject ??= new();
             set => _Subject = value;
         }
         private PathFormatter _Subject;
