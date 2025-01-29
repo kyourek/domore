@@ -1,0 +1,47 @@
+name: Workflow
+
+on:
+  push:
+    branches: [ master ]
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '8.0.404'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  CUSTOM_PACK_OUTPUT: ${{ github.workspace }}/pack-output
+
+jobs:
+  workflow:
+    name: Build, test, pack, and push
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+    
+#    - name: Test
+#      run: dotnet test --no-restore --configuration Release --no-build --verbosity normal
+
+    - name: Pack
+      if: github.event_name == 'release'
+      run: dotnet pack --no-restore --configuration Release --no-build --output ${{ env.CUSTOM_PACK_OUTPUT }}
+
+    - name: Push
+      if: github.event_name == 'release'
+      run: |
+           foreach($file in (Get-ChildItem "${{ env.CUSTOM_PACK_OUTPUT }}" -Recurse -Include *.nupkg)) {
+             dotnet nuget push $file --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+           }
