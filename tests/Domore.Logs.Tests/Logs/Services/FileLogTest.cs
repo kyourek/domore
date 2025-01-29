@@ -10,7 +10,7 @@ using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs.Services {
     [TestFixture]
-    internal class FileLogTest {
+    internal sealed class FileLogTest {
         private string Id {
             get => _Id ??= Guid.NewGuid().ToString();
             set => _Id = value;
@@ -168,6 +168,46 @@ namespace Domore.Logs.Services {
 
             var originalLog = Path.Combine(fileDir, fileName);
             Assert.That("crt More data that will be in the original log" + Environment.NewLine, Is.EqualTo(File.ReadAllText(originalLog)));
+        }
+
+        [TestCase("the_log")]
+        [TestCase("the(log)")]
+        public void RotatesLogFilesWithoutExtension(string name) {
+            ConfigFile(@$"
+                log[f].service.name = {name}
+                log[f].service.file size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+                log[f].config.default.format = {{sev}}
+            ");
+            Log.Critical("Some data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("More data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("That's all");
+            Thread.Sleep(100);
+            Logging.Complete();
+            var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+            Assert.That(datedLogs.Length, Is.EqualTo(3));
+        }
+
+        [TestCase("the", "log")]
+        [TestCase("the", "(log)")]
+        public void RotatesLogFilesWithExtension(string name, string extension) {
+            ConfigFile(@$"
+                log[f].service.name = {name}.{extension}
+                log[f].service.file size limit = 1
+                log[f].service.flush interval = 00:00:00.01
+                log[f].config.default.format = {{sev}}
+            ");
+            Log.Critical("Some data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("More data that will be in a dated log");
+            Thread.Sleep(100);
+            Log.Critical("That's all");
+            Thread.Sleep(100);
+            Logging.Complete();
+            var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+            Assert.That(datedLogs.Length, Is.EqualTo(3));
         }
 
         [Test]
