@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace Domore.Logs {
     internal sealed class LogSubscriptionProxy {
-        private readonly Dictionary<Type, LogSeverity> ThresholdCache = [];
+        private readonly ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
 
         public ILogSubscription Agent { get; }
 
@@ -13,10 +13,8 @@ namespace Domore.Logs {
         }
 
         private void Agent_ThresholdChanged(object sender, EventArgs e) {
-            lock (ThresholdCache) {
-                ThresholdCache.Clear();
-                ThresholdChanged?.Invoke(this, e);
-            }
+            ThresholdCache.Clear();
+            ThresholdChanged?.Invoke(this, e);
         }
 
         public event EventHandler ThresholdChanged;
@@ -25,18 +23,15 @@ namespace Domore.Logs {
             if (type == null) {
                 return LogSeverity.None;
             }
-            lock (ThresholdCache) {
-                if (ThresholdCache.TryGetValue(type, out var severity) == false) {
-                    try {
-                        severity = Agent.Threshold(type);
-                    }
-                    catch (Exception ex) {
-                        Logging.Notify(ex);
-                    }
-                    ThresholdCache[type] = severity;
+            return ThresholdCache.GetOrAdd(type, type => {
+                try {
+                    return Agent.Threshold(type);
                 }
-                return severity;
-            }
+                catch (Exception ex) {
+                    Logging.Notify(ex);
+                }
+                return LogSeverity.None;
+            });
         }
 
         public void Receive(LogEntry entry) {
