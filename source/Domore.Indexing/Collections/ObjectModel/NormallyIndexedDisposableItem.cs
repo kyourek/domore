@@ -1,23 +1,23 @@
 ﻿using System;
 
-namespace Domore.Collections.ObjectModel {
-    public abstract class NormallyIndexedDisposableItem<TItem> : NormallyIndexedItem, IDisposable where TItem : NormallyIndexedItem, IDisposable, new() {
-        protected NormallyIndexedDisposableItem() {
-        }
+namespace Domore.Collections.ObjectModel;
 
-        protected virtual void Dispose(bool disposing) {
-        }
+public abstract class NormallyIndexedDisposableItem<TItem> : NormallyIndexedItem, IDisposable where TItem : NormallyIndexedItem, IDisposable, new() {
+    protected NormallyIndexedDisposableItem() {
+    }
 
-        public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+    protected virtual void Dispose(bool disposing) {
+    }
 
-        ~NormallyIndexedDisposableItem() {
-            Dispose(false);
-        }
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
-        public class Collection : DisposableCollection<TItem> {
-        }
+    ~NormallyIndexedDisposableItem() {
+        Dispose(false);
+    }
+
+    public class Collection : DisposableCollection<TItem> {
     }
 }

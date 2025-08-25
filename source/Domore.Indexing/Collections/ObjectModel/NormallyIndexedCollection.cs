@@ -1,8 +1,8 @@
-﻿namespace Domore.Collections.ObjectModel {
-    using Generic;
+﻿using Domore.Collections.Generic;
 
-    public abstract class NormallyIndexedCollection<TItem> : IndexedCollection<string, TItem> where TItem : IIndexedItem<string> {
-        public NormallyIndexedCollection() : base(new NormalStringComparer()) {
-        }
+namespace Domore.Collections.ObjectModel;
+
+public abstract class NormallyIndexedCollection<TItem> : IndexedCollection<string, TItem> where TItem : IIndexedItem<string> {
+    public NormallyIndexedCollection() : base(new NormalStringComparer()) {
     }
 }

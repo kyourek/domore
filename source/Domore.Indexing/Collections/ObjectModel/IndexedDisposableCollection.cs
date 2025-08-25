@@ -1,29 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Domore.Collections.ObjectModel {
-    public abstract class IndexedDisposableCollection<TIndex, TItem> : IndexedCollection<TIndex, TItem> where TItem : IIndexedItem<TIndex>, IDisposable {
-        protected IndexedDisposableCollection() {
-        }
+namespace Domore.Collections.ObjectModel;
 
-        protected IndexedDisposableCollection(IEqualityComparer<TIndex> comparer) : base(comparer) {
-        }
+public abstract class IndexedDisposableCollection<TIndex, TItem> : IndexedCollection<TIndex, TItem> where TItem : IIndexedItem<TIndex>, IDisposable {
+    protected IndexedDisposableCollection() {
+    }
 
-        protected virtual void Dispose(bool disposing) {
-            if (disposing) {
-                foreach (var item in this) {
-                    item.Dispose();
-                }
+    protected IndexedDisposableCollection(IEqualityComparer<TIndex> comparer) : base(comparer) {
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (disposing) {
+            foreach (var item in this) {
+                item.Dispose();
             }
         }
+    }
 
-        public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
-        ~IndexedDisposableCollection() {
-            Dispose(false);
-        }
+    ~IndexedDisposableCollection() {
+        Dispose(false);
     }
 }

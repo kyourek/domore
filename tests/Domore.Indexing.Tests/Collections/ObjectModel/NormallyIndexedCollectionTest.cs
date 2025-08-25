@@ -1,46 +1,45 @@
 ﻿using NUnit.Framework;
 
-namespace Domore.Collections.ObjectModel {
-    [TestFixture]
-    public sealed class NormallyIndexedCollectionTest {
-        private Implementation Subject {
-            get => _Subject ?? (_Subject = new Implementation());
-            set => _Subject = value;
-        }
-        private Implementation _Subject;
+namespace Domore.Collections.ObjectModel;
 
-        [SetUp]
-        public void SetUp() {
-            Subject = null;
-        }
+[TestFixture, Parallelizable]
+public sealed class NormallyIndexedCollectionTest {
+    private Implementation Subject {
+        get => field ??= new Implementation();
+        set => field = value;
+    }
 
-        [TearDown]
-        public void TearDown() {
-        }
+    [SetUp]
+    public void SetUp() {
+        Subject = null;
+    }
 
-        [Test]
-        public void Item_GetsSameItemWhenTheKeyOnlyDiffersInCaseAndWhitespace() {
-            var item1 = Subject["hello world"];
-            var item2 = Subject["  helloWorlD\t"];
-            Assert.That(item1, Is.SameAs(item2));
-        }
+    [TearDown]
+    public void TearDown() {
+    }
 
-        [Test]
-        public void Contains_ReturnsTrueWhenTheKeyOnlyDiffersInCaseAndWhitespace() {
-            _ = Subject["hello world"];
-            Assert.That(Subject.Contains(" helloWorlD\t"), Is.True);
-        }
+    [Test]
+    public void Item_GetsSameItemWhenTheKeyOnlyDiffersInCaseAndWhitespace() {
+        var item1 = Subject["hello world"];
+        var item2 = Subject["  helloWorlD\t"];
+        Assert.That(item1, Is.SameAs(item2));
+    }
 
-        private class Implementation : NormallyIndexedCollection<Implementation.Item> {
-            protected override Item CreateItem(string index) =>
-                new Item(index);
+    [Test]
+    public void Contains_ReturnsTrueWhenTheKeyOnlyDiffersInCaseAndWhitespace() {
+        _ = Subject["hello world"];
+        Assert.That(Subject.Contains(" helloWorlD\t"), Is.True);
+    }
 
-            public sealed class Item : IIndexedItem<string> {
-                public string Index { get; }
+    private class Implementation : NormallyIndexedCollection<Implementation.Item> {
+        protected override Item CreateItem(string index) =>
+            new Item(index);
 
-                public Item(string index) {
-                    Index = index;
-                }
+        public sealed class Item : IIndexedItem<string> {
+            public string Index { get; }
+
+            public Item(string index) {
+                Index = index;
             }
         }
     }
