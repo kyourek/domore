@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 
-namespace Domore.Conf; 
+namespace Domore.Conf;
 
 [TestFixture]
 public sealed class ConfContainerTest {
@@ -15,10 +15,9 @@ public sealed class ConfContainerTest {
     private object Content;
 
     private ConfContainer Subject {
-        get => _Subject ?? (_Subject = new ConfContainer { Source = Content });
-        set => _Subject = value;
+        get => field ??= new ConfContainer { Source = Content };
+        set => field = value;
     }
-    private ConfContainer _Subject;
 
     [SetUp]
     public void SetUp() {

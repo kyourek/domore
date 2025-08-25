@@ -5,7 +5,7 @@
     <Copyright>Copyright © Ken Yourek 2023-2025</Copyright>
     <RootNamespace>Domore</RootNamespace>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    <LangVersion>12.0</LangVersion>
+    <LangVersion>preview</LangVersion>
     <VersionPrefix>9.7</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>

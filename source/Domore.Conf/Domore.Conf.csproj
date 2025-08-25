@@ -4,7 +4,6 @@
     <PackageTags>.NET Conf;.NET Config;.NET Configuration;Conf Files;Config Files;Configuration Files;Conf;Config;Configuration</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
