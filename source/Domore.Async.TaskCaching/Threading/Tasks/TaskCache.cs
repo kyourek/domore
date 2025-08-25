@@ -100,8 +100,11 @@ namespace Domore.Threading.Tasks {
                 if (Cached) {
                     return Result;
                 }
-                Cached = true;
-                Result = result;
+                var c = true;
+                var r = result;
+                Thread.MemoryBarrier();
+                Cached = c;
+                Result = r;
             }
             return result;
         }

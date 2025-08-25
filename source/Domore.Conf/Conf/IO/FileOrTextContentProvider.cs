@@ -4,27 +4,22 @@ using System;
 using System.Collections.Generic;
 using FILE = System.IO.File;
 
-namespace Domore.Conf.IO {
-    internal sealed class FileOrTextContentProvider : ConfContentProviderBase {
-        private PathFormatter PathFormatter => _PathFormatter ??= new();
-        private PathFormatter _PathFormatter;
+namespace Domore.Conf.IO;
 
-        private TextContentProvider Text => _Text ??= new();
-        private TextContentProvider _Text;
+internal sealed class FileOrTextContentProvider : ConfContentProviderBase {
+    private PathFormatter PathFormatter => field ??= new();
+    private TextContentProvider Text => field ??= new();
+    private FileContentProvider File => field ??= new();
 
-        private FileContentProvider File => _File ??= new();
-        private FileContentProvider _File;
-
-        public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
-            var file = $"{source}".Trim();
-            if (file != "") {
-                var expand = PathFormatter.Expand(Environment.ExpandEnvironmentVariables(file));
-                var exists = FILE.Exists(expand);
-                if (exists) {
-                    return File.GetConfContent(expand, sources, context);
-                }
+    public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
+        var file = $"{source}".Trim();
+        if (file != "") {
+            var expand = PathFormatter.Expand(Environment.ExpandEnvironmentVariables(file));
+            var exists = FILE.Exists(expand);
+            if (exists) {
+                return File.GetConfContent(expand, sources, context);
             }
-            return Text.GetConfContent(source, sources, context);
         }
+        return Text.GetConfContent(source, sources, context);
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Domore.Conf {
-    internal interface IConfKeyIndexPart : IConfToken {
-    }
+﻿namespace Domore.Conf;
+
+internal interface IConfKeyIndexPart : IConfToken {
 }

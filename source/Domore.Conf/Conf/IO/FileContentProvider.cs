@@ -4,10 +4,7 @@ using System.IO;
 
 namespace Domore.Conf.IO {
     internal sealed class FileContentProvider : ConfContentProviderBase {
-        private TextContentProvider Text =>
-            _Text ?? (
-            _Text = new TextContentProvider());
-        private TextContentProvider _Text;
+        private TextContentProvider Text => field ??= new();
 
         public sealed override ConfContent GetConfContent(object source, IEnumerable<object> sources, ConfContentProviderContext context) {
             var path = $"{source}";

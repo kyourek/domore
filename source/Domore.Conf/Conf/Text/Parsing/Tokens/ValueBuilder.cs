@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Text;
 
-namespace Domore.Conf.Text.Parsing.Tokens {
-    internal abstract class ValueBuilder : TokenBuilder, IConfValue {
-        protected StringBuilder String { get; } = new StringBuilder();
+namespace Domore.Conf.Text.Parsing.Tokens;
 
-        protected sealed override string Create() {
-            return String.ToString();
-        }
+internal abstract class ValueBuilder : TokenBuilder, IConfValue {
+    protected StringBuilder String { get; } = new();
 
-        public KeyBuilder Key { get; }
+    protected sealed override string Create() {
+        return String.ToString();
+    }
 
-        public ValueBuilder(KeyBuilder key) : base((key ?? throw new ArgumentNullException(nameof(key))).Sep) {
-            Key = key ?? throw new ArgumentNullException(nameof(key));
-        }
+    public KeyBuilder Key { get; }
+
+    public ValueBuilder(KeyBuilder key) : base((key ?? throw new ArgumentNullException(nameof(key))).Sep) {
+        Key = key ?? throw new ArgumentNullException(nameof(key));
     }
 }

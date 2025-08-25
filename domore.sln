@@ -90,6 +90,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{71EF33
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{5C14E701-A0F7-434A-82E2-67A11BFDA50B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "parsing", "parsing", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Parsing", "source\Domore.Parsing\Domore.Parsing.csproj", "{33255367-6588-4D67-8D3E-33E285F455AE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -172,6 +176,10 @@ Global
 		{F24E18DB-78AD-4072-BC1E-7DE9C2FA8BDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F24E18DB-78AD-4072-BC1E-7DE9C2FA8BDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F24E18DB-78AD-4072-BC1E-7DE9C2FA8BDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33255367-6588-4D67-8D3E-33E285F455AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33255367-6588-4D67-8D3E-33E285F455AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33255367-6588-4D67-8D3E-33E285F455AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33255367-6588-4D67-8D3E-33E285F455AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -205,6 +213,7 @@ Global
 		{8FBCF925-B393-4387-9175-C09667367627} = {269A45D1-2734-419C-8EAE-01B99861D568}
 		{0263D0D1-8A67-4A18-9DE6-902E98877AA7} = {269A45D1-2734-419C-8EAE-01B99861D568}
 		{71EF3310-0182-4672-B1BF-F1B16A812665} = {269A45D1-2734-419C-8EAE-01B99861D568}
+		{33255367-6588-4D67-8D3E-33E285F455AE} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}
