@@ -17,7 +17,7 @@ internal sealed class TextSourceProvider {
         return s;
     }
 
-    private IEnumerable<KeyValuePair<string, string>> ListConfContents(IList list, string key) {
+    private IEnumerable<KeyValuePair<string, string>> ListConfContents(IList list, string key, List<object> referenceList) {
         if (null == list) throw new ArgumentNullException(nameof(list));
         if (key == null) {
             var listType = list.GetType();
@@ -37,7 +37,7 @@ internal sealed class TextSourceProvider {
                         value: Multiline($"{v}"));
                 }
                 else {
-                    foreach (var kvp in ConfContents(v, k, help: false)) {
+                    foreach (var kvp in ConfContents(v, k, help: false, referenceList)) {
                         yield return kvp;
                     }
                 }
@@ -45,7 +45,7 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> DictionaryConfContents(IDictionary dictionary, string key) {
+    private IEnumerable<KeyValuePair<string, string>> DictionaryConfContents(IDictionary dictionary, string key, List<object> referenceList) {
         if (null == dictionary) throw new ArgumentNullException(nameof(dictionary));
         if (key == null) {
             var dictType = dictionary.GetType();
@@ -67,7 +67,7 @@ internal sealed class TextSourceProvider {
                             value: Multiline($"{v}"));
                     }
                     else {
-                        foreach (var kvp in ConfContents(v, k, help: false)) {
+                        foreach (var kvp in ConfContents(v, k, help: false, referenceList)) {
                             yield return kvp;
                         }
                     }
@@ -76,7 +76,7 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source, string key, bool help) {
+    private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source, string key, bool help, List<object> referenceList) {
         var type = source.GetType();
         var properties = type
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -86,7 +86,8 @@ internal sealed class TextSourceProvider {
         foreach (var property in properties) {
             if (property.CanRead) {
                 var confAttr = property.GetConfAttribute();
-                if (confAttr == null || confAttr.IgnoreGet == false) {
+                var confIgnore = true == confAttr?.IgnoreGet;
+                if (confIgnore == false) {
                     var parameters = property.GetIndexParameters();
                     if (parameters.Length == 0) {
                         var propertyValue = property.GetValue(source, null);
@@ -112,7 +113,7 @@ internal sealed class TextSourceProvider {
                                 var cc = ConfContents(
                                     source: propertyValue,
                                     key: k(property.Name),
-                                    help: help);
+                                    help: help, referenceList);
                                 foreach (var item in cc) {
                                     yield return item;
                                 }
@@ -124,26 +125,32 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> ConfContents(object source, string key, bool help) {
-        if (null == source) throw new ArgumentNullException(nameof(source));
-
-        var list = source as IList;
-        if (list != null) {
-            return ListConfContents(list, key);
+    private IEnumerable<KeyValuePair<string, string>> ConfContents(object source, string key, bool help, List<object> referenceList) {
+        if (referenceList is null) {
+            throw new ArgumentNullException(nameof(referenceList));
         }
-
-        var dictionary = source as IDictionary;
-        if (dictionary != null) {
-            return DictionaryConfContents(dictionary, key);
+        if (source is null) {
+            throw new ArgumentNullException(nameof(source));
         }
-
-        return DefaultConfContents(source, key, help);
+        if (referenceList.Any(r => ReferenceEquals(r, source))) {
+            throw new ConfCircularReferenceException(source);
+        }
+        else {
+            referenceList.Add(source);
+        }
+        if (source is IList list) {
+            return ListConfContents(list, key, referenceList);
+        }
+        if (source is IDictionary dictionary) {
+            return DictionaryConfContents(dictionary, key, referenceList);
+        }
+        return DefaultConfContents(source, key, help, referenceList);
     }
 
     public string GetConfSource(object obj, string key = null, bool? multiline = null) {
         var equals = multiline == false ? "=" : " = ";
         var separator = multiline == false ? ";" : Environment.NewLine;
-        var confContents = ConfContents(obj, key, help: multiline != false);
+        var confContents = ConfContents(obj, key, help: multiline != false, new());
         return string
             .Join(separator, confContents
                 .Select(pair => pair.Value == null

@@ -598,7 +598,7 @@ more lines{
     }
 
     [Test]
-    public void Foo() {
+    public void ConfFrom_CanInstantiateItemsWithPrivateConstructor() {
         var text = @"
                 ItemList[0].Foo = Bar
                 ItemList[1].Foo = Baz
@@ -606,5 +606,29 @@ more lines{
         var actual = new ConfFrom_CanInstantiateItemsWithPrivateConstructor_Object().ConfFrom(text, key: "").ItemList.Select(item => item.Foo).ToList();
         var expected = new[] { "Bar", "Baz" };
         Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    private sealed class CircularParent {
+        public CircularChild Child { get; }
+
+        public CircularParent() {
+            Child = new() { Parent = this };
+        }
+
+        public sealed class CircularChild {
+            public int Flag { get; }
+            public CircularParent Parent { get; set; }
+        }
+    }
+
+    [Test]
+    public void ConfText_ThrowsCircularReferenceException() {
+        Assert.That(
+            () => new CircularParent().ConfText(),
+            Throws
+                .TypeOf<ConfCircularReferenceException>()
+                .With
+                .Property(nameof(Exception.Message))
+                .Contains(nameof(CircularParent)));
     }
 }

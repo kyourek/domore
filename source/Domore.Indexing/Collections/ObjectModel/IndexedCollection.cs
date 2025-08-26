@@ -20,7 +20,7 @@ public abstract class IndexedCollection<TIndex, TItem> : IIndexedCollection<TInd
         Collection.Comparer;
 
     protected IndexedCollection(IEqualityComparer<TIndex> comparer) {
-        Collection = new KeyedCollection(comparer);
+        Collection = new(comparer);
     }
 
     protected IndexedCollection() : this(default(IEqualityComparer<TIndex>)) {
