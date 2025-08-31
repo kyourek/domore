@@ -2,7 +2,7 @@
   <PropertyGroup>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domore.Conf.Tests.Process\Domore.Conf.Tests.Process.csproj" />
+    <ProjectReference Include="..\..\samples\Domore.Conf.Tests.Helper\Domore.Conf.Tests.Helper.csproj" />
     <ProjectReference Include="..\..\source\Domore.Conf\Domore.Conf.csproj" />
   </ItemGroup>
   <ItemGroup>

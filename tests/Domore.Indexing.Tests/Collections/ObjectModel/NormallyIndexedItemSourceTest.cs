@@ -3,7 +3,7 @@
 namespace Domore.Collections.ObjectModel;
 
 [TestFixture, Parallelizable]
-public sealed class NormallyIndexedCollectionTest {
+public sealed class NormallyIndexedItemSourceTest {
     private Implementation Subject {
         get => field ??= new Implementation();
         set => field = value;
@@ -31,9 +31,9 @@ public sealed class NormallyIndexedCollectionTest {
         Assert.That(Subject.Contains(" helloWorlD\t"), Is.True);
     }
 
-    private class Implementation : NormallyIndexedCollection<Implementation.Item> {
+    private class Implementation : NormallyIndexedItemSource<Implementation.Item> {
         protected override Item CreateItem(string index) =>
-            new Item(index);
+            new(index);
 
         public sealed class Item : IIndexedItem<string> {
             public string Index { get; }

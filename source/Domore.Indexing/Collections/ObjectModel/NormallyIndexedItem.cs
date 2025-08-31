@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Domore.Collections.ObjectModel;
+﻿namespace Domore.Collections.ObjectModel;
 
 public abstract class NormallyIndexedItem : IIndexedItem<string> {
     protected string Index { get; private set; }
@@ -10,16 +8,8 @@ public abstract class NormallyIndexedItem : IIndexedItem<string> {
 
     string IIndexedItem<string>.Index => Index;
 
-    public class Collection<TItem> : NormallyIndexedCollection<TItem> where TItem : NormallyIndexedItem, new() {
-        protected Collection() {
-        }
-
-        protected override TItem CreateItem(string index) =>
-            new() { Index = index };
-    }
-
-    public class DisposableCollection<TItem> : NormallyIndexedDisposableCollection<TItem> where TItem : NormallyIndexedItem, IDisposable, new() {
-        protected DisposableCollection() {
+    public class Source<TItem> : NormallyIndexedItemSource<TItem> where TItem : NormallyIndexedItem, new() {
+        protected Source() {
         }
 
         protected override TItem CreateItem(string index) =>
@@ -27,10 +17,10 @@ public abstract class NormallyIndexedItem : IIndexedItem<string> {
     }
 }
 
-public abstract class NormallyIndexedItem<TItem> : NormallyIndexedItem where TItem : NormallyIndexedItem, new() {
+public abstract class NormallyIndexedItem<TSelf> : NormallyIndexedItem where TSelf : NormallyIndexedItem, new() {
     protected NormallyIndexedItem() {
     }
 
-    public class Collection : Collection<TItem> {
+    public sealed class Source : Source<TSelf> {
     }
 }

@@ -9,31 +9,32 @@ namespace Domore.Conf;
 
 [TestFixture]
 internal sealed class ConfContentProviderTest {
-    private string ProcessPath => field ??= GetProcessPath();
-    private string ProcessDir => field ??= Path.GetDirectoryName(ProcessPath);
-    private string ConfPath => field ??= Path.ChangeExtension(ProcessPath, ".conf");
+    private string HelperPath => field ??= GetHelperPath();
+    private string HelperDir => field ??= Path.GetDirectoryName(HelperPath);
+    private string ConfPath => field ??= Path.ChangeExtension(HelperPath, ".conf");
     private string ConfDefaultPath => field ??= ConfPath + ".default";
 
-    private string GetProcessPath() {
+    private static string GetHelperPath() {
         var thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
-        var thisAssemblyFile = new FileInfo(thisAssemblyPath);
-        var runtime = thisAssemblyFile.Directory.Name;
-        var processProject = Path.Combine(thisAssemblyFile.Directory.Parent.Parent.FullName, "Domore.Conf.Tests.Process");
-        var processPath = Path.Combine(processProject, runtime, "Domore.Conf.Tests.Process.exe");
-        return processPath;
+        var thisAssemblyDir = Path.GetDirectoryName(thisAssemblyPath);
+        return Path.Combine(thisAssemblyDir, "Domore.Conf.Tests.Helper.exe");
     }
 
     private string RunProcess(params string[] args) {
+#if NET8_0_OR_GREATER
+#else
+        Assert.Ignore();
+#endif
         var error = new StringBuilder();
         var output = new StringBuilder();
         using (var process = new Process()) {
             process.StartInfo.Arguments = string.Join(" ", args);
-            process.StartInfo.FileName = ProcessPath;
+            process.StartInfo.FileName = HelperPath;
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            process.StartInfo.WorkingDirectory = ProcessDir;
+            process.StartInfo.WorkingDirectory = HelperDir;
             process.Start();
             process.ErrorDataReceived += (s, e) => { error.AppendLine(e?.Data); };
             process.OutputDataReceived += (s, e) => { output.AppendLine(e?.Data); };
