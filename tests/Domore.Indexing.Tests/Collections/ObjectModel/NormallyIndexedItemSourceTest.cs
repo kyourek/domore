@@ -55,6 +55,14 @@ public sealed class NormallyIndexedItemSourceTest {
         }
     }
 
+    [Test]
+    public void Item_Index_IsExpected() {
+        var item = Subject["  Hello, World!  "];
+        var actual = item.Index;
+        var expected = "  Hello, World!  ";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
     private class Implementation : NormallyIndexedItemSource<Implementation.Item> {
         protected override Item CreateItem(string index) =>
             new(index);
