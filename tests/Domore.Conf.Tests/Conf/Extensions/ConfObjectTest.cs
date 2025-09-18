@@ -662,4 +662,60 @@ more lines{
                 .Property(nameof(Exception.Message))
                 .Contains(nameof(CircularParent)));
     }
+
+    class Foo {
+        public string Bar { get; set; }
+    }
+
+    [Test]
+    public void ConfText_CanRoundTripIfStringStartsWithOpenBrace() {
+        var expected = string.Join("\n", "{", "1234");
+        var foo = new Foo { Bar = expected };
+        var conf = foo.ConfText();
+        var other = new Foo().ConfFrom(conf);
+        Assert.That(other.Bar, Is.EqualTo(expected));
+    }
+
+    [TestCase("1234\n}")]
+    [TestCase("1234\n} ")]
+    [TestCase("1234\n}\n")]
+    [TestCase("1234\n} \n")]
+    [TestCase("1234\n} \n ")]
+    public void ConfText_CanRoundTripIfStringEndsWithClosedBrace(string expected) {
+        var foo = new Foo { Bar = expected };
+        var conf = foo.ConfText();
+        var other = new Foo().ConfFrom(conf);
+        Assert.That(other.Bar, Is.EqualTo(expected));
+    }
+
+    [TestCase("1234\n}\n5678")]
+    [TestCase("1234\n  \t} \n \t5678 ")]
+    public void ConfText_CanRoundTripIfStringContainsClosedBraceOnItsOwnLine(string expected) {
+        var foo = new Foo { Bar = expected };
+        var conf = foo.ConfText();
+        var other = new Foo().ConfFrom(conf);
+        Assert.That(other.Bar, Is.EqualTo(expected));
+    }
+
+    [TestCase("1234\n\"\"\"")]
+    [TestCase("1234\n\"\"\" ")]
+    [TestCase("1234\n\"\"\"\n")]
+    [TestCase("1234\n\"\"\" \n")]
+    [TestCase("1234\n\"\"\" \n ")]
+    public void ConfText_CanRoundTripIfStringEndsWithTripleQuote(string expected) {
+        var foo = new Foo { Bar = expected };
+        var conf = foo.ConfText();
+        var other = new Foo().ConfFrom(conf);
+        Assert.That(other.Bar, Is.EqualTo(expected));
+    }
+
+    [TestCase("1234\n\"\"\"\n5678")]
+    [TestCase("1234\n\"\"\" \t \n 5678\t")]
+    [TestCase("1234\n \t \n \t\"\"\" \n \n5678\n")]
+    public void ConfText_CanRoundTripIfStringHasTripleQuoteOnItsOwnLine(string expected) {
+        var foo = new Foo { Bar = expected };
+        var conf = foo.ConfText();
+        var other = new Foo().ConfFrom(conf);
+        Assert.That(other.Bar, Is.EqualTo(expected));
+    }
 }

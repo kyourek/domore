@@ -21,6 +21,16 @@ internal sealed class MultilineInTripleQuotesBuilder : MultiLineValueBuilder {
             if (mightBeTripleQuote) {
                 if (Peek(s, i + 1, includeWhiteSpace: true) == '"') {
                     if (Peek(s, i + 2, includeWhiteSpace: true) == '"') {
+                        if (s.Length == i + 3) {
+                            i = i + 3;
+                            Cleanup();
+                            if (String.Length > 0) {
+                                return new Complete(Key, this);
+                            }
+                            else {
+                                return new KeyBuilder(Sep);
+                            }
+                        }
                         for (var j = i + 3; j < s.Length; j++) {
                             var k = s[j];
                             if (k == Sep) {

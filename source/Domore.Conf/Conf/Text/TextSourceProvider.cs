@@ -4,17 +4,39 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace Domore.Conf.Text;
 
 internal sealed class TextSourceProvider {
     private static string Multiline(string s) {
-        if (s != null) {
-            if (s.Contains('\n')) {
-                s = string.Join(Environment.NewLine, "{", s, "}");
+        if (s?.Contains('\n') != true) {
+            return s;
+        }
+        var line = default(StringBuilder);
+        var open = "{";
+        var close = "}";
+        for (var i = 0; i < s.Length; i++) {
+            if (s[i] == '\n') {
+                if (line?.Length > 0) {
+                    if (line.ToString().Trim() == "}") {
+                        open = close = "\"\"\"";
+                        break;
+                    }
+                    line.Clear();
+                }
+            }
+            else {
+                line ??= new();
+                line.Append(s[i]);
             }
         }
-        return s;
+        if (line?.Length > 0) {
+            if (line.ToString().Trim() == "}") {
+                open = close = "\"\"\"";
+            }
+        }
+        return string.Join(Environment.NewLine, open, s, close);
     }
 
     private IEnumerable<KeyValuePair<string, string>> ListConfContents(IList list, string key, List<object> referenceList) {
