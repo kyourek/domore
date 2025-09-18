@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System;
 using System.Linq;
 using System.Numerics;
 
@@ -84,6 +85,16 @@ public sealed class SemVerTest {
         "9.8.7-whatever+meta+meta",
         "99999999999999999999999.999999999999999999.99999999999999999----RC-SNAPSHOT.12.09.1--------------------------------..12"
     };
+
+    [TestCaseSource(nameof(ValidSemanticVersions))]
+    public void Parse_DoesNotThrow(string v) {
+        Assert.That(SemVer.Parse(v), Is.Not.Null);
+    }
+
+    [TestCaseSource(nameof(InvalidSemanticVersions))]
+    public void Parse_ThrowsFormatException(string v) {
+        Assert.That(() => SemVer.Parse(v), Throws.InstanceOf<FormatException>());
+    }
 
     [TestCaseSource(nameof(ValidSemanticVersions))]
     public void TryParse_SucceedsWithValidSemanticVersions(string v) {
@@ -174,7 +185,7 @@ public sealed class SemVerTest {
             "1.0.0"
         };
         var actual = input
-            .Select(s => SemVer.Parse(s))
+            .Select(SemVer.Parse)
             .OrderBy(v => v)
             .Select(v => $"{v}")
             .ToList();
@@ -182,27 +193,27 @@ public sealed class SemVerTest {
     }
 
     [Test]
-    public void Zero_MajorIsZero() {
+    public void Zero_Major_IsZero() {
         Assert.That(SemVer.Zero.Major, Is.EqualTo((BigInteger)0));
     }
 
     [Test]
-    public void Zero_MinorIsZero() {
+    public void Zero_Minor_IsZero() {
         Assert.That(SemVer.Zero.Minor, Is.EqualTo((BigInteger)0));
     }
 
     [Test]
-    public void Zero_PatchIsZero() {
+    public void Zero_Patch_IsZero() {
         Assert.That(SemVer.Zero.Patch, Is.EqualTo((BigInteger)0));
     }
 
     [Test]
-    public void Zero_PreReleaseIsNull() {
+    public void Zero_PreRelease_IsNull() {
         Assert.That(SemVer.Zero.PreRelease, Is.Null);
     }
 
     [Test]
-    public void Zero_BuildIsNull() {
+    public void Zero_Build_IsNull() {
         Assert.That(SemVer.Zero.Build, Is.Null);
     }
 
