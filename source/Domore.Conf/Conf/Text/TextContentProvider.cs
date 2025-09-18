@@ -44,7 +44,7 @@ internal sealed class TextContentProvider : ConfContentProviderBase {
         var s = $"{source}";
         var sourceList = sources?.Concat(new[] { s })?.ToList();
         if (sourceList == null) {
-            sourceList = new List<object>(new[] { s });
+            sourceList = [s];
         }
         var
         p = Parse.Pairs(s).ToList();

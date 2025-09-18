@@ -21,7 +21,7 @@ internal sealed class ConfContainer : IConfContainer {
     }
 
     public IConfContentProvider ContentProvider {
-        get => _ContentProvider ?? (_ContentProvider = new ConfContentProvider());
+        get => _ContentProvider ??= new ConfContentProvider();
         set {
             if (_ContentProvider != value) {
                 _ContentProvider = value;
@@ -59,9 +59,7 @@ internal sealed class ConfContainer : IConfContainer {
     public IEnumerable<object> Sources =>
         Content.Sources;
 
-    public IConfLookup Lookup =>
-        _Lookup ?? (
-        _Lookup = new ConfLookup(Content.Pairs));
+    public IConfLookup Lookup => _Lookup ??= new ConfLookup(Content.Pairs);
     private IConfLookup _Lookup;
 
     public T Configure<T>(T target, string key = null) {
