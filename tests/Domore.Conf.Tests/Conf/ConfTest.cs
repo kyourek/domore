@@ -119,4 +119,34 @@ Etiam semper mattis tincidunt. Sed in consequat elit. Fusce orci enim, rhoncus i
         Contain_ReturnsContainerThatCanConfigureFromStringSource((actual, expected) =>
             Assert.That(actual.Text, Is.EqualTo(expected.Text)));
     }
+
+    [Test]
+    public void Special_HasDefaultValue() {
+        Assert.That(Conf.Special, Is.EqualTo("@conf"));
+    }
+
+    [Test, NonParallelizable]
+    public void Special_CanBeSet() {
+        var original = Conf.Special;
+        try {
+            Conf.Special = "FOO";
+            Assert.That(Conf.Special, Is.EqualTo("FOO"));
+        }
+        finally {
+            Conf.Special = original;
+        }
+
+    }
+
+    [Test, NonParallelizable]
+    public void Special_CanBeSetNull() {
+        var original = Conf.Special;
+        try {
+            Conf.Special = null;
+            Assert.That(Conf.Special, Is.Null);
+        }
+        finally {
+            Conf.Special = original;
+        }
+    }
 }
