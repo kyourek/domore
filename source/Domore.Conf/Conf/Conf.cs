@@ -6,7 +6,7 @@ namespace Domore.Conf {
     /// Provider of serialization to and from conf content.
     /// </summary>
     public sealed class Conf : IConf {
-        private static readonly ConfContainer _Container = new();
+        private static readonly ConfContainer _Container = new() { Special = "@conf" };
 
         /// <summary>
         /// Gets the instance of <see cref="IConfContainer"/> used by static methods.
@@ -90,7 +90,7 @@ namespace Domore.Conf {
         /// <param name="source">The conf source.</param>
         /// <returns>The created instance of <see cref="IConfContainer"/>.</returns>
         public static IConfContainer Contain(object source) {
-            return Contain(source, null);
+            return Contain(source, Special);
         }
 
         /// <summary>

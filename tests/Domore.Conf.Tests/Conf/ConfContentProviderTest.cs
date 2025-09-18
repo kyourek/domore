@@ -97,4 +97,18 @@ internal sealed class ConfContentProviderTest {
             File.Delete(tempPath);
         }
     }
+
+    [Test]
+    public void ConfHasDefaultSpecial() {
+        var tempPath = Path.GetTempFileName();
+        try {
+            File.WriteAllText(tempPath, $"Program.Greeting = wassup");
+            File.WriteAllText(ConfPath, $"@conf.include = {tempPath}");
+            var output = RunProcess();
+            Assert.That(output.Trim(), Is.EqualTo("wassup"));
+        }
+        finally {
+            File.Delete(tempPath);
+        }
+    }
 }

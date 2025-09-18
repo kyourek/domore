@@ -5,7 +5,7 @@ namespace Domore.Conf;
 
 internal sealed class ConfTestHelper {
     private static void Main(string[] args) {
-        Conf.Special = args.FirstOrDefault();
+        Conf.Special = args.FirstOrDefault() ?? Conf.Special;
         var program = Conf.Configure(new ConfTestHelper(), key: "Program");
         Console.WriteLine(program.Greeting);
     }

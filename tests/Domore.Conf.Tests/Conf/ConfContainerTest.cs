@@ -891,24 +891,6 @@ public sealed class ConfContainerTest {
     }
 
     [Test]
-    public void FileIsIncludedIfSpecialIsNotExplicitlySet() {
-        var temp = Path.GetTempFileName();
-        try {
-            File.WriteAllText(temp, $"depth = 25");
-            Content = $@"
-                    depth = 24
-                    @conf.INCLUDE = {temp}
-                ";
-            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-            var expected = 25;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
-        finally {
-            File.Delete(temp);
-        }
-    }
-
-    [Test]
     public void ConfAfterIncludeOverridesInclude() {
         var temp = Path.GetTempFileName();
         try {
