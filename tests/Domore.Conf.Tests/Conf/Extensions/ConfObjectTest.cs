@@ -676,6 +676,25 @@ more lines{
         Assert.That(other.Bar, Is.EqualTo(expected));
     }
 
+    [Test]
+    public void ConfText_UsesTripleQuoteIfStringContainsBraces() {
+        var value = @"{   
+    Hello, World!
+    Goodbye, Earth.
+} 
+  ";
+        var obj = new Foo { Bar = value };
+        var actual = obj.ConfText();
+        var expected = @"Foo.Bar = """"""
+{   
+    Hello, World!
+    Goodbye, Earth.
+} 
+  
+""""""";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
     [TestCase("1234\n}")]
     [TestCase("1234\n} ")]
     [TestCase("1234\n}\n")]
