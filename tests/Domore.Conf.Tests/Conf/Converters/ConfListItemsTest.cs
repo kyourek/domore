@@ -1,6 +1,5 @@
 ﻿using Domore.Conf.Extensions;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -22,14 +21,14 @@ public sealed class ConfListItemsTest {
     public void ConvertsItemsIntoList() {
         var actual = new Kid().ConfFrom($"kid.FavoriteColors = Red, green,   BLUE").FavoriteColors;
         var expected = new[] { "Red", "green", "BLUE" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
     public void ConvertsItemsIntoListWithSpecifiedName() {
         var actual = new Kid().ConfFrom($"kid.pets= Little Bit & Penny").PetNames;
         var expected = new[] { "Little Bit", "Penny" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class Pi {
@@ -41,7 +40,7 @@ public sealed class ConfListItemsTest {
     public void ConvertsItemsIntoListOfInt() {
         var actual = new Pi().ConfFrom($"PI.digits = 3, 1,4 ").Digits;
         var expected = new[] { 3, 1, 4 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [TypeConverter(typeof(PairWithDefaultTypeConverter.Converter))]
@@ -71,7 +70,7 @@ public sealed class ConfListItemsTest {
         var items = new PairWithDefaultTypeConverters().ConfFrom($"Items = str1&1.2 , str2&2.3 , str3&3.4", key: "").Items;
         var actual = items.SelectMany(item => new object[] { item.Thing1, item.Thing2 }).ToArray();
         var expected = new object[] { items[0].Thing1, items[0].Thing2, items[1].Thing1, items[1].Thing2, items[2].Thing1, items[2].Thing2 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class PairWithSpecifiedTypeConverter {
@@ -100,7 +99,7 @@ public sealed class ConfListItemsTest {
         var items = new PairWithSpecifiedTypeConverters().ConfFrom($"things = str1&1.2 , str2&2.3 , str3&3.4", key: "").Items;
         var actual = items.SelectMany(item => new object[] { item.Thing1, item.Thing2 }).ToArray();
         var expected = new object[] { items[0].Thing1, items[0].Thing2, items[1].Thing1, items[1].Thing2, items[2].Thing1, items[2].Thing2 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class PairWithConfValueConverter {
@@ -129,7 +128,7 @@ public sealed class ConfListItemsTest {
         var items = new PairWithConfValueConverters().ConfFrom($"ITEMS = str1&1.2, str2&2.3 ,str3&3.4", key: "").Items;
         var actual = items.SelectMany(item => new object[] { item.Thing1, item.Thing2 }).ToArray();
         var expected = new object[] { items[0].Thing1, items[0].Thing2, items[1].Thing1, items[1].Thing2, items[2].Thing1, items[2].Thing2 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
 
@@ -143,6 +142,6 @@ public sealed class ConfListItemsTest {
         var items = new PairWithConfValueConvertersAndSeparator().ConfFrom($"ITEMS = str1&1.2| str2&2.3 |str3&3.4", key: "").Items;
         var actual = items.SelectMany(item => new object[] { item.Thing1, item.Thing2 }).ToArray();
         var expected = new object[] { items[0].Thing1, items[0].Thing2, items[1].Thing1, items[1].Thing2, items[2].Thing1, items[2].Thing2 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Domore.Logs.Mocks;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -451,7 +450,7 @@ namespace Domore.Logs.Services {
             Logging.Complete();
             var actual = entries.SelectMany(e => e.LogList).ToList();
             var expected = new[] { "here's some data" };
-            CollectionAssert.AreEqual(expected, actual);
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [Test]

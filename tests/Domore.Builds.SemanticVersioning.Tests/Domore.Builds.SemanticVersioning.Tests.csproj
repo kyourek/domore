@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\source\Domore.Builds.SemanticVersioning\Domore.Builds.SemanticVersioning.csproj" />
+  </ItemGroup>
+</Project>

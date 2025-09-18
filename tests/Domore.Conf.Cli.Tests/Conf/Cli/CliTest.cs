@@ -5,7 +5,6 @@ using System.Linq;
 
 namespace Domore.Conf.Cli {
     using Converters;
-    using NUnit.Framework.Legacy;
 
     [TestFixture]
     public partial class CliTest {
@@ -155,13 +154,13 @@ mv direction<up/down/left/right> [speed<num>]
         [Test]
         public void Configure_SetsListItems() {
             var blend = Cli.Configure(new Blend(), "apples,bananas");
-            CollectionAssert.AreEqual(new[] { "apples", "bananas" }, blend.Fruits);
+            Assert.That(blend.Fruits, Is.EqualTo(["apples", "bananas"]));
         }
 
         [Test]
         public void Configure_SetsListItemsOfType() {
             var blend = Cli.Configure(new Blend(), "apples,bananas nuts=cashews,almonds");
-            CollectionAssert.AreEqual(new[] { NutKind.Cashews, NutKind.Almonds }, blend.Nuts);
+            Assert.That(blend.Nuts, Is.EqualTo([NutKind.Cashews, NutKind.Almonds]));
         }
 
         [Test]
@@ -483,13 +482,13 @@ baz [word=<z/s>]".Trim();
                 ? new ClassWithArgumentsList { Arguments = null }
                 : new ClassWithArgumentsList { Arguments = new List<string>() };
             Cli.Configure(target, "Hello World! count 1 2 3 4");
-            CollectionAssert.AreEqual(new[] { "Hello", "World!", "count", "1", "2", "3", "4" }, target.Arguments);
+            Assert.That(target.Arguments, Is.EqualTo(["Hello", "World!", "count", "1", "2", "3", "4"]));
         }
 
         [Test]
         public void Configure_TrimsArguments() {
             var obj = Cli.Configure(new ClassWithArgumentsList(), " \t 'Hello  World!'  \t  count \" 1 '2\t3 ' \t4  \"  ");
-            CollectionAssert.AreEqual(new[] { "Hello  World!", "count", "1 '2\t3 ' \t4" }, obj.Arguments);
+            Assert.That(obj.Arguments, Is.EqualTo(["Hello  World!", "count", "1 '2\t3 ' \t4"]));
         }
 
         [Test]
@@ -543,7 +542,7 @@ baz [word=<z/s>]".Trim();
             var target = new TargetWithParameterSet();
             var set = (Dictionary<string, bool>)target.Params;
             Cli.Configure(target, "one=true two=false");
-            CollectionAssert.AreEqual(new[] { true, false }, new[] { set["one"], set["two"] });
+            Assert.That(new[] { set["one"], set["two"] }, Is.EqualTo([true, false]));
         }
 
         private class TargetWithParameterSet2 {

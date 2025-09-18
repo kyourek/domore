@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,7 +47,7 @@ public sealed class TaskCacheTest {
         }
         var expected = Enumerable.Range(0, n).Select(_ => result);
         var actual = results;
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));        
     }
 
     [Test]
@@ -86,7 +85,7 @@ public sealed class TaskCacheTest {
             actual.Add(ex);
         }
         var expected = new Exception[] { ex1, ex2 };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -121,7 +120,7 @@ public sealed class TaskCacheTest {
         actual.Add(await subject.Ready(CancellationToken.None));
         await subject.Refresh(CancellationToken.None);
         actual.Add(await subject.Ready(CancellationToken.None));
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -132,6 +131,6 @@ public sealed class TaskCacheTest {
         var subject = new TaskCache<object>.WithRefresh(async _ => await Get(expected[n++]));
         actual.Add(await subject.Ready(CancellationToken.None));
         actual.Add(await subject.Refreshed(CancellationToken.None));
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 }

@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -147,7 +146,7 @@ internal class ConfObjectTest {
         var copy = conf.Configure(new DictedClass());
         var actual = copy.DictOfStrings;
         var expected = subject.DictOfStrings;
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -159,7 +158,7 @@ internal class ConfObjectTest {
         var copy = new DictedClass().ConfFrom(text);
         var actual = copy.DictOfStrings;
         var expected = subject.DictOfStrings;
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class ComplexDictedClass {

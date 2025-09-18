@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -469,7 +468,7 @@ public partial class NotifierTest {
         subject.MyVal = "world";
         var actual = ((INotifyDataErrorInfo)subject).GetErrors(nameof(subject.MyNum));
         var expected = new[] { "This has to be a num!", "Val must be equal to num." };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -491,7 +490,7 @@ public partial class NotifierTest {
         subject.MyVal = "2345";
         var actual = ((INotifyDataErrorInfo)subject).GetErrors(propertyName);
         var expected = new[] { "Val and num are wrong." };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class Subject6 : Subject5 {
@@ -520,7 +519,7 @@ public partial class NotifierTest {
         subject.Foo = new Exception();
         var actual = ((INotifyDataErrorInfo)subject).GetErrors("Foo");
         var expected = new object[] { subject.Foo, "Foo" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]

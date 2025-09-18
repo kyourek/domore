@@ -46,7 +46,6 @@ var types = new[] {
 var file = new StringBuilder();
 var f = new Action<string>(l => file.AppendLine(l));
 f(@"using NUnit.Framework;");
-f(@"using NUnit.Framework.Legacy;");
 f(@"using System;");
 f(@"using System.Collections.Generic;");
 f(@"using System.ComponentModel;");
@@ -120,7 +119,7 @@ foreach (var type in types) {
     m(@"    var field = $Z;");
     m(@"    Subject.Change(ref field, $O, expected[0], expected[1], expected[2]);");
     m(@"");
-    m(@"    CollectionAssert.AreEqual(expected, actual);");
+    m(@"    Assert.That(actual, Is.EqualTo(expected));");
     m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -132,7 +131,7 @@ foreach (var type in types) {
 	m(@"    var field = $Z;");
 	m(@"    Subject.Change(ref field, $O, expected[0], expected[1], expected[2]);");
 	m(@"");
-	m(@"    CollectionAssert.AreEqual(expected, actual);");
+	m(@"    Assert.That(actual, Is.EqualTo(expected));");
 	m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -155,7 +154,7 @@ foreach (var type in types) {
     m(@"    var field = $Z;");
     m(@"    Subject.Change(ref field, $Z, expected[0], expected[1], expected[2]);");
     m(@"");
-    m(@"    CollectionAssert.IsEmpty(actual);");
+    m(@"    Assert.That(actual, Is.Empty);");
     m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -167,7 +166,7 @@ foreach (var type in types) {
 	m(@"    var field = $Z;");
 	m(@"    Subject.Change(ref field, $Z, expected[0], expected[1], expected[2]);");
 	m(@"");
-	m(@"    CollectionAssert.IsEmpty(actual);");
+	m(@"    Assert.That(actual, Is.Empty);");
 	m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -236,7 +235,7 @@ foreach (var type in types) {
     m(@"    var field = $Z;");
     m(@"    Subject.Change(ref field, $O, expected[0], expected[1], expected[2]);");
     m(@"");
-    m(@"    CollectionAssert.AreEqual(expected, actual);");
+    m(@"    Assert.That(actual, Is.EqualTo(expected));");
     m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -248,7 +247,7 @@ foreach (var type in types) {
 	m(@"    var field = $Z;");
 	m(@"    Subject.Change(ref field, $O, new PropertyChangedEventArgs(expected[0].PropertyName), new PropertyChangedEventArgs(expected[1].PropertyName), new PropertyChangedEventArgs(expected[2].PropertyName));");
 	m(@"");
-	m(@"    CollectionAssert.AreEqual(expected.Select(e => e.PropertyName), actual.Select(e => e.PropertyName));");
+	m(@"    Assert.That(actual.Select(e => e.PropertyName), Is.EqualTo(expected.Select(e => e.PropertyName)));");
 	m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -271,7 +270,7 @@ foreach (var type in types) {
     m(@"    var field = $Z;");
     m(@"    Subject.Change(ref field, $Z, expected[0], expected[1], expected[2]);");
     m(@"");
-    m(@"    CollectionAssert.IsEmpty(actual);");
+    m(@"    Assert.That(actual, Is.Empty);");
     m(@"}");
 	m(@"");
 	m(@"[Test]");
@@ -283,7 +282,7 @@ foreach (var type in types) {
 	m(@"    var field = $Z;");
 	m(@"    Subject.Change(ref field, $Z, expected[0], expected[1], expected[2]);");
 	m(@"");
-	m(@"    CollectionAssert.IsEmpty(actual);");
+	m(@"    Assert.That(actual, Is.Empty);");
 	m(@"}");
 	m(@"");
 	m(@"[Test]");

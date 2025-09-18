@@ -1,6 +1,5 @@
 ﻿using Domore.Conf.Extensions;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 
 namespace Domore.Conf.Converters;
@@ -28,8 +27,10 @@ public sealed class ConfTextTest {
                     favorite ice cream flavors = chocolate, strawberry, NOT vanilla
                 }
             ");
-        Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
-        Assert.That(parent.Child.Age, Is.EqualTo(7));
-        CollectionAssert.AreEqual(new[] { "chocolate", "strawberry", "NOT vanilla" }, parent.Child.FavoriteIceCreamFlavors);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
+            Assert.That(parent.Child.Age, Is.EqualTo(7));
+            Assert.That(parent.Child.FavoriteIceCreamFlavors, Is.EqualTo(["chocolate", "strawberry", "NOT vanilla"]));
+        }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -65,7 +64,7 @@ public sealed class ConfContainerTest {
                 Man.Best friend = Penny
             ";
         var man = Subject.Configure(new Man());
-        Assert.That("red", Is.EqualTo(man.BestFriend.Color));
+        Assert.That(man.BestFriend.Color, Is.EqualTo("red"));
     }
 
     [TestCase("penny.Color")]
@@ -100,7 +99,7 @@ public sealed class ConfContainerTest {
 
                 PENNy    .COLOR   = Red and White   
             ";
-        CollectionAssert.AreEqual(Subject.Lookup.All("penny.color"), new[] { "red", "brown", "Red and White" });
+        Assert.That(Subject.Lookup.All("penny.color"), Is.EqualTo(["red", "brown", "Red and White"]));
     }
 
     private class ManWithCat : Man {
@@ -116,7 +115,7 @@ public sealed class ConfContainerTest {
                 Man.Cat.Color = black
             ";
         var man = Subject.Configure(new ManWithCat(), "Man");
-        Assert.That("black", Is.EqualTo(man.Cat.Color));
+        Assert.That(man.Cat.Color, Is.EqualTo("black"));
     }
 
     private class ManWithIgnoredCat : Man {
@@ -407,7 +406,7 @@ public sealed class ConfContainerTest {
         var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
         var expected = new List<string> { "Num 0", "num 0", "num1", "NUM1", "num 2", "num  2" };
         var actual = kids.Select(kid => kid.Key).ToList();
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -423,7 +422,7 @@ public sealed class ConfContainerTest {
         var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
         var expected = new List<string> { "Num 0", "num 0", "NUM1", "num 2", "num  2" };
         var actual = kids.Select(kid => kid.Key).ToList();
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -439,7 +438,7 @@ public sealed class ConfContainerTest {
         var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid", StringComparer.OrdinalIgnoreCase).ToList();
         var expected = new List<string> { "Num 0", "num1", "num 2", "num  2" };
         var actual = kids.Select(kid => kid.Key).ToList();
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -592,7 +591,7 @@ public sealed class ConfContainerTest {
                 item.inners[2].value = 1.3
             ";
         var obj = Subject.Configure(new ClassWithListExposedAsICollection(), "item");
-        CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
     }
 
     [Test]
@@ -604,7 +603,7 @@ public sealed class ConfContainerTest {
             ";
         var actual = Subject.Sources;
         var expected = new[] { Content.ToString() };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [TestCase("item.inners[0].value", "1.1")]
@@ -636,7 +635,7 @@ public sealed class ConfContainerTest {
             ";
         var actual = Subject.Lookup.All("ITEM . INNERS [ 1 ] . VALUE");
         var expected = new[] { "3.4", "1.2", "5.6", "7.8" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -651,7 +650,7 @@ public sealed class ConfContainerTest {
             ";
         var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
         var expected = new[] { "3.4", "5.6", "7.8" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -666,7 +665,7 @@ public sealed class ConfContainerTest {
             ";
         var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
         var expected = new[] { "5.6", "7.8" };
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     private class ObjWithOptionalNames {
@@ -725,7 +724,7 @@ public sealed class ConfContainerTest {
                 item.inner[2].value = 1.3
             ";
         var obj = Subject.Configure(new ClassWithNamedListExposedAsICollection(), "item");
-        CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo(new[] { 1.1, 1.2, 1.3 }));
     }
 
     [Test]
@@ -785,7 +784,7 @@ public sealed class ConfContainerTest {
         Content = "Bar = \\r \\n";
         var inst = Subject.Configure(new ClassWithStringPropertiesForConverterTest(), key: "");
         var actual = inst.Bar;
-        CollectionAssert.AreEqual(new[] { "\r", "\n" }, actual);
+        Assert.That(actual, Is.EqualTo(["\r", "\n"]));
     }
 
     [Test]

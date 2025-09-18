@@ -94,6 +94,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0BFAEF73
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Conf.Tests.Helper", "samples\Domore.Conf.Tests.Helper\Domore.Conf.Tests.Helper.csproj", "{8F19E1AC-27DB-A578-BCC6-B53612067299}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "builds", "builds", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Builds.SemanticVersioning", "source\Domore.Builds.SemanticVersioning\Domore.Builds.SemanticVersioning.csproj", "{410262EA-D313-44B3-B8C3-661EF9AE5A7B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Builds.SemanticVersioning.Tests", "tests\Domore.Builds.SemanticVersioning.Tests\Domore.Builds.SemanticVersioning.Tests.csproj", "{2BF0F3FB-7A37-DC1F-315C-488E65609866}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -176,6 +184,14 @@ Global
 		{8F19E1AC-27DB-A578-BCC6-B53612067299}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F19E1AC-27DB-A578-BCC6-B53612067299}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F19E1AC-27DB-A578-BCC6-B53612067299}.Release|Any CPU.Build.0 = Release|Any CPU
+		{410262EA-D313-44B3-B8C3-661EF9AE5A7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{410262EA-D313-44B3-B8C3-661EF9AE5A7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{410262EA-D313-44B3-B8C3-661EF9AE5A7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{410262EA-D313-44B3-B8C3-661EF9AE5A7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -211,6 +227,9 @@ Global
 		{D98C2630-44EA-4CD8-A1FB-B0B02F858002} = {37B35561-4128-4D30-B2F0-C6F4AFCB1E4C}
 		{0BFAEF73-354A-4068-909F-B7DEBC196619} = {003E5404-5686-414F-A16F-2700D765EC53}
 		{8F19E1AC-27DB-A578-BCC6-B53612067299} = {D98C2630-44EA-4CD8-A1FB-B0B02F858002}
+		{410262EA-D313-44B3-B8C3-661EF9AE5A7B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{2BF0F3FB-7A37-DC1F-315C-488E65609866} = {DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}

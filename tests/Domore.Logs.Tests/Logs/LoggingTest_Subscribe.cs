@@ -1,6 +1,5 @@
 ﻿using Domore.Logs.Mocks;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 
@@ -14,7 +13,7 @@ namespace Domore.Logs {
             mock.Threshold = _ => LogSeverity.Info;
             Logging.Subscribe(mock);
             Log.Info("Here's the info.");
-            CollectionAssert.AreEqual(new[] { "Here's the info." }, entry.LogList);
+            Assert.That(entry.LogList, Is.EqualTo(["Here's the info."]));
             Logging.Complete();
         }
 
@@ -53,7 +52,7 @@ namespace Domore.Logs {
             mock.Threshold = _ => LogSeverity.Info;
             mock.ThresholdChanged();
             Log.Info("Here's some more.");
-            CollectionAssert.AreEqual(new[] { "Here's some more." }, entries);
+            Assert.That(entries, Is.EqualTo(["Here's some more."]));
             Logging.Complete();
         }
 
@@ -67,7 +66,7 @@ namespace Domore.Logs {
             Log.Info("Here's the info.");
             mock.Threshold = _ => LogSeverity.Info;
             Log.Info("Here's some more.");
-            CollectionAssert.IsEmpty(entries);
+            Assert.That(entries, Is.Empty);
             Logging.Complete();
         }
 

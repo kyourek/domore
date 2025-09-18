@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,7 +39,7 @@ public sealed class FileOrTextContentProviderTest {
                 item.inners[2].value = 1.3
             ");
         var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
-        CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
     }
 
     [Test]
@@ -61,7 +60,7 @@ public sealed class FileOrTextContentProviderTest {
                 item.inners[2].value = 1.3
             " };
         var actual = container.Sources;
-        CollectionAssert.AreEqual(expected, actual);
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
@@ -75,6 +74,6 @@ public sealed class FileOrTextContentProviderTest {
                 "
         };
         var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
-        CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
     }
 }

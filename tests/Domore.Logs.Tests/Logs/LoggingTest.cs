@@ -1,6 +1,5 @@
 ﻿using Domore.Conf.Logs;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -65,7 +64,7 @@ namespace Domore.Logs {
             };
             var log = Logging.For(typeof(LoggingTest));
             log.Info("log1", "log2", "log3");
-            CollectionAssert.AreEqual(new[] { "log1", "log2", "log3" }, message);
+            Assert.That(message, Is.EqualTo(["log1", "log2", "log3"]));
         }
 
         [Test]
@@ -173,7 +172,7 @@ namespace Domore.Logs {
             Logging.Complete();
             var actual = TestLogService.Instance.Items.Select(i => i.Data);
             var expected = new[] { "LoggingTest [inf] Some message" };
-            CollectionAssert.AreEqual(expected, actual);
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [Test]

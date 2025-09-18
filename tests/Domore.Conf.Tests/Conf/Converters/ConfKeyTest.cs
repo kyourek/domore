@@ -1,6 +1,5 @@
 ﻿using Domore.Conf.Extensions;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 
 namespace Domore.Conf.Converters;
@@ -34,9 +33,11 @@ public sealed class ConfKeyTest {
                 }
                 parent.child = paul
             ");
-        Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
-        Assert.That(parent.Child.Age, Is.EqualTo(7));
-        CollectionAssert.AreEqual(new[] { "chocolate", "strawberry", "NOT vanilla" }, parent.Child.FavoriteIceCreamFlavors);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
+            Assert.That(parent.Child.Age, Is.EqualTo(7));
+            Assert.That(parent.Child.FavoriteIceCreamFlavors, Is.EqualTo(["chocolate", "strawberry", "NOT vanilla"]));
+        }
     }
 
     [Test]
@@ -58,13 +59,15 @@ public sealed class ConfKeyTest {
                     Vanilla
                 }
             ");
-        Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
-        Assert.That(parent.Child.Age, Is.EqualTo(7));
-        CollectionAssert.AreEqual(new[] { "chocolate", "strawberry", "NOT vanilla" }, parent.Child.FavoriteIceCreamFlavors);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(parent.Child.Name, Is.EqualTo("Paul"));
+            Assert.That(parent.Child.Age, Is.EqualTo(7));
+            Assert.That(parent.Child.FavoriteIceCreamFlavors, Is.EqualTo(new[] { "chocolate", "strawberry", "NOT vanilla" }));
 
-        Assert.That(parent.SecondChild.Name, Is.EqualTo("Mary"));
-        Assert.That(parent.SecondChild.Age, Is.EqualTo(4));
-        CollectionAssert.AreEqual(new[] { "Vanilla" }, parent.SecondChild.FavoriteIceCreamFlavors);
+            Assert.That(parent.SecondChild.Name, Is.EqualTo("Mary"));
+            Assert.That(parent.SecondChild.Age, Is.EqualTo(4));
+            Assert.That(parent.SecondChild.FavoriteIceCreamFlavors, Is.EqualTo(new[] { "Vanilla" }));
+        }
     }
 
     private class Parent2 {
@@ -92,12 +95,14 @@ public sealed class ConfKeyTest {
                     Vanilla
                 }
             ");
-        Assert.That(parent.Child.Name, Is.EqualTo("paul"));
-        Assert.That(parent.Child.Age, Is.EqualTo(7));
-        CollectionAssert.AreEqual(new[] { "chocolate", "strawberry", "NOT vanilla" }, parent.Child.FavoriteIceCreamFlavors);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(parent.Child.Name, Is.EqualTo("paul"));
+            Assert.That(parent.Child.Age, Is.EqualTo(7));
+            Assert.That(parent.Child.FavoriteIceCreamFlavors, Is.EqualTo(["chocolate", "strawberry", "NOT vanilla"]));
 
-        Assert.That(parent.SecondChild.Name, Is.EqualTo("MaryJo"));
-        Assert.That(parent.SecondChild.Age, Is.EqualTo(4));
-        CollectionAssert.AreEqual(new[] { "Vanilla" }, parent.SecondChild.FavoriteIceCreamFlavors);
+            Assert.That(parent.SecondChild.Name, Is.EqualTo("MaryJo"));
+            Assert.That(parent.SecondChild.Age, Is.EqualTo(4));
+            Assert.That(parent.SecondChild.FavoriteIceCreamFlavors, Is.EqualTo(["Vanilla"]));
+        }
     }
 }
