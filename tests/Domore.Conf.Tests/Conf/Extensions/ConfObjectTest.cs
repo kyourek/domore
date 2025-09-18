@@ -161,6 +161,33 @@ internal class ConfObjectTest {
         Assert.That(actual, Is.EqualTo(expected));
     }
 
+    [Test]
+    public void ConfFrom_GetsMultiLineValueInTripleQuotes() {
+        var conf = string.Join(Environment.NewLine,
+            @"DictedClass.DictOfStrings[0] = hello",
+            @"DictedClass.DictOfStrings[2] = """""" 
+                "" 
+                the 
+                """""" multiline
+                value "" 
+                "" """"""
+            """"""""
+                """" 
+                 """"""  
+            ",
+            @"DictedClass.DictOfStrings[1] = world");
+        var obj = new DictedClass().ConfFrom(conf);
+        var actual = obj.DictOfStrings[2];
+        var expected = @"                "" 
+                the 
+                """""" multiline
+                value "" 
+                "" """"""
+            """"""""
+                """" ";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
     private class ComplexDictedClass {
         public Dictionary<int, ComplexClass> Dict { get; } = new Dictionary<int, ComplexClass>();
     }
@@ -200,12 +227,14 @@ internal class ConfObjectTest {
         var text = subject.ConfText();
         var conf = new ConfContainer { Source = text };
         var copy = conf.Configure(new ComplexDictedClass());
-        Assert.That(copy.Dict[0].Child.StringProp, Is.EqualTo(subject.Dict[0].Child.StringProp));
-        Assert.That(copy.Dict[0].DoubleProp, Is.EqualTo(subject.Dict[0].DoubleProp));
-        Assert.That(copy.Dict[0].StringProp, Is.EqualTo(subject.Dict[0].StringProp));
-        Assert.That(copy.Dict[1].Child.StringProp, Is.EqualTo(subject.Dict[1].Child.StringProp));
-        Assert.That(copy.Dict[1].DoubleProp, Is.EqualTo(subject.Dict[1].DoubleProp));
-        Assert.That(copy.Dict[1].StringProp, Is.EqualTo(subject.Dict[1].StringProp));
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(copy.Dict[0].Child.StringProp, Is.EqualTo(subject.Dict[0].Child.StringProp));
+            Assert.That(copy.Dict[0].DoubleProp, Is.EqualTo(subject.Dict[0].DoubleProp));
+            Assert.That(copy.Dict[0].StringProp, Is.EqualTo(subject.Dict[0].StringProp));
+            Assert.That(copy.Dict[1].Child.StringProp, Is.EqualTo(subject.Dict[1].Child.StringProp));
+            Assert.That(copy.Dict[1].DoubleProp, Is.EqualTo(subject.Dict[1].DoubleProp));
+            Assert.That(copy.Dict[1].StringProp, Is.EqualTo(subject.Dict[1].StringProp));
+        }
     }
 
     private void ConfFrom_CanRoundTripComplexDictedClass(bool multiline) {
@@ -220,12 +249,14 @@ internal class ConfObjectTest {
         subject.Dict[1].StringProp = "WORLD";
         var text = subject.ConfText();
         var copy = new ComplexDictedClass().ConfFrom(text);
-        Assert.That(copy.Dict[0].Child.StringProp, Is.EqualTo(subject.Dict[0].Child.StringProp));
-        Assert.That(copy.Dict[0].DoubleProp, Is.EqualTo(subject.Dict[0].DoubleProp));
-        Assert.That(copy.Dict[0].StringProp, Is.EqualTo(subject.Dict[0].StringProp));
-        Assert.That(copy.Dict[1].Child.StringProp, Is.EqualTo(subject.Dict[1].Child.StringProp));
-        Assert.That(copy.Dict[1].DoubleProp, Is.EqualTo(subject.Dict[1].DoubleProp));
-        Assert.That(copy.Dict[1].StringProp, Is.EqualTo(subject.Dict[1].StringProp));
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(copy.Dict[0].Child.StringProp, Is.EqualTo(subject.Dict[0].Child.StringProp));
+            Assert.That(copy.Dict[0].DoubleProp, Is.EqualTo(subject.Dict[0].DoubleProp));
+            Assert.That(copy.Dict[0].StringProp, Is.EqualTo(subject.Dict[0].StringProp));
+            Assert.That(copy.Dict[1].Child.StringProp, Is.EqualTo(subject.Dict[1].Child.StringProp));
+            Assert.That(copy.Dict[1].DoubleProp, Is.EqualTo(subject.Dict[1].DoubleProp));
+            Assert.That(copy.Dict[1].StringProp, Is.EqualTo(subject.Dict[1].StringProp));
+        }
     }
 
     [Test]
@@ -529,14 +560,15 @@ more lines{
         var conf = new ConfContainer { Source = text };
         var copy = conf.Configure(key => new ClassWithListExposedAsICollection(), "item")
             .ToDictionary(pair => pair.Key, pair => pair.Value);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(copy["obj1"].Inners.ElementAt(0).Value, Is.EqualTo(1.1));
+            Assert.That(copy["obj1"].Inners.ElementAt(1).Value, Is.EqualTo(1.2));
+            Assert.That(copy["obj1"].Inners.ElementAt(2).Value, Is.EqualTo(1.3));
 
-        Assert.That(copy["obj1"].Inners.ElementAt(0).Value, Is.EqualTo(1.1));
-        Assert.That(copy["obj1"].Inners.ElementAt(1).Value, Is.EqualTo(1.2));
-        Assert.That(copy["obj1"].Inners.ElementAt(2).Value, Is.EqualTo(1.3));
-
-        Assert.That(copy["obj2"].Inners.ElementAt(0).Value, Is.EqualTo(2.1));
-        Assert.That(copy["obj2"].Inners.ElementAt(1).Value, Is.EqualTo(2.2));
-        Assert.That(copy["obj2"].Inners.ElementAt(2).Value, Is.EqualTo(2.3));
+            Assert.That(copy["obj2"].Inners.ElementAt(0).Value, Is.EqualTo(2.1));
+            Assert.That(copy["obj2"].Inners.ElementAt(1).Value, Is.EqualTo(2.2));
+            Assert.That(copy["obj2"].Inners.ElementAt(2).Value, Is.EqualTo(2.3));
+        }
     }
 
     private class ConfText_CanBePassedEmptyStringForKey_Helper : ComplexListedClass {

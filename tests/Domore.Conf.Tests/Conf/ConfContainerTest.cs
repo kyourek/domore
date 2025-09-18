@@ -807,6 +807,26 @@ public sealed class ConfContainerTest {
         Assert.That(actual, Is.EqualTo(expected));
     }
 
+    [Test]
+    public void Lookup_GetsMultiLineValueFromTripleQuote() {
+        Content = @"
+                here is some = """"""
+
+
+                    text 1
+                    text 2
+                    
+                """"""
+            ";
+        var actual = Subject.Lookup.Value("HEREISSOME");
+        var expected = @"
+
+                    text 1
+                    text 2
+                    ";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
     public sealed class EnumIndexParameter {
         public enum MyEnum {
             Tiny,

@@ -22,10 +22,35 @@ internal sealed class SingleLineValueBuilder : ValueBuilder {
                     for (var j = i + 1; j < s.Length; j++) {
                         if (s[j] == Sep) {
                             i = j;
-                            return new MultilineValueBuilder(Key);
+                            return new MultilineInBracesBuilder(Key);
                         }
                         if (char.IsWhiteSpace(s[j]) == false) {
                             break;
+                        }
+                    }
+                }
+                goto default;
+            case '"':
+                if (String.Length == 0) {
+                    var quotes = 1;
+                    for (var j = i + 1; j < s.Length; j++) {
+                        if (quotes > 3) {
+                            break;
+                        }
+                        if (s[j] == '"') {
+                            quotes++;
+                        }
+                        if (s[j] == Sep) {
+                            if (quotes == 3) {
+                                i = j;
+                                return new MultilineInTripleQuotesBuilder(Key);
+                            }
+                            break;
+                        }
+                        if (char.IsWhiteSpace(s[j])) {
+                            if (quotes < 3) {
+                                break;
+                            }
                         }
                     }
                 }
