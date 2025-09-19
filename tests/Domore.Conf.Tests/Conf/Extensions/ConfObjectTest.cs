@@ -664,16 +664,16 @@ more lines{
     }
 
     class Foo {
-        public string Bar { get; set; }
+        public string String { get; set; }
     }
 
     [Test]
     public void ConfText_CanRoundTripIfStringStartsWithOpenBrace() {
         var expected = string.Join("\n", "{", "1234");
-        var foo = new Foo { Bar = expected };
+        var foo = new Foo { String = expected };
         var conf = foo.ConfText();
         var other = new Foo().ConfFrom(conf);
-        Assert.That(other.Bar, Is.EqualTo(expected));
+        Assert.That(other.String, Is.EqualTo(expected));
     }
 
     [Test]
@@ -683,9 +683,9 @@ more lines{
     Goodbye, Earth.
 } 
   ";
-        var obj = new Foo { Bar = value };
+        var obj = new Foo { String = value };
         var actual = obj.ConfText();
-        var expected = @"Foo.Bar = """"""
+        var expected = @"Foo.String = """"""
 {   
     Hello, World!
     Goodbye, Earth.
@@ -701,19 +701,19 @@ more lines{
     [TestCase("1234\n} \n")]
     [TestCase("1234\n} \n ")]
     public void ConfText_CanRoundTripIfStringEndsWithClosedBrace(string expected) {
-        var foo = new Foo { Bar = expected };
+        var foo = new Foo { String = expected };
         var conf = foo.ConfText();
         var other = new Foo().ConfFrom(conf);
-        Assert.That(other.Bar, Is.EqualTo(expected));
+        Assert.That(other.String, Is.EqualTo(expected));
     }
 
     [TestCase("1234\n}\n5678")]
     [TestCase("1234\n  \t} \n \t5678 ")]
     public void ConfText_CanRoundTripIfStringContainsClosedBraceOnItsOwnLine(string expected) {
-        var foo = new Foo { Bar = expected };
+        var foo = new Foo { String = expected };
         var conf = foo.ConfText();
         var other = new Foo().ConfFrom(conf);
-        Assert.That(other.Bar, Is.EqualTo(expected));
+        Assert.That(other.String, Is.EqualTo(expected));
     }
 
     [TestCase("1234\n\"\"\"")]
@@ -722,19 +722,129 @@ more lines{
     [TestCase("1234\n\"\"\" \n")]
     [TestCase("1234\n\"\"\" \n ")]
     public void ConfText_CanRoundTripIfStringEndsWithTripleQuote(string expected) {
-        var foo = new Foo { Bar = expected };
+        var foo = new Foo { String = expected };
         var conf = foo.ConfText();
         var other = new Foo().ConfFrom(conf);
-        Assert.That(other.Bar, Is.EqualTo(expected));
+        Assert.That(other.String, Is.EqualTo(expected));
     }
 
     [TestCase("1234\n\"\"\"\n5678")]
     [TestCase("1234\n\"\"\" \t \n 5678\t")]
     [TestCase("1234\n \t \n \t\"\"\" \n \n5678\n")]
     public void ConfText_CanRoundTripIfStringHasTripleQuoteOnItsOwnLine(string expected) {
-        var foo = new Foo { Bar = expected };
+        var foo = new Foo { String = expected };
         var conf = foo.ConfText();
         var other = new Foo().ConfFrom(conf);
-        Assert.That(other.Bar, Is.EqualTo(expected));
+        Assert.That(other.String, Is.EqualTo(expected));
+    }
+
+    class Bar : Foo {
+        [ConfPopulatedCallback]
+        private void Callback1() {
+            BarCallback1Count++;
+        }
+
+        [ConfPopulatedCallback]
+        internal void Callback2() {
+            BarCallback2Count++;
+        }
+
+        [ConfPopulatedCallback]
+        public void Callback3() {
+            BarCallback3Count++;
+        }
+
+        [ConfPopulatedCallback]
+        public void Callback4(IConf conf) {
+            BarCallback4Conf = conf;
+        }
+
+        public int BarCallback1Count { get; private set; }
+        public int BarCallback2Count { get; private set; }
+        public int BarCallback3Count { get; private set; }
+        public IConf BarCallback4Conf { get; private set; }
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledIfPrivate() {
+        var
+        obj = new Bar();
+        obj.ConfFrom("Bar.String = a");
+        Assert.That(obj.BarCallback1Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledIfInternal() {
+        var
+        obj = new Bar();
+        obj.ConfFrom("Bar.String = a");
+        Assert.That(obj.BarCallback2Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledIfPublic() {
+        var
+        obj = new Bar();
+        obj.ConfFrom("Bar.String = a");
+        Assert.That(obj.BarCallback3Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledWithConfInstance() {
+        var
+        obj = new Bar();
+        obj.ConfFrom("Bar.String = a");
+        Assert.That(obj.BarCallback4Conf, Is.Not.Null);
+    }
+
+    class Baz : Bar {
+        [ConfPopulatedCallback]
+        private void Callback1() {
+            BazCallback1Count++;
+        }
+
+        [ConfPopulatedCallback]
+        new public void Callback3() {
+            BazCallback3Count++;
+        }
+
+        public int BazCallback1Count { get; private set; }
+        public int BazCallback3Count { get; private set; }
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledFromBothTypesInHierarchy() {
+        var
+        obj = new Baz();
+        obj.ConfFrom("Bar.String = a");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.BarCallback1Count, Is.EqualTo(1));
+            Assert.That(obj.BazCallback1Count, Is.EqualTo(1));
+        }
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackIsCalledFromBothTypesInHierarchyWithNewMethod() {
+        var
+        obj = new Baz();
+        obj.ConfFrom("Bar.String = a");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.BarCallback3Count, Is.EqualTo(1));
+            Assert.That(obj.BazCallback3Count, Is.EqualTo(1));
+        }
+    }
+
+    class Qux {
+        [ConfPopulatedCallback]
+        public void Callback(DateTime _) {
+        }
+    }
+
+    [Test]
+    public void ConfPopulatedCallbackThrowsOnInvalidSignature() {
+        var obj = new Qux();
+        Assert.That(
+            () => obj.ConfFrom(""),
+            Throws.TypeOf<ConfPopulatedCallbackSignatureInvalidException>());
     }
 }

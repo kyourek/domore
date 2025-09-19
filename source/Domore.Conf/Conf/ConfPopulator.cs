@@ -61,9 +61,16 @@ internal sealed class ConfPopulator {
     public static ConfPopulator Cached { get; } = new ConfPopulator();
 
     public void Populate(object target, IConf conf, IEnumerable<IConfPair> pairs) {
+        if (null == target) throw new ArgumentNullException(nameof(target));
         if (null == pairs) throw new ArgumentNullException(nameof(pairs));
         foreach (var pair in pairs) {
-            Populate(pair.Key, pair.Value, target, conf);
+            if (pair is not null) {
+                Populate(pair.Key, pair.Value, target, conf);
+            }
+        }
+        var callbacks = ConfPopulatedCallbackAttribute.For(target.GetType());
+        foreach (var callback in callbacks) {
+            callback.Call(target, conf, pairs);
         }
     }
 }

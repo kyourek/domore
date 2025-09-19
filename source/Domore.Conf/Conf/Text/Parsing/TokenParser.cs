@@ -6,8 +6,17 @@ namespace Domore.Conf.Text.Parsing;
 
 internal sealed class TokenParser {
     public static IConfKey Key(string s) {
-        if (null == s) throw new ArgumentNullException(nameof(s));
-        var sep = s.Contains("\n") ? '\n' : ';';
+        if (s is null) {
+            throw new ArgumentNullException(nameof(s));
+        }
+        var sContainsNewLine = s.Contains(
+#if NETCOREAPP
+            '\n'
+#else
+            "\n"
+#endif
+            );
+        var sep = sContainsNewLine ? '\n' : ';';
         var key = new KeyBuilder(sep);
         var token = key as Token;
         for (var i = 0; i < s.Length; i++) {
@@ -28,8 +37,17 @@ internal sealed class TokenParser {
     }
 
     public IEnumerable<IConfPair> Pairs(string text) {
-        if (null == text) throw new ArgumentNullException(nameof(text));
-        var sep = text.Contains("\n") ? '\n' : ';';
+        if (text is null) {
+            throw new ArgumentNullException(nameof(text));
+        }
+        var textContainsNewLine = text.Contains(
+#if NETCOREAPP
+            '\n'
+#else
+            "\n"
+#endif
+            );
+        var sep = textContainsNewLine ? '\n' : ';';
         var token = new KeyBuilder(sep) as Token;
         for (var i = 0; i < text.Length; i++) {
             if (token == null) {

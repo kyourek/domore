@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Threading;
 
 namespace Domore.Conf.Cli {
     public sealed class CliProvider {
@@ -14,7 +15,7 @@ namespace Domore.Conf.Cli {
 
         public CliProvider(CliSetup setup) {
             Setup = setup;
-            LazyTargetDescription = new(() => new(Setup));
+            LazyTargetDescription = new(() => new(Setup), LazyThreadSafetyMode.PublicationOnly);
         }
 
         private T Validate<T>(T target) {
@@ -32,7 +33,7 @@ namespace Domore.Conf.Cli {
                 throw;
             }
             catch (Exception ex) {
-                throw new CliValidationException(nameof(CliValidationException), ex);
+                throw new CliValidationException($"Invalid command: {ex?.Message}", ex);
             }
             return target;
         }

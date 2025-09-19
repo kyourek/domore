@@ -58,18 +58,43 @@ public partial class CliProviderTest {
     public void Configure_ThrowsExceptionIfRequiredPropertyNotFound() {
         using (Assert.EnterMultipleScope()) {
             var ex = Assert.Throws<CliRequiredNotFoundException>(() => Subject.Configure(new Move(), ""));
-            Assert.That(ex.NotFound
-                .Select(notFound => notFound.PropertyInfo)
-                .Contains(typeof(Move).GetProperty(nameof(Move.Direction))));
+            Assert.That(
+                ex.NotFound.Select(notFound => notFound.PropertyInfo),
+                Does.Contain(typeof(Move).GetProperty(nameof(Move.Direction))));
         }
     }
 
     [Test]
+    public void Configure_ThrowsExceptionIfRequiredPropertyNotFoundWithCorrectMessage() {
+        Assert.That(
+            () => Subject.Configure(new Move(), ""),
+            Throws
+                .InstanceOf<CliRequiredNotFoundException>()
+                .With
+                .Property(nameof(CliRequiredNotFoundException.Message))
+                .EqualTo("Missing required: direction"));
+    }
+
+    [Test]
     public void Configure_ThrowsExceptionIfTooManyArgumentsGiven() {
-        using (Assert.EnterMultipleScope()) {
-            var ex = Assert.Throws<CliArgumentNotFoundException>(() => Subject.Configure(new Move(), "RIGHT 55.5 extra"));
-            Assert.That(ex.Argument == "extra");
-        }
+        Assert.That(
+            () => Subject.Configure(new Move(), "RIGHT 55.5 extra"),
+            Throws
+                .InstanceOf<CliArgumentNotFoundException>()
+                .With
+                .Property(nameof(CliArgumentNotFoundException.Argument))
+                .EqualTo("extra"));
+    }
+
+    [Test]
+    public void Configure_ThrowsExceptionIfTooManyArgumentsGivenWithCorrectMessage() {
+        Assert.That(
+            () => Subject.Configure(new Move(), "RIGHT 55.5 extra"),
+            Throws
+                .InstanceOf<CliArgumentNotFoundException>()
+                .With
+                .Property(nameof(CliArgumentNotFoundException.Message))
+                .EqualTo("Unexpected argument: extra"));
     }
 
     [Test]
@@ -92,7 +117,7 @@ public partial class CliProviderTest {
 
     [Test]
     public void Display_UsesSetCommandName() {
-        Setup = Setup.CommandName(t => t == typeof(Move) ? "mv" : null);
+        Setup = Setup.WithCommandName(t => t == typeof(Move) ? "mv" : null);
         var actual = Subject.Display(new Move());
         var expected = "mv direction<up/down/left/right> [speed<num>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -113,7 +138,7 @@ move direction<up/down/left/right> [speed<num>]
 
     [Test]
     public void Manual_UsesSetCommandName() {
-        Setup = Setup.CommandName(t => t == typeof(Move) ? "mv" : null);
+        Setup = Setup.WithCommandName(t => t == typeof(Move) ? "mv" : null);
         var actual = Subject.Manual(new Move());
         var expected = @"
 mv direction<up/down/left/right> [speed<num>]
@@ -149,7 +174,7 @@ mv direction<up/down/left/right> [speed<num>]
 
     [Test]
     public void Display_ShowsPropertyNamesWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "go");
+        Setup = Setup.WithCommandName(_ => "go");
         var actual = Subject.Display(new Bike());
         var expected = "go move=<up/down/left/right> [speed=<num>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -187,7 +212,7 @@ mv direction<up/down/left/right> [speed<num>]
 
     [Test]
     public void Display_ShowsListWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "blnd");
+        Setup = Setup.WithCommandName(_ => "blnd");
         var actual = Subject.Display(new Blend());
         var expected = "blnd fruits<,> [nuts=<,<peanuts/almonds/cashews>>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -230,7 +255,7 @@ mv direction<up/down/left/right> [speed<num>]
 
     [Test]
     public void Display_DisplaysOverrideOnEnumNamesWithCustomCommandName() {
-        Setup = Setup.CommandName(t => t == typeof(Copy) ? "cp" : null);
+        Setup = Setup.WithCommandName(t => t == typeof(Copy) ? "cp" : null);
         var actual = Subject.Display(new Copy());
         var expected = "cp where<(n)ext/(p)revious>";
         Assert.That(actual, Is.EqualTo(expected));
@@ -301,7 +326,7 @@ valuewordclass3 [word=<z/s>]".Trim();
 
     [Test]
     public void Display_DisplaysMultipleCommandsWithCustomNames() {
-        Setup = Setup.CommandName(t =>
+        Setup = Setup.WithCommandName(t =>
             t == typeof(ValueWordClass) ? "foo" :
             t == typeof(ValueWordClass2) ? "bar" :
             t == typeof(ValueWordClass3) ? "baz" :
@@ -337,7 +362,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_DoesNotIncludeUnincludedEnumMembersWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "foo");
+        Setup = Setup.WithCommandName(_ => "foo");
         var actual = Subject.Display(new ValueWordClass());
         var expected = "foo [word=<none/one>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -387,7 +412,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_DoesNotIncludeEnumMembersByOverrideWithCustomCommandName() {
-        Setup = Setup.CommandName(t => t == typeof(ValueWordClass3) ? "vwc" : null);
+        Setup = Setup.WithCommandName(t => t == typeof(ValueWordClass3) ? "vwc" : null);
         var actual = Subject.Display(new ValueWordClass3());
         var expected = "vwc [word=<z/s>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -424,7 +449,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_UsesUnderlyingTypeOfNullableWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "bar");
+        Setup = Setup.WithCommandName(_ => "bar");
         var actual = Subject.Display(new NullableFlagsEnumClass());
         var expected = "bar [flags=<flag1|flag2|flag4>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -446,7 +471,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_DisplaysBooleanSwitchAndOptionalArgumentWithCustomCommandName() {
-        Setup = Setup.CommandName(t => t == typeof(ClassWithBoolAndStr) ? "cwbas" : null);
+        Setup = Setup.WithCommandName(t => t == typeof(ClassWithBoolAndStr) ? "cwbas" : null);
         var actual = Subject.Display(new ClassWithBoolAndStr());
         var expected = "cwbas [<somechars>] option=<true/false>";
         Assert.That(actual, Is.EqualTo(expected));
@@ -479,7 +504,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_DoesNotShowReadonlyPropertiesWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "cmd");
+        Setup = Setup.WithCommandName(_ => "cmd");
         var actual = Subject.Display(new ClassWithReadonlyProperties());
         var expected = "cmd [readwritelist=<,>]";
         Assert.That(actual, Is.EqualTo(expected));
@@ -575,9 +600,11 @@ baz [word=<z/s>]".Trim();
     public void Configure_SetsPropertyWhileAddingToParameterSet() {
         var target = new TargetWithParameterSet2();
         Subject.Configure(target, "not-A-property='Hello World!' FLAG=TRUE");
-        Assert.That(target.Param["not-A-property"], Is.EqualTo("Hello World!"));
-        Assert.That(target.Param["FLAG"], Is.EqualTo("TRUE"));
-        Assert.That(target.Flag, Is.True);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(target.Param["not-A-property"], Is.EqualTo("Hello World!"));
+            Assert.That(target.Param["FLAG"], Is.EqualTo("TRUE"));
+            Assert.That(target.Flag, Is.True);
+        }
     }
 
     private class TargetWithNestedProperties {
@@ -604,7 +631,7 @@ baz [word=<z/s>]".Trim();
 
     [Test]
     public void Display_UsesDisplayOverrideForPropertyWithCustomCommandName() {
-        Setup = Setup.CommandName(_ => "target");
+        Setup = Setup.WithCommandName(_ => "target");
         var display = Subject.Display(new TargetWithNestedProperties());
         Assert.That(display, Is.EqualTo("target [set.dict[<string>]=<string>]"));
     }
@@ -721,8 +748,8 @@ ex. longmanualderived foo 1
     [Test]
     public void Manual_ShowsALongManualWithCustomCommandSpaceAndName() {
         Setup = Setup
-            .CommandName(t => t == typeof(LongManualDerived) ? "my-cmd" : null)
-            .CommandSpace(_ => "do-it");
+            .WithCommandName(t => t == typeof(LongManualDerived) ? "my-cmd" : null)
+            .WithCommandSpace(_ => "do-it");
         var actual = Subject.Manual(new LongManualDerived());
         var expected = @"
 my-cmd <args> [argi<int>] [names=<,>] [speed=<num>]
