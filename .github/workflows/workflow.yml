@@ -10,9 +10,7 @@ permissions:
   contents: read
 
 env:
-  DOTNET_VERSION: '8.0.404'
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-  DOTNET_NOLOGO: true
+  DOTNET_VERSION: '9.x'
   CUSTOM_PACK_OUTPUT: ${{ github.workspace }}/pack-output
 
 jobs:
