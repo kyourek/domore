@@ -1,61 +1,60 @@
 using System;
 
-namespace Domore.Logs {
-    internal sealed class Logger : ILog {
-        public Type Type { get; }
-        public Logging Logging { get; }
+namespace Domore.Logs; 
+internal sealed class Logger : ILog {
+    public Type Type { get; }
+    public Logging Logging { get; }
 
-        public Logger(Type type, Logging logging) {
-            Type = type;
-            Logging = logging ?? throw new ArgumentNullException(nameof(logging));
-        }
+    public Logger(Type type, Logging logging) {
+        Type = type;
+        Logging = logging ?? throw new ArgumentNullException(nameof(logging));
+    }
 
-        public bool Enabled(LogSeverity severity) {
-            return Logging.Log(this, severity);
-        }
+    public bool Enabled(LogSeverity severity) {
+        return Logging.Log(this, severity);
+    }
 
-        public void Data(LogSeverity severity, params object[] data) {
-            Logging.Log(this, severity, data);
-        }
+    public void Data(LogSeverity severity, params object[] data) {
+        Logging.Log(this, severity, data);
+    }
 
-        public bool Debug() {
-            return Enabled(LogSeverity.Debug);
-        }
+    public bool Debug() {
+        return Enabled(LogSeverity.Debug);
+    }
 
-        public void Debug(params object[] data) {
-            Data(LogSeverity.Debug, data);
-        }
+    public void Debug(params object[] data) {
+        Data(LogSeverity.Debug, data);
+    }
 
-        public bool Info() {
-            return Enabled(LogSeverity.Info);
-        }
+    public bool Info() {
+        return Enabled(LogSeverity.Info);
+    }
 
-        public void Info(params object[] data) {
-            Data(LogSeverity.Info, data);
-        }
+    public void Info(params object[] data) {
+        Data(LogSeverity.Info, data);
+    }
 
-        public bool Warn() {
-            return Enabled(LogSeverity.Warn);
-        }
+    public bool Warn() {
+        return Enabled(LogSeverity.Warn);
+    }
 
-        public void Warn(params object[] data) {
-            Data(LogSeverity.Warn, data);
-        }
+    public void Warn(params object[] data) {
+        Data(LogSeverity.Warn, data);
+    }
 
-        public bool Error() {
-            return Enabled(LogSeverity.Error);
-        }
+    public bool Error() {
+        return Enabled(LogSeverity.Error);
+    }
 
-        public void Error(params object[] data) {
-            Data(LogSeverity.Error, data);
-        }
+    public void Error(params object[] data) {
+        Data(LogSeverity.Error, data);
+    }
 
-        public bool Critical() {
-            return Enabled(LogSeverity.Critical);
-        }
+    public bool Critical() {
+        return Enabled(LogSeverity.Critical);
+    }
 
-        public void Critical(params object[] data) {
-            Data(LogSeverity.Critical, data);
-        }
+    public void Critical(params object[] data) {
+        Data(LogSeverity.Critical, data);
     }
 }

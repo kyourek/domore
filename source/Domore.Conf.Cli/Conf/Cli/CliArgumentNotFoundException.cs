@@ -1,12 +1,11 @@
-﻿namespace Domore.Conf.Cli {
-    internal sealed class CliArgumentNotFoundException : CliException {
-        public sealed override string Message =>
-            $"Unexpected argument: {Argument}";
+﻿namespace Domore.Conf.Cli; 
+internal sealed class CliArgumentNotFoundException : CliException {
+    public sealed override string Message =>
+        $"Unexpected argument: {Argument}";
 
-        public string Argument { get; }
+    public string Argument { get; }
 
-        public CliArgumentNotFoundException(string argument) {
-            Argument = argument;
-        }
+    public CliArgumentNotFoundException(string argument) {
+        Argument = argument;
     }
 }
