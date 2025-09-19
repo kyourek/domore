@@ -1,98 +1,97 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 
-namespace Domore.Conf {
-    [TestFixture]
-    public sealed class ConfContainerTest {
-        private readonly List<string> TempFiles = new();
+namespace Domore.Conf;
 
-        private object Content;
+[TestFixture]
+public sealed class ConfContainerTest {
+    private readonly List<string> TempFiles = new();
 
-        private ConfContainer Subject {
-            get => _Subject ?? (_Subject = new ConfContainer { Source = Content });
-            set => _Subject = value;
-        }
-        private ConfContainer _Subject;
+    private object Content;
 
-        [SetUp]
-        public void SetUp() {
-            Content = null;
-            Subject = null;
-            TempFiles.Clear();
-        }
+    private ConfContainer Subject {
+        get => field ??= new ConfContainer { Source = Content };
+        set => field = value;
+    }
 
-        [TearDown]
-        public void TearDown() {
-            foreach (var tempFile in TempFiles) {
-                try {
-                    File.Delete(tempFile);
-                }
-                catch {
-                }
+    [SetUp]
+    public void SetUp() {
+        Content = null;
+        Subject = null;
+        TempFiles.Clear();
+    }
+
+    [TearDown]
+    public void TearDown() {
+        foreach (var tempFile in TempFiles) {
+            try {
+                File.Delete(tempFile);
+            }
+            catch {
             }
         }
+    }
 
-        private string TempFile() {
-            var temp = Path.GetTempFileName();
-            TempFiles.Add(temp);
-            return temp;
+    private string TempFile() {
+        var temp = Path.GetTempFileName();
+        TempFiles.Add(temp);
+        return temp;
+    }
+
+    private class Man {
+        [ConfConverter(typeof(DogConfValueConverter))]
+        public Dog BestFriend { get; set; }
+    }
+
+    private class Dog {
+        public string Color { get; set; }
+    }
+
+    private class DogConfValueConverter : ConfValueConverter {
+        public override object Convert(string value, ConfValueConverterState state) {
+            return state.Conf.Configure(new Dog(), key: value);
         }
+    }
 
-        private class Man {
-            [ConfConverter(typeof(DogConfValueConverter))]
-            public Dog BestFriend { get; set; }
-        }
-
-        private class Dog {
-            public string Color { get; set; }
-        }
-
-        private class DogConfValueConverter : ConfValueConverter {
-            public override object Convert(string value, ConfValueConverterState state) {
-                return state.Conf.Configure(new Dog(), key: value);
-            }
-        }
-
-        [Test]
-        public void Configure_UsesConfTypeConverter() {
-            Content = @"
+    [Test]
+    public void Configure_UsesConfTypeConverter() {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
             ";
-            var man = Subject.Configure(new Man());
-            Assert.That("red", Is.EqualTo(man.BestFriend.Color));
-        }
+        var man = Subject.Configure(new Man());
+        Assert.That(man.BestFriend.Color, Is.EqualTo("red"));
+    }
 
-        [TestCase("penny.Color")]
-        [TestCase("man.bestfriend")]
-        [TestCase("Man.Best friend")]
-        public void Lookup_ContainsKeys(string key) {
-            Content = @"
+    [TestCase("penny.Color")]
+    [TestCase("man.bestfriend")]
+    [TestCase("Man.Best friend")]
+    public void Lookup_ContainsKeys(string key) {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
             ";
-            Assert.That(Subject.Lookup.Contains(key));
-        }
+        Assert.That(Subject.Lookup.Contains(key));
+    }
 
-        [TestCase("  penny . Color  \t", "red")]
-        [TestCase("man.best FRIEND ", "Penny")]
-        [TestCase("\tMa n.BestFriend", "Penny")]
-        public void Lookup_ReturnsKeyValue(string key, string value) {
-            Content = @"
+    [TestCase("  penny . Color  \t", "red")]
+    [TestCase("man.best FRIEND ", "Penny")]
+    [TestCase("\tMa n.BestFriend", "Penny")]
+    public void Lookup_ReturnsKeyValue(string key, string value) {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
             ";
-            Assert.That(Subject.Lookup.Value(key), Is.EqualTo(value));
-        }
+        Assert.That(Subject.Lookup.Value(key), Is.EqualTo(value));
+    }
 
-        [Test]
-        public void Lookup_ReturnsAllForKey() {
-            Content = @"
+    [Test]
+    public void Lookup_ReturnsAllForKey() {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
                 penny .  color  = brown
@@ -100,212 +99,212 @@ namespace Domore.Conf {
 
                 PENNy    .COLOR   = Red and White   
             ";
-            CollectionAssert.AreEqual(Subject.Lookup.All("penny.color"), new[] { "red", "brown", "Red and White" });
-        }
+        Assert.That(Subject.Lookup.All("penny.color"), Is.EqualTo(["red", "brown", "Red and White"]));
+    }
 
-        private class ManWithCat : Man {
-            [Conf(ignore: false)]
-            public Cat Cat { get; set; }
-        }
+    private class ManWithCat : Man {
+        [Conf(ignore: false)]
+        public Cat Cat { get; set; }
+    }
 
-        [Test]
-        public void Configure_DoesNotIgnoreProperty() {
-            Content = @"
+    [Test]
+    public void Configure_DoesNotIgnoreProperty() {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
                 Man.Cat.Color = black
             ";
-            var man = Subject.Configure(new ManWithCat(), "Man");
-            Assert.That("black", Is.EqualTo(man.Cat.Color));
-        }
+        var man = Subject.Configure(new ManWithCat(), "Man");
+        Assert.That(man.Cat.Color, Is.EqualTo("black"));
+    }
 
-        private class ManWithIgnoredCat : Man {
-            [Conf(ignore: true)]
-            public Cat Cat { get; set; }
-        }
+    private class ManWithIgnoredCat : Man {
+        [Conf(ignore: true)]
+        public Cat Cat { get; set; }
+    }
 
-        [Test]
-        public void Configure_IgnoresMansCat() {
-            Content = @"
+    [Test]
+    public void Configure_IgnoresMansCat() {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
                 Man.Cat.Color = black
             ";
-            var man = Subject.Configure(new ManWithIgnoredCat(), "Man");
-            Assert.That(man.Cat, Is.Null);
-        }
+        var man = Subject.Configure(new ManWithIgnoredCat(), "Man");
+        Assert.That(man.Cat, Is.Null);
+    }
 
-        private class ManWithIgnoredCat2 : Man {
-            [Conf(ignoreSet: true, ignoreGet: false)]
-            public Cat Cat { get; set; }
-        }
+    private class ManWithIgnoredCat2 : Man {
+        [Conf(ignoreSet: true, ignoreGet: false)]
+        public Cat Cat { get; set; }
+    }
 
-        [Test]
-        public void Configure_IgnoresMansCat2() {
-            Content = @"
+    [Test]
+    public void Configure_IgnoresMansCat2() {
+        Content = @"
                 Penny.color = red
                 Man.Best friend = Penny
                 Man.Cat.Color = black
             ";
-            var man = Subject.Configure(new ManWithIgnoredCat2(), "Man");
-            Assert.That(man.Cat, Is.Null);
-        }
+        var man = Subject.Configure(new ManWithIgnoredCat2(), "Man");
+        Assert.That(man.Cat, Is.Null);
+    }
 
-        private class ObjWithIgnoredProp {
-            public string NotIgnored { get; set; }
+    private class ObjWithIgnoredProp {
+        public string NotIgnored { get; set; }
 
-            [Conf(ignore: true)]
-            public string YesIgnored { get; set; }
-        }
+        [Conf(ignore: true)]
+        public string YesIgnored { get; set; }
+    }
 
-        [Test]
-        public void Configure_IgnoresIgnoredProperty() {
-            Content = @"
+    [Test]
+    public void Configure_IgnoresIgnoredProperty() {
+        Content = @"
                 Obj.NotIgnored = 1
                 Obj.YesIgnored = 1
             ";
-            var obj = Subject.Configure(new ObjWithIgnoredProp(), "Obj");
-            Assert.That(obj.YesIgnored, Is.Null);
-        }
+        var obj = Subject.Configure(new ObjWithIgnoredProp(), "Obj");
+        Assert.That(obj.YesIgnored, Is.Null);
+    }
 
-        private class Kid { public Pet Pet { get; set; } }
-        private class Pet { }
-        private class Cat : Pet { public string Color { get; set; } }
+    private class Kid { public Pet Pet { get; set; } }
+    private class Pet { }
+    private class Cat : Pet { public string Color { get; set; } }
 
-        [Test]
-        public void Configure_CreatesInstanceOfType() {
-            Content = @"Kid.Pet = Domore.Conf.ConfContainerTest+Cat, Domore.Conf.Tests";
-            var kid = Subject.Configure(new Kid());
-            Assert.That(kid.Pet, Is.InstanceOf(typeof(Cat)));
-        }
+    [Test]
+    public void Configure_CreatesInstanceOfType() {
+        Content = @"Kid.Pet = Domore.Conf.ConfContainerTest+Cat, Domore.Conf.Tests";
+        var kid = Subject.Configure(new Kid());
+        Assert.That(kid.Pet, Is.InstanceOf(typeof(Cat)));
+    }
 
-        private class Mom { public IList<string> Jobs { get; } = new Collection<string>(); }
+    private class Mom { public IList<string> Jobs { get; } = new Collection<string>(); }
 
-        [Test]
-        public void Configure_AddsToList() {
-            Content = @"
+    [Test]
+    public void Configure_AddsToList() {
+        Content = @"
                 Mom.Jobs[0] = chef
                 Mom.jobs[1] = Nurse
                 mom.jobs[2] = accountant";
-            var mom = Subject.Configure(new Mom());
-            Assert.That(mom.Jobs, Is.EqualTo(new[] { "chef", "Nurse", "accountant" }));
-        }
+        var mom = Subject.Configure(new Mom());
+        Assert.That(mom.Jobs, Is.EqualTo(new[] { "chef", "Nurse", "accountant" }));
+    }
 
-        private class NumContainer { public ICollection<double> Nums { get; } = new List<double>(); }
+    private class NumContainer { public ICollection<double> Nums { get; } = new List<double>(); }
 
-        [Test]
-        public void Configure_AddsConvertedValuesToList() {
-            Content = @"
+    [Test]
+    public void Configure_AddsConvertedValuesToList() {
+        Content = @"
                 Cont.Nums[0] = 1.23
                 Cont.nums[1] = 2.34
                 Cont.nums[2] = 3.45";
-            var cont = Subject.Configure(new NumContainer(), "cont");
-            Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.34, 3.45 }));
-        }
+        var cont = Subject.Configure(new NumContainer(), "cont");
+        Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.34, 3.45 }));
+    }
 
-        [Test]
-        public void Configure_RespectsLastListedIndexOfList() {
-            Content = @"
+    [Test]
+    public void Configure_RespectsLastListedIndexOfList() {
+        Content = @"
                 Cont.Nums[0] = 1.23
                 Cont.nums[1] = 2.34
                 Cont.nums[1] = 2.00
                 Cont.nums[2] = 3.45";
-            var cont = Subject.Configure(new NumContainer(), "cont");
-            Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.00, 3.45 }));
-        }
+        var cont = Subject.Configure(new NumContainer(), "cont");
+        Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.00, 3.45 }));
+    }
 
-        [Test]
-        public void Configure_SetsListItemsToDefault() {
-            Content = @"
+    [Test]
+    public void Configure_SetsListItemsToDefault() {
+        Content = @"
                 Cont.Nums[0] = 1.23
                 Cont.nums[1] = 2.34
                 Cont.nums[2] = 3.45
                 Cont.nums[5] = 5.67";
-            var cont = Subject.Configure(new NumContainer(), "cont");
-            Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.34, 3.45, 0.0, 0.0, 5.67 }));
-        }
+        var cont = Subject.Configure(new NumContainer(), "cont");
+        Assert.That(cont.Nums, Is.EqualTo(new[] { 1.23, 2.34, 3.45, 0.0, 0.0, 5.67 }));
+    }
 
-        [Test]
-        public void Configure_SetsListItemsToNull() {
-            Content = @"
+    [Test]
+    public void Configure_SetsListItemsToNull() {
+        Content = @"
                 Mom.Jobs[1] = chef
                 Mom.jobs[3] = Nurse
                 mom.jobs[7] = accountant";
-            var mom = Subject.Configure(new Mom());
-            Assert.That(mom.Jobs, Is.EqualTo(new[] { null, "chef", null, "Nurse", null, null, null, "accountant" }));
-        }
+        var mom = Subject.Configure(new Mom());
+        Assert.That(mom.Jobs, Is.EqualTo(new[] { null, "chef", null, "Nurse", null, null, null, "accountant" }));
+    }
 
-        private class IntContainer { public IDictionary<string, int> Dict { get; } = new Dictionary<string, int>(); }
+    private class IntContainer { public IDictionary<string, int> Dict { get; } = new Dictionary<string, int>(); }
 
-        [Test]
-        public void Configure_SetsDictionaryValues() {
-            Content = @"
+    [Test]
+    public void Configure_SetsDictionaryValues() {
+        Content = @"
                 cont.Dict[first] = 1
                 cont.dict[Third] = 3";
-            var cont = Subject.Configure(new IntContainer(), "cont");
-            Assert.That(cont.Dict, Is.EqualTo(new Dictionary<string, int> { { "first", 1 }, { "Third", 3 } }));
-        }
+        var cont = Subject.Configure(new IntContainer(), "cont");
+        Assert.That(cont.Dict, Is.EqualTo(new Dictionary<string, int> { { "first", 1 }, { "Third", 3 } }));
+    }
 
-        private class Infant {
-            public string Weight { get; set; }
-            public int DiaperSize { get; set; }
-            public Mom Mom { get; } = new Mom();
-        }
+    private class Infant {
+        public string Weight { get; set; }
+        public int DiaperSize { get; set; }
+        public Mom Mom { get; } = new Mom();
+    }
 
-        [Test]
-        public void Configure_CanSetValuesWithoutKey() {
-            Content = @"
+    [Test]
+    public void Configure_CanSetValuesWithoutKey() {
+        Content = @"
                 Weight = 12.3 lb
                 Diaper size = 1
                 Mom.Jobs[0] = chef
                 Mom.jobs[1] = Nurse
                 mom.jobs[2] = accountant            ";
-            var infant = Subject.Configure(new Infant(), "");
-            Assert.That(infant.Weight, Is.EqualTo("12.3 lb"));
-        }
+        var infant = Subject.Configure(new Infant(), "");
+        Assert.That(infant.Weight, Is.EqualTo("12.3 lb"));
+    }
 
-        [Test]
-        public void Configure_SetsSecondValueWithoutKey() {
-            Content = @"
+    [Test]
+    public void Configure_SetsSecondValueWithoutKey() {
+        Content = @"
                 Weight = 12.3 lb
                 Diaper size = 1
                 Mom.Jobs[0] = chef
                 Mom.jobs[1] = Nurse
                 mom.jobs[2] = accountant
             ";
-            var infant = Subject.Configure(new Infant(), "");
-            Assert.That(infant.DiaperSize, Is.EqualTo(1));
-        }
+        var infant = Subject.Configure(new Infant(), "");
+        Assert.That(infant.DiaperSize, Is.EqualTo(1));
+    }
 
-        [Test]
-        public void Configure_SetsComplexTypeValuesWithoutKey() {
-            Content = @"
+    [Test]
+    public void Configure_SetsComplexTypeValuesWithoutKey() {
+        Content = @"
                 Weight = 12.3 lb
                 Diaper size = 1
                 Mom.Jobs[0] = chef
                 Mom.jobs[1] = Nurse
                 mom.jobs[2] = accountant
             ";
-            var infant = Subject.Configure(new Infant(), "");
-            Assert.That(infant.Mom.Jobs[1], Is.EqualTo("Nurse"));
-        }
+        var infant = Subject.Configure(new Infant(), "");
+        Assert.That(infant.Mom.Jobs[1], Is.EqualTo("Nurse"));
+    }
 
-        [Test]
-        public void Configure_SetsDeepValues() {
-            Content = @"
+    [Test]
+    public void Configure_SetsDeepValues() {
+        Content = @"
                 kid.Weight = 12.3 lb
                 kid.Diaper size = 1
                 kid.Mom.Jobs[0] = chef
                 kid.Mom.jobs[1] = Nurse
                 kid.mom.jobs[2] = accountant
             ";
-            var infant = Subject.Configure(new Infant(), "Kid");
-            Assert.That(infant.Mom.Jobs[2], Is.EqualTo("accountant"));
-        }
+        var infant = Subject.Configure(new Infant(), "Kid");
+        Assert.That(infant.Mom.Jobs[2], Is.EqualTo("accountant"));
+    }
 
-        [Test]
-        public void Configure_ReturnsCollection() {
-            Content = @"
+    [Test]
+    public void Configure_ReturnsCollection() {
+        Content = @"
                 kid[0].weight = 3
                 kid[0].diapersize = 1
                 kid[1].weight = 15
@@ -313,18 +312,18 @@ namespace Domore.Conf {
                 kid[2].weight = 26
                 kid[2].diapersize = 4
             ";
-            var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
-            Assert.That(kids.Count, Is.EqualTo(3));
-        }
+        var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
+        Assert.That(kids.Count, Is.EqualTo(3));
+    }
 
-        [TestCase(0, "Weight", "3")]
-        [TestCase(0, "DiaperSize", 1)]
-        [TestCase(1, "Weight", "15")]
-        [TestCase(1, "DiaperSize", 2)]
-        [TestCase(2, "Weight", "26")]
-        [TestCase(2, "DiaperSize", 4)]
-        public void Configure_ConfiguresCollection(int index, string propertyName, object expected) {
-            Content = @"
+    [TestCase(0, "Weight", "3")]
+    [TestCase(0, "DiaperSize", 1)]
+    [TestCase(1, "Weight", "15")]
+    [TestCase(1, "DiaperSize", 2)]
+    [TestCase(2, "Weight", "26")]
+    [TestCase(2, "DiaperSize", 4)]
+    public void Configure_ConfiguresCollection(int index, string propertyName, object expected) {
+        Content = @"
                 kid[0].weight = 3
                 kid[0].diapersize = 1
                 kid[1].weight = 15
@@ -332,18 +331,18 @@ namespace Domore.Conf {
                 kid[2].weight = 26
                 kid[2].diapersize = 4
             ";
-            var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
-            Assert.That(typeof(Infant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
-        }
+        var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
+        Assert.That(typeof(Infant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
+    }
 
-        [TestCase(0, "Weight", "3")]
-        [TestCase(0, "DiaperSize", 1)]
-        [TestCase(1, "Weight", "15")]
-        [TestCase(1, "DiaperSize", 0)]
-        [TestCase(2, "Weight", "26")]
-        [TestCase(2, "DiaperSize", 4)]
-        public void Configure_IgnoresConfigurationOfDifferentCollection(int index, string propertyName, object expected) {
-            Content = @"
+    [TestCase(0, "Weight", "3")]
+    [TestCase(0, "DiaperSize", 1)]
+    [TestCase(1, "Weight", "15")]
+    [TestCase(1, "DiaperSize", 0)]
+    [TestCase(2, "Weight", "26")]
+    [TestCase(2, "DiaperSize", 4)]
+    public void Configure_IgnoresConfigurationOfDifferentCollection(int index, string propertyName, object expected) {
+        Content = @"
                 kid[0].weight = 3
                 kid[0].diapersize = 1
                 kid[1].weight = 15
@@ -351,13 +350,13 @@ namespace Domore.Conf {
                 kid[2].weight = 26
                 kid[2].diapersize = 4
             ";
-            var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
-            Assert.That(typeof(Infant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
-        }
+        var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
+        Assert.That(typeof(Infant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_ConfiguresCollectionDeeply() {
-            Content = @"
+    [Test]
+    public void Configure_ConfiguresCollectionDeeply() {
+        Content = @"
                 kid[0].weight = 3
                 kid[0].diapersize = 1
                 kid[1].weight = 15
@@ -368,21 +367,21 @@ namespace Domore.Conf {
                 kid[2].weight = 26
                 kid[2].diapersize = 4
             ";
-            var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
-            var kid = kids.Single(k => k.DiaperSize == 2);
-            Assert.That(kid.Mom.Jobs[1], Is.EqualTo("Nurse1"));
-        }
+        var kids = Subject.Configure(() => new Infant(), "Kid").ToList();
+        var kid = kids.Single(k => k.DiaperSize == 2);
+        Assert.That(kid.Mom.Jobs[1], Is.EqualTo("Nurse1"));
+    }
 
-        private class KeyedInfant : Infant { public string Key { get; set; } }
+    private class KeyedInfant : Infant { public string Key { get; set; } }
 
-        [TestCase("Num 0", "Weight", "3")]
-        [TestCase("Num 0", "DiaperSize", 1)]
-        [TestCase("num1", "Weight", "15")]
-        [TestCase("num1", "DiaperSize", 2)]
-        [TestCase("num 2", "Weight", "26")]
-        [TestCase("num  2", "DiaperSize", 4)]
-        public void Configure_ConfiguresPairs(string index, string propertyName, object expected) {
-            Content = @"
+    [TestCase("Num 0", "Weight", "3")]
+    [TestCase("Num 0", "DiaperSize", 1)]
+    [TestCase("num1", "Weight", "15")]
+    [TestCase("num1", "DiaperSize", 2)]
+    [TestCase("num 2", "Weight", "26")]
+    [TestCase("num  2", "DiaperSize", 4)]
+    public void Configure_ConfiguresPairs(string index, string propertyName, object expected) {
+        Content = @"
                 kid[Num 0].weight = 3
                 kid[num 0].diapersize = 1
                 kid[num1].weight = 15
@@ -390,13 +389,13 @@ namespace Domore.Conf {
                 kid[num 2].weight = 26
                 kid[num  2].diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid", StringComparer.OrdinalIgnoreCase).ToDictionary(pair => pair.Key, pair => pair.Value);
-            Assert.That(typeof(KeyedInfant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
-        }
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid", StringComparer.OrdinalIgnoreCase).ToDictionary(pair => pair.Key, pair => pair.Value);
+        Assert.That(typeof(KeyedInfant).GetProperty(propertyName).GetValue(kids[index], null), Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_DoesNotNormalizeKeys() {
-            Content = @"
+    [Test]
+    public void Configure_DoesNotNormalizeKeys() {
+        Content = @"
                 kid[Num 0].weight = 3
                 kid[num 0].diapersize = 1
                 kid[num1].weight = 15
@@ -404,15 +403,15 @@ namespace Domore.Conf {
                 kid[num 2].weight = 26
                 kid[num  2].diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
-            var expected = new List<string> { "Num 0", "num 0", "num1", "NUM1", "num 2", "num  2" };
-            var actual = kids.Select(kid => kid.Key).ToList();
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
+        var expected = new List<string> { "Num 0", "num 0", "num1", "NUM1", "num 2", "num  2" };
+        var actual = kids.Select(kid => kid.Key).ToList();
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_PaysAttentionToCollection() {
-            Content = @"
+    [Test]
+    public void Configure_PaysAttentionToCollection() {
+        Content = @"
                 kid  [Num 0].weight = 3
                 k id[num 0].diapersize = 1
                 wiz[num1].weight = 15
@@ -420,15 +419,15 @@ namespace Domore.Conf {
                 KID[num 2].weight = 26
                 Kid[num  2].diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
-            var expected = new List<string> { "Num 0", "num 0", "NUM1", "num 2", "num  2" };
-            var actual = kids.Select(kid => kid.Key).ToList();
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
+        var expected = new List<string> { "Num 0", "num 0", "NUM1", "num 2", "num  2" };
+        var actual = kids.Select(kid => kid.Key).ToList();
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_UsesSuppliedKeyComparer() {
-            Content = @"
+    [Test]
+    public void Configure_UsesSuppliedKeyComparer() {
+        Content = @"
                 kid[Num 0].weight = 3
                 kid[num 0].diapersize = 1
                 kid [num1].weight = 15
@@ -436,29 +435,29 @@ namespace Domore.Conf {
                 kid[num 2].weight = 26
                 kid[num  2].diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid", StringComparer.OrdinalIgnoreCase).ToList();
-            var expected = new List<string> { "Num 0", "num1", "num 2", "num  2" };
-            var actual = kids.Select(kid => kid.Key).ToList();
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid", StringComparer.OrdinalIgnoreCase).ToList();
+        var expected = new List<string> { "Num 0", "num1", "num 2", "num  2" };
+        var actual = kids.Select(kid => kid.Key).ToList();
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_ConfiguresSingleItem() {
-            Content = @"
+    [Test]
+    public void Configure_ConfiguresSingleItem() {
+        Content = @"
                 kid.weight = 3
                 kid.diapersize = 1
                 kid.Mom.JOBS[0] = nurse0
                 kid.Mom.JOBS[1] = Nurse1
                 kid.Mom.JOBS[2] = nurse2
             ";
-            var kids = Subject.Configure(() => new Infant(), "KID").ToList();
-            var kid = kids.Single();
-            Assert.That(kid.Mom.Jobs[2], Is.EqualTo("nurse2"));
-        }
+        var kids = Subject.Configure(() => new Infant(), "KID").ToList();
+        var kid = kids.Single();
+        Assert.That(kid.Mom.Jobs[2], Is.EqualTo("nurse2"));
+    }
 
-        [Test]
-        public void Configure_ConfiguresSingleItemWithBracketedValues() {
-            Content = @"
+    [Test]
+    public void Configure_ConfiguresSingleItemWithBracketedValues() {
+        Content = @"
                 kid.weight = 3
                 kid.diapersize = 1
                 kid.Mom.JOBS[0] = nurse0
@@ -469,19 +468,19 @@ namespace Domore.Conf {
                 }
                 kid.Mom.JOBS[2] = nurse2
             ";
-            var kids = Subject.Configure(() => new Infant(), "KID").ToList();
-            var kid = kids.Single();
-            var actual = kid.Mom.Jobs[1];
-            var expected =
+        var kids = Subject.Configure(() => new Infant(), "KID").ToList();
+        var kid = kids.Single();
+        var actual = kid.Mom.Jobs[1];
+        var expected =
 @"                    Nurse and
                     chauffeur and
                     cook";
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_DoesNotTrimBracketedValues() {
-            Content = @"
+    [Test]
+    public void Configure_DoesNotTrimBracketedValues() {
+        Content = @"
                 kid.weight = 3
                 kid.diapersize = 1
                 kid.Mom.JOBS[0] = nurse0
@@ -497,10 +496,10 @@ namespace Domore.Conf {
                 }
                 kid.Mom.JOBS[2] = nurse2
             ";
-            var kids = Subject.Configure(() => new Infant(), "KID").ToList();
-            var kid = kids.Single();
-            var actual = kid.Mom.Jobs[1];
-            var expected = @"   
+        var kids = Subject.Configure(() => new Infant(), "KID").ToList();
+        var kid = kids.Single();
+        var actual = kid.Mom.Jobs[1];
+        var expected = @"   
                     Nurse and            
                     chauffeur and    
 
@@ -508,12 +507,12 @@ namespace Domore.Conf {
                     cook                             
 
         ";
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_DoesNotSetValueWithEmptyBracketedText() {
-            Content = @"
+    [Test]
+    public void Configure_DoesNotSetValueWithEmptyBracketedText() {
+        Content = @"
                 kid.weight = 3
                 kid.diapersize = 1
                 kid.Mom.JOBS[0] = nurse0
@@ -523,110 +522,110 @@ namespace Domore.Conf {
                 }
                 kid.Mom.JOBS[2] = nurse2
             ";
-            var kids = Subject.Configure(() => new Infant(), "KID").ToList();
-            var kid = kids.Single();
-            var actual = kid.Mom.Jobs[1];
-            var expected = default(string);
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        var kids = Subject.Configure(() => new Infant(), "KID").ToList();
+        var kid = kids.Single();
+        var actual = kid.Mom.Jobs[1];
+        var expected = default(string);
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_UsesClassName() {
-            Content = @"
+    [Test]
+    public void Configure_UsesClassName() {
+        Content = @"
                 infant.weight = 3
                 infant.diapersize = 1
                 infant.Mom.JOBS[0] = nurse0
                 infant.Mom.JOBS[1] = Nurse1
                 infant.Mom.JOBS[2] = nurse2
             ";
-            var kids = Subject.Configure(() => new Infant()).ToList();
-            var kid = kids.Single();
-            Assert.That(kid.Mom.Jobs[1], Is.EqualTo("Nurse1"));
-        }
+        var kids = Subject.Configure(() => new Infant()).ToList();
+        var kid = kids.Single();
+        Assert.That(kid.Mom.Jobs[1], Is.EqualTo("Nurse1"));
+    }
 
-        [Test]
-        public void Configure_CallsBackWithNullKey() {
-            Content = @"
+    [Test]
+    public void Configure_CallsBackWithNullKey() {
+        Content = @"
                 kid[].diapersize = 1
                 kid.weight = 15
                 kid[ " + "\t" + @" ].weight = 26
                 kid.diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
-            var kid = kids.Single(k => k.Key == null);
-            Assert.That(kid.Value.Weight, Is.EqualTo("15"));
-            Assert.That(kid.Value.DiaperSize, Is.EqualTo(4));
-        }
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
+        var kid = kids.Single(k => k.Key == null);
+        Assert.That(kid.Value.Weight, Is.EqualTo("15"));
+        Assert.That(kid.Value.DiaperSize, Is.EqualTo(4));
+    }
 
-        [Test]
-        public void Configure_CallsBackWithEmptyString() {
-            Content = @"
+    [Test]
+    public void Configure_CallsBackWithEmptyString() {
+        Content = @"
                 kid[].diapersize = 1
                 kid.weight = 15
                 kid[ " + "\t" + @" ].weight = 26
                 kid.diapersize = 4
             ";
-            var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
-            var kid = kids.Single(k => k.Key == "");
-            Assert.That(kid.Value.Weight, Is.EqualTo("26"));
-            Assert.That(kid.Value.DiaperSize, Is.EqualTo(1));
+        var kids = Subject.Configure(k => new KeyedInfant { Key = k }, "Kid").ToList();
+        var kid = kids.Single(k => k.Key == "");
+        Assert.That(kid.Value.Weight, Is.EqualTo("26"));
+        Assert.That(kid.Value.DiaperSize, Is.EqualTo(1));
+    }
+
+    private class ClassWithListExposedAsICollection {
+        public ICollection<Inner> Inners {
+            get => _Inners ?? (_Inners = new List<Inner>());
+            set => _Inners = value;
         }
+        private ICollection<Inner> _Inners;
 
-        private class ClassWithListExposedAsICollection {
-            public ICollection<Inner> Inners {
-                get => _Inners ?? (_Inners = new List<Inner>());
-                set => _Inners = value;
-            }
-            private ICollection<Inner> _Inners;
-
-            public sealed class Inner {
-                public double Value { get; set; }
-            }
+        public sealed class Inner {
+            public double Value { get; set; }
         }
+    }
 
-        [Test]
-        public void Configure_AddsItemsToListExposedAsICollection() {
-            Content = @"
+    [Test]
+    public void Configure_AddsItemsToListExposedAsICollection() {
+        Content = @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             ";
-            var obj = Subject.Configure(new ClassWithListExposedAsICollection(), "item");
-            CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
-        }
+        var obj = Subject.Configure(new ClassWithListExposedAsICollection(), "item");
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
+    }
 
-        [Test]
-        public void Sources_ReturnsStringSource() {
-            Content = @"
+    [Test]
+    public void Sources_ReturnsStringSource() {
+        Content = @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             ";
-            var actual = Subject.Sources;
-            var expected = new[] { Content.ToString() };
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var actual = Subject.Sources;
+        var expected = new[] { Content.ToString() };
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [TestCase("item.inners[0].value", "1.1")]
-        [TestCase("item.inners[1].value", "1.2")]
-        [TestCase("item.inners[2].value", "1.3")]
-        [TestCase("item  . inners\t[ 0 ]\t.value\t", "1.1")]
-        [TestCase("item.Inners [\t 1\t ]  .value", "1.2")]
-        [TestCase("ITEM.inners[   \t  2  \t  ] . VAlue  ", "1.3")]
-        public void Lookup_GetsValueOfKeyWithIndex(string key, string value) {
-            Content = @"
+    [TestCase("item.inners[0].value", "1.1")]
+    [TestCase("item.inners[1].value", "1.2")]
+    [TestCase("item.inners[2].value", "1.3")]
+    [TestCase("item  . inners\t[ 0 ]\t.value\t", "1.1")]
+    [TestCase("item.Inners [\t 1\t ]  .value", "1.2")]
+    [TestCase("ITEM.inners[   \t  2  \t  ] . VAlue  ", "1.3")]
+    public void Lookup_GetsValueOfKeyWithIndex(string key, string value) {
+        Content = @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             ";
-            var actual = Subject.Lookup.Value(key);
-            var expected = value;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        var actual = Subject.Lookup.Value(key);
+        var expected = value;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Lookup_GetsAllValuesWithIndex() {
-            Content = @"
+    [Test]
+    public void Lookup_GetsAllValuesWithIndex() {
+        Content = @"
                 item.  inners[1].VALUE = 3.4
                 item.inners[0].value = 1.1
                 item.Inners[1].value = 1.2
@@ -634,14 +633,14 @@ namespace Domore.Conf {
                 item.inners[   1  ].value = 5.6
                 item.inners[ 1  ].value = 7.8
             ";
-            var actual = Subject.Lookup.All("ITEM . INNERS [ 1 ] . VALUE");
-            var expected = new[] { "3.4", "1.2", "5.6", "7.8" };
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var actual = Subject.Lookup.All("ITEM . INNERS [ 1 ] . VALUE");
+        var expected = new[] { "3.4", "1.2", "5.6", "7.8" };
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Lookup_RespectsSpacesInsideIndex() {
-            Content = @"
+    [Test]
+    public void Lookup_RespectsSpacesInsideIndex() {
+        Content = @"
                 item.  inners[ a b ].VALUE = 3.4
                 item.inners[0].value = 1.1
                 item.Inners[ ab ].value = 1.2
@@ -649,14 +648,14 @@ namespace Domore.Conf {
                 item.inners[a b].value = 5.6
                 item.inners[    a b    ].value = 7.8
             ";
-            var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
-            var expected = new[] { "3.4", "5.6", "7.8" };
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
+        var expected = new[] { "3.4", "5.6", "7.8" };
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Lookup_RespectsCaseInsideIndex() {
-            Content = @"
+    [Test]
+    public void Lookup_RespectsCaseInsideIndex() {
+        Content = @"
                 item.  inners[ a B ].VALUE = 3.4
                 item.inners[0].value = 1.1
                 item.Inners[ ab ].value = 1.2
@@ -664,133 +663,133 @@ namespace Domore.Conf {
                 item.inners[a b].value = 5.6
                 item.inners[    a b    ].value = 7.8
             ";
-            var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
-            var expected = new[] { "5.6", "7.8" };
-            CollectionAssert.AreEqual(expected, actual);
+        var actual = Subject.Lookup.All("ITEM . INNERS [ a b ] . VALUE");
+        var expected = new[] { "5.6", "7.8" };
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    private class ObjWithOptionalNames {
+        [Conf("sp", "stringproperty")]
+        public string StrProp { get; set; }
+    }
+
+    [TestCase("sp")]
+    [TestCase("strprop")]
+    [TestCase("stringproperty")]
+    [TestCase("STRINGproperty")]
+    public void Configure_RespectsConfAttributeNames(string name) {
+        Content = $"obj.{name} = hello world";
+        var obj = Subject.Configure(new ObjWithOptionalNames(), "obj");
+        Assert.That(obj.StrProp, Is.EqualTo("hello world"));
+    }
+
+    [TestCase("sp")]
+    [TestCase("strprop")]
+    [TestCase("stringproperty")]
+    [TestCase("STRINGproperty")]
+    public void Configure_RespectsConfAttributeNamesWithoutKey(string name) {
+        Content = $"{name} = hello world";
+        var obj = Subject.Configure(new ObjWithOptionalNames(), "");
+        Assert.That(obj.StrProp, Is.EqualTo("hello world"));
+    }
+
+    [TestCase("spp")]
+    [TestCase("sstrprop")]
+    [TestCase("stringroperty")]
+    [TestCase("STINGproperty")]
+    public void Configure_DoesNotUseNameNotInAttributeList(string name) {
+        Content = $"{name} = hello world";
+        var obj = Subject.Configure(new ObjWithOptionalNames(), "");
+        Assert.That(obj.StrProp, Is.Not.EqualTo("hello world"));
+    }
+
+    private class ClassWithNamedListExposedAsICollection {
+        [Conf("Inner")]
+        public ICollection<Inner> Inners {
+            get => _Inners ?? (_Inners = new List<Inner>());
+            set => _Inners = value;
         }
+        private ICollection<Inner> _Inners;
 
-        private class ObjWithOptionalNames {
-            [Conf("sp", "stringproperty")]
-            public string StrProp { get; set; }
+        public sealed class Inner {
+            public double Value { get; set; }
         }
+    }
 
-        [TestCase("sp")]
-        [TestCase("strprop")]
-        [TestCase("stringproperty")]
-        [TestCase("STRINGproperty")]
-        public void Configure_RespectsConfAttributeNames(string name) {
-            Content = $"obj.{name} = hello world";
-            var obj = Subject.Configure(new ObjWithOptionalNames(), "obj");
-            Assert.That(obj.StrProp, Is.EqualTo("hello world"));
-        }
-
-        [TestCase("sp")]
-        [TestCase("strprop")]
-        [TestCase("stringproperty")]
-        [TestCase("STRINGproperty")]
-        public void Configure_RespectsConfAttributeNamesWithoutKey(string name) {
-            Content = $"{name} = hello world";
-            var obj = Subject.Configure(new ObjWithOptionalNames(), "");
-            Assert.That(obj.StrProp, Is.EqualTo("hello world"));
-        }
-
-        [TestCase("spp")]
-        [TestCase("sstrprop")]
-        [TestCase("stringroperty")]
-        [TestCase("STINGproperty")]
-        public void Configure_DoesNotUseNameNotInAttributeList(string name) {
-            Content = $"{name} = hello world";
-            var obj = Subject.Configure(new ObjWithOptionalNames(), "");
-            Assert.That(obj.StrProp, Is.Not.EqualTo("hello world"));
-        }
-
-        private class ClassWithNamedListExposedAsICollection {
-            [Conf("Inner")]
-            public ICollection<Inner> Inners {
-                get => _Inners ?? (_Inners = new List<Inner>());
-                set => _Inners = value;
-            }
-            private ICollection<Inner> _Inners;
-
-            public sealed class Inner {
-                public double Value { get; set; }
-            }
-        }
-
-        [Test]
-        public void Configure_AddsItemsToListExposedAsICollection2() {
-            Content = @"
+    [Test]
+    public void Configure_AddsItemsToListExposedAsICollection2() {
+        Content = @"
                 item.inner[0].value = 1.1
                 item.inner[1].value = 1.2
                 item.inner[2].value = 1.3
             ";
-            var obj = Subject.Configure(new ClassWithNamedListExposedAsICollection(), "item");
-            CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
-        }
+        var obj = Subject.Configure(new ClassWithNamedListExposedAsICollection(), "item");
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo(new[] { 1.1, 1.2, 1.3 }));
+    }
 
-        [Test]
-        public void Configure_GetsNameOfActualObjectType() {
-            Content = "Cat.Color = plaid";
-            var pet = Subject.Configure<Pet>(new Cat());
-            var cat = (Cat)pet;
-            Assert.That(cat.Color, Is.EqualTo("plaid"));
-        }
+    [Test]
+    public void Configure_GetsNameOfActualObjectType() {
+        Content = "Cat.Color = plaid";
+        var pet = Subject.Configure<Pet>(new Cat());
+        var cat = (Cat)pet;
+        Assert.That(cat.Color, Is.EqualTo("plaid"));
+    }
 
-        private class ClassWithStringPropertiesForConverterTest {
-            [ConfConverter(typeof(Converter))]
-            public string Foo { get; set; }
+    private class ClassWithStringPropertiesForConverterTest {
+        [ConfConverter(typeof(Converter))]
+        public string Foo { get; set; }
 
-            [ConfConverter(typeof(Converter))]
-            public string[] Bar { get; set; }
+        [ConfConverter(typeof(Converter))]
+        public string[] Bar { get; set; }
 
-            private class Converter : ConfValueConverter {
-                private string Convert(string value) {
-                    if (value == "\\r") return "\r";
-                    if (value == "\\n") return "\n";
-                    if (value == "\\r\\n") return "\r\n";
+        private class Converter : ConfValueConverter {
+            private string Convert(string value) {
+                if (value == "\\r") return "\r";
+                if (value == "\\n") return "\n";
+                if (value == "\\r\\n") return "\r\n";
+                return value;
+            }
+
+            public override object Convert(string value, ConfValueConverterState state) {
+                if (state.Property.Name == nameof(Foo)) {
+                    return Convert(value);
+                }
+                if (state.Property.Name == nameof(Bar)) {
+                    if (value != null) {
+                        return value
+                            .Split()
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Select(s => Convert(s))
+                            .ToArray();
+                    }
                     return value;
                 }
-
-                public override object Convert(string value, ConfValueConverterState state) {
-                    if (state.Property.Name == nameof(Foo)) {
-                        return Convert(value);
-                    }
-                    if (state.Property.Name == nameof(Bar)) {
-                        if (value != null) {
-                            return value
-                                .Split()
-                                .Where(s => !string.IsNullOrWhiteSpace(s))
-                                .Select(s => Convert(s))
-                                .ToArray();
-                        }
-                        return value;
-                    }
-                    throw new ArgumentException();
-                }
+                throw new ArgumentException();
             }
         }
+    }
 
-        [TestCase("Foo = \\r", "\r")]
-        [TestCase("Foo = \\n", "\n")]
-        [TestCase("Foo = \\r\\n", "\r\n")]
-        public void Configure_UsesPrivateConverterClassInstance(string content, string expected) {
-            Content = content;
-            var inst = Subject.Configure(new ClassWithStringPropertiesForConverterTest(), key: "");
-            var actual = inst.Foo;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+    [TestCase("Foo = \\r", "\r")]
+    [TestCase("Foo = \\n", "\n")]
+    [TestCase("Foo = \\r\\n", "\r\n")]
+    public void Configure_UsesPrivateConverterClassInstance(string content, string expected) {
+        Content = content;
+        var inst = Subject.Configure(new ClassWithStringPropertiesForConverterTest(), key: "");
+        var actual = inst.Foo;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_UsesPrivateConverterClassInstanceToConvertToArray() {
-            Content = "Bar = \\r \\n";
-            var inst = Subject.Configure(new ClassWithStringPropertiesForConverterTest(), key: "");
-            var actual = inst.Bar;
-            CollectionAssert.AreEqual(new[] { "\r", "\n" }, actual);
-        }
+    [Test]
+    public void Configure_UsesPrivateConverterClassInstanceToConvertToArray() {
+        Content = "Bar = \\r \\n";
+        var inst = Subject.Configure(new ClassWithStringPropertiesForConverterTest(), key: "");
+        var actual = inst.Bar;
+        Assert.That(actual, Is.EqualTo(["\r", "\n"]));
+    }
 
-        [Test]
-        public void Lookup_GetsMultiLineValue() {
-            Content = @"
+    [Test]
+    public void Lookup_GetsMultiLineValue() {
+        Content = @"
                 here is some = {
 
 
@@ -799,104 +798,124 @@ namespace Domore.Conf {
                     
                 }
             ";
-            var actual = Subject.Lookup.Value("HEREISSOME");
-            var expected = @"
+        var actual = Subject.Lookup.Value("HEREISSOME");
+        var expected = @"
 
                     text 1
                     text 2
                     ";
-            Assert.That(actual, Is.EqualTo(expected));
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void Lookup_GetsMultiLineValueFromTripleQuote() {
+        Content = @"
+                here is some = """"""
+
+
+                    text 1
+                    text 2
+                    
+                """"""
+            ";
+        var actual = Subject.Lookup.Value("HEREISSOME");
+        var expected = @"
+
+                    text 1
+                    text 2
+                    ";
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    public sealed class EnumIndexParameter {
+        public enum MyEnum {
+            Tiny,
+            Small,
+            Big
         }
 
-        public sealed class EnumIndexParameter {
-            public enum MyEnum {
-                Tiny,
-                Small,
-                Big
-            }
+        public Dictionary<MyEnum, string> Dict { get; set; }
+    }
 
-            public Dictionary<MyEnum, string> Dict { get; set; }
-        }
-
-        [TestCase(EnumIndexParameter.MyEnum.Tiny, "this is tiny")]
-        [TestCase(EnumIndexParameter.MyEnum.Big, "this is BIG")]
-        public void Configure_SetsIndexedPropertiesWithEnumIndex(EnumIndexParameter.MyEnum key, string expected) {
-            Content = @"
+    [TestCase(EnumIndexParameter.MyEnum.Tiny, "this is tiny")]
+    [TestCase(EnumIndexParameter.MyEnum.Big, "this is BIG")]
+    public void Configure_SetsIndexedPropertiesWithEnumIndex(EnumIndexParameter.MyEnum key, string expected) {
+        Content = @"
                 dict[tiny] = this is tiny
                 dict[BIG] = this is BIG
             ";
-            var actual = Subject.Configure(new EnumIndexParameter(), key: "").Dict[key];
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        var actual = Subject.Configure(new EnumIndexParameter(), key: "").Dict[key];
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        private sealed class Shipwreck {
-            public int Depth { get; private set; }
-        }
+    private sealed class Shipwreck {
+        public int Depth { get; private set; }
+    }
 
-        [Test]
-        public void Configure_SetsPropertiesWithPrivateSetter() {
-            Content = "depth = 25";
+    [Test]
+    public void Configure_SetsPropertiesWithPrivateSetter() {
+        Content = "depth = 25";
+        var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+        var expected = 25;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [TestCase('!')]
+    [TestCase('@')]
+    [TestCase('#')]
+    [TestCase('$')]
+    public void SpecialCharsMayBeUsedAsKey(char c) {
+        Content = $"{c}.depth = 25";
+        var actual = Subject.Configure(new Shipwreck(), key: $"{c}").Depth;
+        var expected = 25;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void FileIsIncludedAndUsedAfterDefaultConf() {
+        var temp = Path.GetTempFileName();
+        try {
+            File.WriteAllText(temp, $"depth = 25");
+            Content = $@"
+                    depth = 24
+                    @.INCLUDE = {temp}
+                ";
+            Subject.Special = "@";
             var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
             var expected = 25;
             Assert.That(actual, Is.EqualTo(expected));
         }
+        finally {
+            File.Delete(temp);
+        }
+    }
 
-        [TestCase('!')]
-        [TestCase('@')]
-        [TestCase('#')]
-        [TestCase('$')]
-        public void SpecialCharsMayBeUsedAsKey(char c) {
-            Content = $"{c}.depth = 25";
-            var actual = Subject.Configure(new Shipwreck(), key: $"{c}").Depth;
-            var expected = 25;
+    [Test]
+    public void ConfAfterIncludeOverridesInclude() {
+        var temp = Path.GetTempFileName();
+        try {
+            File.WriteAllText(temp, $"depth = 25");
+            Content = $@"
+                    @.INCLUDE = {temp}
+                    depth = 24
+                ";
+            Subject.Special = "@";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 24;
             Assert.That(actual, Is.EqualTo(expected));
         }
-
-        [Test]
-        public void FileIsIncludedAndUsedAfterDefaultConf() {
-            var temp = Path.GetTempFileName();
-            try {
-                File.WriteAllText(temp, $"depth = 25");
-                Content = $@"
-                    depth = 24
-                    @.INCLUDE = {temp}
-                ";
-                Subject.Special = "@";
-                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-                var expected = 25;
-                Assert.That(actual, Is.EqualTo(expected));
-            }
-            finally {
-                File.Delete(temp);
-            }
+        finally {
+            File.Delete(temp);
         }
+    }
 
-        [Test]
-        public void ConfAfterIncludeOverridesInclude() {
-            var temp = Path.GetTempFileName();
-            try {
-                File.WriteAllText(temp, $"depth = 25");
-                Content = $@"
-                    @.INCLUDE = {temp}
-                    depth = 24
-                ";
-                Subject.Special = "@";
-                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-                var expected = 24;
-                Assert.That(actual, Is.EqualTo(expected));
-            }
-            finally {
-                File.Delete(temp);
-            }
-        }
-
-        [Test]
-        public void IncludeCanBeAList() {
-            var t1 = TempFile();
-            var t2 = TempFile();
-            var t3 = TempFile();
-            File.WriteAllText(t2, "depth = 26");
-            Content = $@"
+    [Test]
+    public void IncludeCanBeAList() {
+        var t1 = TempFile();
+        var t2 = TempFile();
+        var t3 = TempFile();
+        File.WriteAllText(t2, "depth = 26");
+        Content = $@"
                 depth = 24
                 ##.INCLUDE = {{
                     {t1}
@@ -904,62 +923,62 @@ namespace Domore.Conf {
                     {t3}
                 }}
             ";
-            Subject.Special = "##";
-            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-            var expected = 26;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Subject.Special = "##";
+        var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+        var expected = 26;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void IncludeExpandsSpecialFolderName() {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
-            try {
-                Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
-                File.WriteAllText(localInclude, "depth = 27");
-                Content = @"
+    [Test]
+    public void IncludeExpandsSpecialFolderName() {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
+        try {
+            Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
+            File.WriteAllText(localInclude, "depth = 27");
+            Content = @"
                     depth = 24
                     conf.INCLUDE = {LocalApplicationData}/Domore/Conf/Test/include.conf
                 ";
-                Subject.Special = "conf";
-                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-                var expected = 27;
-                Assert.That(actual, Is.EqualTo(expected));
-            }
-            finally {
-                File.Delete(localInclude);
-            }
+            Subject.Special = "conf";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 27;
+            Assert.That(actual, Is.EqualTo(expected));
         }
+        finally {
+            File.Delete(localInclude);
+        }
+    }
 
-        [Test]
-        public void IncludeExpandsEnvironmentVariable() {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
-            try {
-                Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
-                File.WriteAllText(localInclude, "depth = 28");
-                Content = @"
+    [Test]
+    public void IncludeExpandsEnvironmentVariable() {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localInclude = Path.Combine(localAppData, "Domore", "Conf", "Test", "include.conf");
+        try {
+            Directory.CreateDirectory(Path.GetDirectoryName(localInclude));
+            File.WriteAllText(localInclude, "depth = 28");
+            Content = @"
                     depth = 24
                     conf.INCLUDE = %LOCALAPPDATA%/Domore/Conf/Test/include.conf";
-                Subject.Special = "conf";
-                var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-                var expected = 28;
-                Assert.That(actual, Is.EqualTo(expected));
-            }
-            finally {
-                File.Delete(localInclude);
-            }
+            Subject.Special = "conf";
+            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+            var expected = 28;
+            Assert.That(actual, Is.EqualTo(expected));
         }
+        finally {
+            File.Delete(localInclude);
+        }
+    }
 
-        [Test]
-        public void LastIncludeInAListOverridesOthers() {
-            var t1 = TempFile();
-            var t2 = TempFile();
-            var t3 = TempFile();
-            File.WriteAllText(t1, "depth = 25");
-            File.WriteAllText(t2, "depth = 26");
-            File.WriteAllText(t3, "depth = 27");
-            Content = $@"
+    [Test]
+    public void LastIncludeInAListOverridesOthers() {
+        var t1 = TempFile();
+        var t2 = TempFile();
+        var t3 = TempFile();
+        File.WriteAllText(t1, "depth = 25");
+        File.WriteAllText(t2, "depth = 26");
+        File.WriteAllText(t3, "depth = 27");
+        Content = $@"
                 depth = 24
                 ##.INCLUDE = {{
                     {t1}
@@ -967,39 +986,39 @@ namespace Domore.Conf {
                     {t3}
                 }}
             ";
-            Subject.Special = "##";
-            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-            var expected = 27;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Subject.Special = "##";
+        var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+        var expected = 27;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void IncludesCanBeNested() {
-            var t1 = TempFile();
-            var t2 = TempFile();
-            File.WriteAllText(t1, "depth = 25");
-            File.WriteAllText(t2, $"##.include = {t1}");
-            Content = $@"
+    [Test]
+    public void IncludesCanBeNested() {
+        var t1 = TempFile();
+        var t2 = TempFile();
+        File.WriteAllText(t1, "depth = 25");
+        File.WriteAllText(t2, $"##.include = {t1}");
+        Content = $@"
                 depth = 24
                 ##.INCLUDE = {{
                     {t2}
                 }}
             ";
-            Subject.Special = "##";
-            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-            var expected = 25;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Subject.Special = "##";
+        var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+        var expected = 25;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void LastIncludeInAListOverridesOthersWhenOthersAreNested() {
-            var t1 = TempFile();
-            var t2 = TempFile();
-            var t3 = TempFile();
-            File.WriteAllText(t1, "depth = 25");
-            File.WriteAllText(t2, $"##.include = {t1}");
-            File.WriteAllText(t3, "depth = 27");
-            Content = $@"
+    [Test]
+    public void LastIncludeInAListOverridesOthersWhenOthersAreNested() {
+        var t1 = TempFile();
+        var t2 = TempFile();
+        var t3 = TempFile();
+        File.WriteAllText(t1, "depth = 25");
+        File.WriteAllText(t2, $"##.include = {t1}");
+        File.WriteAllText(t3, "depth = 27");
+        Content = $@"
                 depth = 24
                 ##.INCLUDE = {{
                     {t1}
@@ -1007,10 +1026,9 @@ namespace Domore.Conf {
                     {t3}
                 }}
             ";
-            Subject.Special = "##";
-            var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
-            var expected = 27;
-            Assert.That(actual, Is.EqualTo(expected));
-        }
+        Subject.Special = "##";
+        var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
+        var expected = 27;
+        Assert.That(actual, Is.EqualTo(expected));
     }
 }

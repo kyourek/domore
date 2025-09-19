@@ -1,38 +1,38 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Domore.Conf {
-    internal sealed class ConfCollection<T> : IConfCollection<T> {
-        private readonly List<T> List;
+namespace Domore.Conf;
 
-        public ConfCollection() {
-            List = new List<T>();
-        }
+internal sealed class ConfCollection<T> : IConfCollection<T> {
+    private readonly List<T> List;
 
-        public ConfCollection(IEnumerable<T> collection) {
-            List = new List<T>(collection);
-        }
+    public ConfCollection() {
+        List = new List<T>();
+    }
 
-        public ConfCollection(params T[] items) {
-            List = new List<T>(items);
-        }
+    public ConfCollection(IEnumerable<T> collection) {
+        List = [.. collection];
+    }
 
-        public void Add(T item) {
-            List.Add(item);
-        }
+    public ConfCollection(params T[] items) {
+        List = [.. items];
+    }
 
-        int IConfCollection.Count =>
-            List.Count;
+    public void Add(T item) {
+        List.Add(item);
+    }
 
-        T IConfCollection<T>.this[int index] =>
-            List[index];
+    int IConfCollection.Count =>
+        List.Count;
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() {
-            return ((IEnumerable<T>)List).GetEnumerator();
-        }
+    T IConfCollection<T>.this[int index] =>
+        List[index];
 
-        IEnumerator IEnumerable.GetEnumerator() {
-            return ((IEnumerable)List).GetEnumerator();
-        }
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() {
+        return ((IEnumerable<T>)List).GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() {
+        return ((IEnumerable)List).GetEnumerator();
     }
 }

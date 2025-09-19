@@ -1,81 +1,79 @@
 ﻿using NUnit.Framework;
-using NUnit.Framework.Legacy;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Domore.Conf.IO {
-    [TestFixture]
-    public sealed class FileOrTextContentProviderTest {
-        private FileOrTextContentProvider Subject {
-            get => _Subject ?? (_Subject = new FileOrTextContentProvider());
-            set => _Subject = value;
+namespace Domore.Conf.IO;
+
+[TestFixture]
+public sealed class FileOrTextContentProviderTest {
+    private FileOrTextContentProvider Subject {
+        get => field ??= new FileOrTextContentProvider();
+        set => field = value;
+    }
+
+    [SetUp]
+    public void SetUp() {
+        Subject = null;
+    }
+
+    private class ClassWithListExposedAsICollection {
+        public ICollection<Inner> Inners {
+            get => _Inners ?? (_Inners = new List<Inner>());
+            set => _Inners = value;
         }
-        private FileOrTextContentProvider _Subject;
+        private ICollection<Inner> _Inners;
 
-        [SetUp]
-        public void SetUp() {
-            Subject = null;
+        public sealed class Inner {
+            public double Value { get; set; }
         }
+    }
 
-        private class ClassWithListExposedAsICollection {
-            public ICollection<Inner> Inners {
-                get => _Inners ?? (_Inners = new List<Inner>());
-                set => _Inners = value;
-            }
-            private ICollection<Inner> _Inners;
-
-            public sealed class Inner {
-                public double Value { get; set; }
-            }
-        }
-
-        [Test]
-        public void Configure_UsesFileIfItExists() {
-            var path = Path.GetTempFileName();
-            var container = new ConfContainer { ContentProvider = Subject, Source = path };
-            File.WriteAllText(path, @"
+    [Test]
+    public void Configure_UsesFileIfItExists() {
+        var path = Path.GetTempFileName();
+        var container = new ConfContainer { ContentProvider = Subject, Source = path };
+        File.WriteAllText(path, @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             ");
-            var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
-            CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
-        }
+        var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
+    }
 
-        [Test]
-        public void Sources_IncludesFileIfFileExists() {
-            var path = Path.GetTempFileName();
-            var container = new ConfContainer { ContentProvider = Subject, Source = path };
-            File.WriteAllText(path, @"
+    [Test]
+    public void Sources_IncludesFileIfFileExists() {
+        var path = Path.GetTempFileName();
+        var container = new ConfContainer { ContentProvider = Subject, Source = path };
+        File.WriteAllText(path, @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             ");
-            var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
-            var expected = new string[] {
-                path,
-                @"
+        var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
+        var expected = new string[] {
+            path,
+            @"
                 item.inners[0].value = 1.1
                 item.inners[1].value = 1.2
                 item.inners[2].value = 1.3
             " };
-            var actual = container.Sources;
-            CollectionAssert.AreEqual(expected, actual);
-        }
+        var actual = container.Sources;
+        Assert.That(actual, Is.EqualTo(expected));
+    }
 
-        [Test]
-        public void Configure_UsesTextIfFileDoesNotExist() {
-            var container = new ConfContainer {
-                ContentProvider = Subject,
-                Source = @"
+    [Test]
+    public void Configure_UsesTextIfFileDoesNotExist() {
+        var container = new ConfContainer {
+            ContentProvider = Subject,
+            Source = @"
                     item.inners[0].value = 1.1
                     item.inners[1].value = 1.2
                     item.inners[2].value = 1.3
                 "
-            };
-            var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
-            CollectionAssert.AreEqual(new[] { 1.1, 1.2, 1.3 }, obj.Inners.Select(i => i.Value));
-        }
+        };
+        var obj = container.Configure(new ClassWithListExposedAsICollection(), "item");
+        Assert.That(obj.Inners.Select(i => i.Value), Is.EqualTo([1.1, 1.2, 1.3]));
     }
 }

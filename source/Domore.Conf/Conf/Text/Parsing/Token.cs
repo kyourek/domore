@@ -1,20 +1,20 @@
-﻿namespace Domore.Conf.Text.Parsing {
-    internal abstract class Token : IConfToken {
-        private string Content;
+﻿namespace Domore.Conf.Text.Parsing;
 
-        protected abstract string Create();
+internal abstract class Token : IConfToken {
+    private string Content;
 
-        public override string ToString() {
-            return Content ?? Create();
-        }
+    protected abstract string Create();
 
-        string IConfToken.Content {
-            get {
-                if (Content == null) {
-                    Content = Create();
-                }
-                return Content;
+    public override string ToString() {
+        return Content ?? Create();
+    }
+
+    string IConfToken.Content {
+        get {
+            if (Content == null) {
+                Content = Create();
             }
+            return Content;
         }
     }
 }

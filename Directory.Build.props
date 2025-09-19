@@ -5,8 +5,8 @@
     <Copyright>Copyright © Ken Yourek 2023-2025</Copyright>
     <RootNamespace>Domore</RootNamespace>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    <LangVersion>12.0</LangVersion>
-    <VersionPrefix>9.7</VersionPrefix>
+    <LangVersion>preview</LangVersion>
+    <VersionPrefix>10.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
@@ -19,7 +19,4 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-  </ItemGroup>
 </Project>
