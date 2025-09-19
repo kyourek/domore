@@ -845,7 +845,7 @@ ex. longmanualderived foo 1
         Assert.That(obj.MyBool, Is.EqualTo(expected));
     }
 
-    class TargetWithDouble { 
+    class TargetWithDouble {
         public double MyDouble { get; set; }
     }
 
