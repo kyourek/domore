@@ -4,15 +4,23 @@ using System.Collections;
 using System.Linq;
 
 namespace Domore.Conf.Cli {
-    public static class Cli {
-        private static CliSetup SetupObject {
-            get => _SetupObject ??= new();
-            set => _SetupObject = value;
-        }
-        private static CliSetup _SetupObject;
+    public sealed class CliProvider {
+        private readonly Lazy<TargetDescription.Cache> LazyTargetDescription;
 
-        private static T Validate<T>(T target) {
-            if (null == target) throw new ArgumentNullException(nameof(target));
+        private TargetDescription.Cache TargetDescription => _TargetDescription ??= LazyTargetDescription.Value;
+        private TargetDescription.Cache _TargetDescription;
+
+        public CliSetup Setup { get; }
+
+        public CliProvider(CliSetup setup) {
+            Setup = setup;
+            LazyTargetDescription = new(() => new(Setup));
+        }
+
+        private T Validate<T>(T target) {
+            if (target is null) {
+                throw new ArgumentNullException(nameof(target));
+            }
             var description = TargetDescription.Describe(target.GetType());
             var validations = description.Validations;
             try {
@@ -29,8 +37,10 @@ namespace Domore.Conf.Cli {
             return target;
         }
 
-        private static T Conf<T>(T target, string line) {
-            if (null == target) throw new ArgumentNullException(nameof(target));
+        private T Conf<T>(T target, string line) {
+            if (target is null) {
+                throw new ArgumentNullException(nameof(target));
+            }
             var description = TargetDescription.Describe(target.GetType());
             var confLines = description.Conf(line);
             var conf = string.Join(Environment.NewLine, confLines);
@@ -43,15 +53,11 @@ namespace Domore.Conf.Cli {
             return target;
         }
 
-        internal static CliSetup Setup() {
-            return SetupObject;
-        }
-
-        public static T Configure<T>(T target, string line) {
+        public T Configure<T>(T target, string line) {
             return Validate(Conf(target, line));
         }
 
-        public static string Display(object target) {
+        public string Display(object target) {
             return target is null
                 ? null
                 : TargetDescription
@@ -59,7 +65,7 @@ namespace Domore.Conf.Cli {
                     .Display;
         }
 
-        public static string Display(IEnumerable targets) {
+        public string Display(IEnumerable targets) {
             return targets is null
                 ? null
                 : string.Join(Environment.NewLine, targets
@@ -67,7 +73,7 @@ namespace Domore.Conf.Cli {
                     .Select(Display));
         }
 
-        public static string Manual(object target) {
+        public string Manual(object target) {
             return target is null
                 ? null
                 : TargetDescription
@@ -75,22 +81,12 @@ namespace Domore.Conf.Cli {
                     .Manual;
         }
 
-        public static string Manual(IEnumerable targets) {
+        public string Manual(IEnumerable targets) {
             return targets is null
                 ? null
                 : string.Join(Environment.NewLine + Environment.NewLine, targets
                     .OfType<object>()
                     .Select(Manual));
-        }
-
-        public static void Setup(Action<CliSetup> set) {
-            if (set == null) {
-                SetupObject = null;
-            }
-            else {
-                set(SetupObject);
-            }
-            TargetDescription.Clear();
         }
     }
 }
