@@ -31,7 +31,7 @@ public sealed class ConfBooleanAttribute : ConfConverterAttribute {
                     }
                     catch {
                         throw new ConfValueConverterException(this, value, state,
-                            $"Invalid value: {value} (Expected one of {string.Join(" | ", Map.Keys)})");
+                            $"Invalid value: {value} (Expected one of <{string.Join("|", Map.Keys)}>)");
                     }
                 }
             }

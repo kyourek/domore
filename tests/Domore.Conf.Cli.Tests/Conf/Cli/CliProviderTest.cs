@@ -830,7 +830,7 @@ ex. longmanualderived foo 1
                 .InstanceOf<CliConversionException>()
                 .With
                 .Property("Message")
-                .EqualTo("Invalid value: foo (Expected one of true | false | yes | no | 1 | 0)"));
+                .EqualTo("Invalid value: foo (Expected one of <true|false|yes|no|1|0>)"));
     }
 
     [TestCase("true", true)]
@@ -857,6 +857,6 @@ ex. longmanualderived foo 1
                 .InstanceOf<CliConversionException>()
                 .With
                 .Property("Message")
-                .EqualTo("Invalid value: foo (foo is not a valid value for Double.)"));
+                .EqualTo("Invalid value: foo (Expected one of <double>)"));
     }
 }

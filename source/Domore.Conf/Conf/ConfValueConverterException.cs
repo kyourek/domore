@@ -7,7 +7,9 @@ namespace Domore.Conf;
 /// </summary>
 public sealed class ConfValueConverterException : ConfException {
     private static string GetMessage(ConfValueConverter converter, string value, ConfValueConverterState state, Exception innerException) {
-        return $"Invalid value: {value} ({innerException?.Message})";
+        var expectedType = state?.Property?.PropertyType;
+        var expectedTypeName = expectedType?.Name?.ToLowerInvariant();
+        return $"Invalid value: {value} (Expected one of <{expectedTypeName}>)";
     }
 
     private ConfValueConverterException(ConfValueConverter converter, string value, ConfValueConverterState state, string message, Exception innerException) : base(message, innerException) {
