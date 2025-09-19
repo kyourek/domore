@@ -8,11 +8,14 @@ namespace Domore.Conf;
 /// A converter of serialized values in conf.
 /// </summary>
 public class ConfValueConverter {
+    private static readonly ConfValueConverter DefaultBooleanConverter = new ConfBooleanAttribute().ConverterInstance;
     private static readonly ConfValueConverter DefaultListItemsConverter = new ConfListItemsAttribute().ConverterInstance;
     private static readonly ConfValueConverter DefaultEnumFlagsConverter = new ConfEnumFlagsAttribute().ConverterInstance;
 
     internal static object Default(string value, ConfValueConverterState state) {
-        if (null == state) throw new ArgumentNullException(nameof(state));
+        if (state is null) {
+            throw new ArgumentNullException(nameof(state));
+        }
         var converter = state.TypeConverter;
         try {
             return converter.ConvertFromString(value);
@@ -21,6 +24,9 @@ public class ConfValueConverter {
             var type = state.Property.PropertyType;
             if (type == typeof(Type)) {
                 return Type.GetType(value, throwOnError: true, ignoreCase: true);
+            }
+            if (type == typeof(bool)) {
+                return DefaultBooleanConverter.Convert(value, state);
             }
             if (type.IsEnum || (Nullable.GetUnderlyingType(type)?.IsEnum == true)) {
                 return DefaultEnumFlagsConverter.Convert(value, state);
@@ -47,6 +53,9 @@ public class ConfValueConverter {
         try {
             return Default(value, state);
         }
+        catch (ConfValueConverterException) {
+            throw;
+        }
         catch (Exception ex) {
             throw new ConfValueConverterException(this, value, state, ex);
         }
@@ -58,6 +67,9 @@ public class ConfValueConverter {
         public sealed override object Convert(string value, ConfValueConverterState state) {
             try {
                 return Convert(@internal: true, value, state);
+            }
+            catch (ConfValueConverterException) {
+                throw;
             }
             catch (Exception ex) {
                 throw new ConfValueConverterException(this, value, state, ex);

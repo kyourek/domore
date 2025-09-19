@@ -1,9 +1,7 @@
-﻿using System;
-
-namespace Domore.Conf.Cli {
-    public sealed class CliConversionException : Exception {
+﻿namespace Domore.Conf.Cli {
+    public sealed class CliConversionException : CliException {
         private static string GetMessage(ConfValueConverterException innerException) {
-            return "";
+            return innerException?.Message ?? "Invalid value";
         }
 
         public CliConversionException(ConfValueConverterException innerException) : base(GetMessage(innerException), innerException) {

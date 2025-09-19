@@ -817,4 +817,46 @@ ex. longmanualderived foo 1
             ".Trim();
         Assert.That(actual, Is.EqualTo(expected));
     }
+
+    class TargetWithBoolParam {
+        public bool MyBool { get; set; }
+    }
+
+    [Test]
+    public void Configure_ThrowsConversionExceptionOnInvalidBoolean() {
+        Assert.That(
+            () => Subject.Configure(new TargetWithBoolParam(), "MyBool=foo"),
+            Throws
+                .InstanceOf<CliConversionException>()
+                .With
+                .Property("Message")
+                .EqualTo("Invalid value: foo (Expected one of true | false | yes | no | 1 | 0)"));
+    }
+
+    [TestCase("true", true)]
+    [TestCase("false", false)]
+    [TestCase("yes", true)]
+    [TestCase("no", false)]
+    [TestCase("1", true)]
+    [TestCase("0", false)]
+    public void Configure_ConvertsBoolean(string value, bool expected) {
+        var obj = new TargetWithBoolParam();
+        Subject.Configure(obj, "mybool=" + value);
+        Assert.That(obj.MyBool, Is.EqualTo(expected));
+    }
+
+    class TargetWithDouble { 
+        public double MyDouble { get; set; }
+    }
+
+    [Test]
+    public void Configure_ThrowsConversionExceptionOnInvalidDouble() {
+        Assert.That(
+            () => Subject.Configure(new TargetWithDouble(), "MyDouble=foo"),
+            Throws
+                .InstanceOf<CliConversionException>()
+                .With
+                .Property("Message")
+                .EqualTo("Invalid value: foo (foo is not a valid value for Double.)"));
+    }
 }

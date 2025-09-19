@@ -4,6 +4,7 @@ namespace Domore.Conf.Converters;
 /// <summary>
 /// Converts conf content to enum flags.
 /// </summary>
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 public sealed class ConfEnumFlagsAttribute : ConfConverterAttribute {
     internal sealed override ConfValueConverter ConverterInstance => _ConverterInstance ??=
         new ValueConverter { Separators = Separators };

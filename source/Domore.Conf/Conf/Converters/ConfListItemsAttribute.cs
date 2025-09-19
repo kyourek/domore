@@ -9,6 +9,7 @@ namespace Domore.Conf.Converters;
 /// <summary>
 /// Conversion of conf text to an instance of a list.
 /// </summary>
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 public sealed class ConfListItemsAttribute : ConfConverterAttribute {
     internal sealed override ConfValueConverter ConverterInstance => _ConverterInstance ??=
         new ValueConverter {
