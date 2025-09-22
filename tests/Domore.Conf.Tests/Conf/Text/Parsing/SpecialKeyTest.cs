@@ -119,12 +119,32 @@ namespace Domore.Conf.Text.Parsing {
                 '''
             }")]
         public void SpecialKeysCanBeNested(string conf) {
-            var obj = 
+            var obj =
                 Conf.Contain(conf)
                     .Configure(new MoreComplexObj(), "complex");
             using (Assert.EnterMultipleScope()) {
                 Assert.That(obj.OtherObj.StringProp, Is.EqualTo("dcba"));
                 Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(2.345));
+            }
+        }
+
+        [TestCase(@"
+            @conf.key[complex] = {
+                @conf.key[other obj] = '''
+                    stringprop = dcba
+                    double prop = 2.345
+                '''
+            }
+            complex.other obj.string prop = overridden
+            complex.otherobj.doubleprop = 1000
+        ")]
+        public void SpecialKeysCanBeOverridden(string conf) {
+            var obj =
+                Conf.Contain(conf)
+                    .Configure(new MoreComplexObj(), "complex");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("overridden"));
+                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1000));
             }
         }
     }
