@@ -105,6 +105,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{DF9D6E2F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Builds.SemanticVersioning.Tests", "tests\Domore.Builds.SemanticVersioning.Tests\Domore.Builds.SemanticVersioning.Tests.csproj", "{2BF0F3FB-7A37-DC1F-315C-488E65609866}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{1BE433C3-21AD-422D-93FF-EFC3F8EC5790}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{F0A3FA8F-FC4E-40DB-8278-CA6349098E38}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\workflow.yml = .github\workflows\workflow.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -233,6 +240,8 @@ Global
 		{410262EA-D313-44B3-B8C3-661EF9AE5A7B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{2BF0F3FB-7A37-DC1F-315C-488E65609866} = {DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3}
+		{1BE433C3-21AD-422D-93FF-EFC3F8EC5790} = {269A45D1-2734-419C-8EAE-01B99861D568}
+		{F0A3FA8F-FC4E-40DB-8278-CA6349098E38} = {1BE433C3-21AD-422D-93FF-EFC3F8EC5790}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}
