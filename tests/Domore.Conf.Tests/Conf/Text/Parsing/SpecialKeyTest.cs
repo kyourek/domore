@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.IO;
 using System.Linq;
 
 namespace Domore.Conf.Text.Parsing {
@@ -206,6 +207,77 @@ namespace Domore.Conf.Text.Parsing {
                 .Contain(conf)
                 .Configure(new MoreComplexObj(), "the-obj");
             Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Hello, World!"));
+        }
+
+        [TestCase(@"
+            other obj . string prop = Goodbye, Earth.
+            OtherObj.DoubleProp=65.87", "the-obj")]
+        [TestCase(@"
+            string prop = Goodbye, Earth.
+            DoubleProp=65.87", "the-obj.otherObj")]
+        public void SpecialKeyValueCanBeAFilePath(string conf, string key) {
+            var tmp = Path.GetTempFileName();
+            try {
+                File.WriteAllText(tmp, conf);
+                var obj = Conf
+                    .Contain($"@conf.key[{key}] = {tmp}")
+                    .Configure(new MoreComplexObj(), "the-obj");
+                using (Assert.EnterMultipleScope()) {
+                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
+                }
+            }
+            finally {
+                File.Delete(tmp);
+            }
+        }
+
+        [TestCase(@"
+            @conf.key[the-obj] = {
+            other obj . string prop = Goodbye, Earth.
+            OtherObj.DoubleProp=65.87
+            }")]
+        public void IncludedFileCanUseSpecialKeys(string conf) {
+            var tmp = Path.GetTempFileName();
+            try {
+                File.WriteAllText(tmp, conf);
+                var obj = Conf
+                    .Contain($"@conf . Include =  {tmp} ")
+                    .Configure(new MoreComplexObj(), "the-obj");
+                using (Assert.EnterMultipleScope()) {
+                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
+                }
+            }
+            finally {
+                File.Delete(tmp);
+            }
+        }
+
+        [Test]
+        public void SpecialKeyCanUseInclude() {
+            var tmp = Path.GetTempFileName();
+            try {
+                File.WriteAllText(tmp, @"
+                    other obj . string prop = Goodbye, Earth.
+                    OtherObj.DoubleProp=65.87                    
+                ");
+                var conf = @"
+                    @conf.key[the-obj] = '''
+                        @conf.include = " + tmp + @"
+                    '''
+                ";
+                var obj = Conf
+                    .Contain(conf)
+                    .Configure(new MoreComplexObj(), "the-obj");
+                using (Assert.EnterMultipleScope()) {
+                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
+                }
+            }
+            finally {
+                File.Delete(tmp);
+            }
         }
     }
 }
