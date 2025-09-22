@@ -4,7 +4,7 @@ internal abstract class MultiLineValueBuilder : ValueBuilder {
     protected MultiLineValueBuilder(KeyBuilder key) : base(key) {
     }
 
-    protected void Cleanup() {
+    protected Token Complete() {
         if (String.Length > 0) {
             if (Sep == '\n') {
                 if (String[String.Length - 1] == '\r') {
@@ -21,6 +21,12 @@ internal abstract class MultiLineValueBuilder : ValueBuilder {
             if (whitespace) {
                 String.Clear();
             }
+        }
+        if (String.Length > 0) {
+            return new Complete(Key, this);
+        }
+        else {
+            return new KeyBuilder(Sep);
         }
     }
 }

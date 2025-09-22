@@ -15,24 +15,41 @@ internal sealed class TextContentProvider : ConfContentProviderBase {
 
     private List<IConfPair> ConfigInclude(List<IConfPair> existing, List<object> sources, ConfContentProviderContext context) {
         if (null == existing) throw new ArgumentNullException(nameof(existing));
-        var configKey = context?.Special?.Trim() ?? "";
-        if (configKey == "") {
+        var specialKey = context?.Special?.Trim() ?? "";
+        if (specialKey == "") {
             return existing;
         }
         for (var i = 0; i < existing.Count; i++) {
             var existingPair = existing[i];
             var existingPairKey = existingPair.Key;
-            if (existingPairKey.StartsWith(configKey)) {
-                var config = new TextContentConfig().ConfFrom(existingPair.Content, key: configKey);
-                var includes = config.Include;
-                if (includes.Count > 0) {
+            if (existingPairKey.StartsWith(specialKey)) {
+                var special = new TextContentSpecial().ConfFrom(existingPair.Content, key: specialKey);
+                var includes = special.Include;
+                if (includes?.Count > 0) {
                     var j = 1;
                     foreach (var include in includes) {
-                        var includeProvider = FileOrText;
-                        var includeContent = includeProvider.GetConfContent(include, sources, context);
-                        var includePairs = includeContent.Pairs.ToList();
-                        existing.InsertRange(i + j, includePairs);
-                        j += includePairs.Count;
+                        if (!string.IsNullOrWhiteSpace(include)) {
+                            var includeProvider = FileOrText;
+                            var includeContent = includeProvider.GetConfContent(include, sources, context);
+                            var includePairs = includeContent.Pairs.ToList();
+                            existing.InsertRange(i + j, includePairs);
+                            j += includePairs.Count;
+                        }
+                    }
+                }
+                var prefixed = special.Key;
+                if (prefixed?.Count > 0) {
+                    var j = 1;
+                    foreach (var prefix in prefixed) {
+                        if (!string.IsNullOrWhiteSpace(prefix.Value)) {
+                            var prefixProvider = FileOrText;
+                            var prefixContent = prefixProvider.GetConfContent(prefix.Value, sources, context);
+                            var prefixPairs = prefixContent.Pairs.ToList();
+                            existing.InsertRange(i + j, prefixPairs.Select(pair => new ConfPair(
+                                key: ConfKey.Build($"{prefix.Key}.{pair.Key}"),
+                                value: pair.Value)));
+                            j += prefixPairs.Count;
+                        }
                     }
                 }
             }

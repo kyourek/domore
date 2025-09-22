@@ -30,6 +30,7 @@ internal sealed class SingleLineValueBuilder : ValueBuilder {
                     }
                 }
                 goto default;
+            case '\'':
             case '"':
                 if (String.Length == 0) {
                     var quotes = 1;
@@ -37,13 +38,13 @@ internal sealed class SingleLineValueBuilder : ValueBuilder {
                         if (quotes > 3) {
                             break;
                         }
-                        if (s[j] == '"') {
+                        if (s[j] == c) {
                             quotes++;
                         }
                         if (s[j] == Sep) {
                             if (quotes == 3) {
                                 i = j;
-                                return new MultilineInTripleQuotesBuilder(Key);
+                                return new MultilineInTripleQuotesBuilder(Key, quoteChar: c);
                             }
                             break;
                         }
