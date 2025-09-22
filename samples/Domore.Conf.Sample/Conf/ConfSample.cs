@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Domore.Conf;
 
-sealed class ConfSample {
+class ConfSample {
     static void Main() {
         /*
          * The static `Configure` method populates an object
