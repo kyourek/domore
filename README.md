@@ -12,7 +12,8 @@ The following sample uses an application `.conf` file that looks like this:
 # necessary, because any line that does not parse to a known
 # configuration setting will be ignored.
 
-Title = Do More Conf
+Title   = Do More Conf
+outline = ************
 
 This alien will welcome our visitor
 alien.Greeting      = Hello
@@ -45,10 +46,9 @@ class ConfSample {
          * a property name to be considered.
          */
         var movie = Conf.Configure(new Movie(), key: "");
-        var title = movie.Title;
-        Console.WriteLine(new string([.. Enumerable.Range(0, title.Length).Select(_ => '-')]));
-        Console.WriteLine($"{title}");
-        Console.WriteLine(new string([.. Enumerable.Range(0, title.Length).Select(_ => '-')]));
+        Console.WriteLine(movie.Outline);
+        Console.WriteLine(movie.Title);
+        Console.WriteLine(movie.Outline);
         Console.WriteLine();
 
         /*
@@ -97,6 +97,7 @@ class ConfSample {
 
     class Movie {
         public string Title { get; set; }
+        public string Outline { get; set; }
     }
 
     class Alien {
@@ -118,6 +119,7 @@ class ConfSample {
         public Dictionary<string, string> Characters { get; set; }
     }
 }
+
 ```
 
 # Domore.Logs

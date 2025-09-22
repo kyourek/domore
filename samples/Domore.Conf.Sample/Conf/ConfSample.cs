@@ -15,10 +15,9 @@ class ConfSample {
          * a property name to be considered.
          */
         var movie = Conf.Configure(new Movie(), key: "");
-        var title = movie.Title;
-        Console.WriteLine(new string([.. Enumerable.Range(0, title.Length).Select(_ => '-')]));
-        Console.WriteLine($"{title}");
-        Console.WriteLine(new string([.. Enumerable.Range(0, title.Length).Select(_ => '-')]));
+        Console.WriteLine(movie.Outline);
+        Console.WriteLine(movie.Title);
+        Console.WriteLine(movie.Outline);
         Console.WriteLine();
 
         /*
@@ -67,6 +66,7 @@ class ConfSample {
 
     class Movie {
         public string Title { get; set; }
+        public string Outline { get; set; }
     }
 
     class Alien {
