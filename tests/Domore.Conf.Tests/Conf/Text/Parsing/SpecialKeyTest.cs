@@ -40,6 +40,31 @@ namespace Domore.Conf.Text.Parsing {
         }
 
         [TestCase(@"
+            @conf.key[the-obj.] = '''
+                string prop = abcd
+                double prop = 1234
+            '''")]
+        [TestCase(@"
+            @conf.key[.the-obj] = '''
+                string prop = abcd
+                double prop = 1234
+            '''")]
+        [TestCase(@"
+            @conf.key[the-obj] = '''
+                .string prop = abcd
+                .double prop = 1234
+            '''")]
+        public void ExtraDotsAreNotAllowed(string conf) {
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new ObjWithProps(), "the-obj");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.StringProp, Is.Default);
+                Assert.That(obj.DoubleProp, Is.Default);
+            }
+        }
+
+        [TestCase(@"
             theobj.stringprop = efgh            
             @conf.key[the-obj] = '''
                 string prop = abcd
@@ -146,6 +171,41 @@ namespace Domore.Conf.Text.Parsing {
                 Assert.That(obj.OtherObj.StringProp, Is.EqualTo("overridden"));
                 Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1000));
             }
+        }
+
+        class SimilarObj {
+            public string StringProp { get; set; }
+            public double DoubleProp { get; set; }
+        }
+
+        [TestCase(@"
+            string prop = my string
+            double prop = 987.654
+            @conf.key[the-obj] = '''
+                string prop = abcd
+                double prop = 1234
+            '''
+        ")]
+        public void SpecialKeysDoNotAffectSimilarObjects(string conf) {
+            var obj =
+                Conf.Contain(conf)
+                    .Configure(new SimilarObj(), "");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.StringProp, Is.EqualTo("my string"));
+                Assert.That(obj.DoubleProp, Is.EqualTo(987.654));
+            }
+        }
+
+        [TestCase(@"
+            @conf.key[the-obj] = otherobj.string prop = Hello, World!")]
+        [TestCase(@"
+            @conf.key[the-obj.other obj] = string prop = Hello, World!
+        ")]
+        public void SpecialKeyCanBeOnASingleLine(string conf) {
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new MoreComplexObj(), "the-obj");
+            Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Hello, World!"));
         }
     }
 }
