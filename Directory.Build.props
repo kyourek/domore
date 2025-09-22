@@ -6,7 +6,7 @@
     <RootNamespace>Domore</RootNamespace>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <LangVersion>preview</LangVersion>
-    <VersionPrefix>10.0</VersionPrefix>
+    <VersionPrefix>10.1</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

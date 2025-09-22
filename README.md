@@ -2,77 +2,126 @@ Do more in .NET
 
 # Domore.Conf
 
-Configure POCO objects with simple, forgiving strings from configuration files or anywhere in a program.
+> Configure POCO objects with simple, forgiving strings from configuration files or anywhere in a program.
 
 The following sample uses an application `.conf` file that looks like this:
 ```
-    # This is the application's .conf file. Settings in these
-    # files are largely case- and whitespace-insensitive. Hash
-    # signs may precede comments, but they aren't strictly
-    # necessary, as any line that does not parse to a known
-    # configuration setting will be ignored.
-    
-    This alien will welcome our visitor
-    alien.Greeting      = Hello
-    Alien.Home planet   = Jupiter
-    
-    Our visitor is on a tour through the solar system.
-    Visitor.homeplanet                              = Earth
-    visitor.tour destinations[0]                    = Mercury
-    visitor.tour destinations[1]                    = Venus
-    visitor.tour destinations[2]                    = Mars
-    visitor.ship models and makes[Tie Fighter]      = Imperial
-    visitor.ship models and makes[Star Destroyer]   = Imperial
-    visitor.ship models and makes[X-wing]           = Rebel
+# This is the application's .conf file. Settings in these
+# files are largely case- and whitespace-insensitive. Hash
+# signs may precede comments, but they aren't strictly
+# necessary, because any line that does not parse to a known
+# configuration setting will be ignored.
+
+Title   = Do More Conf
+outline = ************
+
+This alien will welcome our visitor
+alien.Greeting      = Hello
+Alien.Home planet   = Jupiter
+
+Our visitor is on a tour through the solar system.
+Visitor.homeplanet                              = Earth
+visitor.tour destinations[0]                    = Mercury
+visitor.tour destinations[1]                    = Venus
+visitor.tour destinations[2]                    = Mars
+visitor.ship models and makes[Tie Fighter]      = Imperial
+visitor.ship models and makes[Star Destroyer]   = Imperial
+visitor.ship models and makes[X-wing]           = Rebel
+
+# The directive @conf.key prefixes the content with the
+# specified key, allowing shorthand syntax for long keys.
+@conf.key[credits] = {
+    cast.characters[Luke Skywalker] = Mark Hamill
+    cast.characters[Chewbacca     ] = Himself
+}
 ```
 ```csharp
-    internal class Sample {
-        private static void Main() {
-            /*
-             * Here, an instance of `Alien` is configured from
-             * the application's `.conf` file. Since no key is
-             * provided, the name of the type (Alien) is used
-             * as the key.
-             */
-            var alien = Conf.Configure(new Alien());
-    
-            /*
-             * The same thing is done for an instance of `Visitor`.
-             */
-            var visitor = Conf.Configure(new Visitor());
-    
-            /*
-             * After configuration, properties of each instance
-             * will match the values specified in the application's
-             * `.conf` file.
-             */
-            Console.WriteLine($"A: {alien.Greeting}, {visitor.HomePlanet}!");
-            Console.WriteLine($"A: Welcome to {alien.HomePlanet}.");
-            Console.WriteLine($"V: Thanks! I also toured {string.Join(", ", visitor.TourDestinations)}");
-            Console.WriteLine($"V: on a {string.Join(", ", visitor.ShipModelsAndMakes.Select(pair => $"{pair.Value} {pair.Key}"))}");
-            Console.WriteLine();
-    
-            /*
-             * Each source that was used during configuration
-             * is displayed here.
-             */
-            Console.WriteLine(nameof(Conf.Sources));
-            Console.WriteLine("-------");
-            Console.WriteLine(string.Join(Environment.NewLine, Conf.Sources));
+class ConfSample {
+    static void Main() {
+        /*
+         * The static `Configure` method populates an object
+         * with values from the application's '.conf' file.
+         * 
+         * An empty `key` parameter causes all keys matching
+         * a property name to be considered.
+         */
+        var movie = Conf.Configure(new Movie(), key: "");
+        Console.WriteLine(movie.Outline);
+        Console.WriteLine(movie.Title);
+        Console.WriteLine(movie.Outline);
+        Console.WriteLine();
+
+        /*
+         * Here, an instance of `Alien` is configured from
+         * the application's '.conf' file. Since no key is
+         * provided, the name of the type (Alien) is used
+         * as the key.
+         */
+        var alien = Conf.Configure(new Alien());
+
+        /*
+         * The same thing is done for an instance of `Visitor`.
+         */
+        var visitor = Conf.Configure(new Visitor());
+
+        /*
+         * After configuration, properties of each instance
+         * will match the values specified in the application's
+         * '.conf' file.
+         */
+        Console.WriteLine($"A: {alien.Greeting}, {visitor.HomePlanet}!");
+        Console.WriteLine($"A: Welcome to {alien.HomePlanet}.");
+        Console.WriteLine($"V: Thanks! I also toured {string.Join(", ", visitor.TourDestinations)}");
+        Console.WriteLine($"V: on a {string.Join(", ", visitor.ShipModelsAndMakes.Select(pair => $"{pair.Value} {pair.Key}"))}");
+        Console.WriteLine();
+
+        /*
+         * The show's over. Roll the credits.
+         */
+        var credits = Conf.Configure(new Credits());
+        Console.WriteLine("Credits");
+        Console.WriteLine("-------");
+        foreach (var character in credits.Cast.Characters) {
+            Console.WriteLine($"{character.Key,-24}{character.Value}");
         }
-    
-        private class Alien {
-            public string Greeting { get; set; }
-            public string HomePlanet { get; set; }
-        }
-    
-        private class Visitor {
-            public string HomePlanet { get; set; }
-            public IList<string> TourDestinations { get; set; } = new List<string>();
-            public IDictionary<string, string> ShipModelsAndMakes { get; set; } = new Dictionary<string, string>();
-        }
+        Console.WriteLine();
+
+        /*
+         * Each source that was used during configuration
+         * is displayed here.
+         */
+        Debug.WriteLine(nameof(Conf.Sources));
+        Debug.WriteLine("-------");
+        Debug.WriteLine(string.Join(Environment.NewLine, Conf.Sources));
     }
+
+    class Movie {
+        public string Title { get; set; }
+        public string Outline { get; set; }
+    }
+
+    class Alien {
+        public string Greeting { get; set; }
+        public string HomePlanet { get; set; }
+    }
+
+    class Visitor {
+        public string HomePlanet { get; set; }
+        public IList<string> TourDestinations { get; set; } = new List<string>();
+        public IDictionary<string, string> ShipModelsAndMakes { get; set; } = new Dictionary<string, string>();
+    }
+
+    class Credits {
+        public Cast Cast { get; set; }
+    }
+
+    class Cast {
+        public Dictionary<string, string> Characters { get; set; }
+    }
+}
+
 ```
+
 # Domore.Logs
 
 A lightweight, simple, and very opinionated logging library.

@@ -13,8 +13,7 @@ internal sealed class MultilineInBracesBuilder : MultiLineValueBuilder {
         var lastChar = i == s.Length - 1;
         var lastCharIsClosingTag = lastChar && c == '}';
         if (lastCharIsClosingTag) {
-            Cleanup();
-            return new Complete(Key, this);
+            return Complete();
         }
         if (c == Sep) {
             var tags = 0;
@@ -34,13 +33,7 @@ internal sealed class MultilineInBracesBuilder : MultiLineValueBuilder {
                 }
             }
             if (whitespace && tags == 1) {
-                Cleanup();
-                if (String.Length > 0) {
-                    return new Complete(Key, this);
-                }
-                else {
-                    return new KeyBuilder(Sep);
-                }
+                return Complete();
             }
             String.Append(Line);
             Line.Clear();

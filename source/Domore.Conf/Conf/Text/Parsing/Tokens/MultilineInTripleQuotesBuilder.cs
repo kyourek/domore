@@ -5,12 +5,16 @@ namespace Domore.Conf.Text.Parsing.Tokens;
 internal sealed class MultilineInTripleQuotesBuilder : MultiLineValueBuilder {
     private readonly StringBuilder Line = new();
 
-    public MultilineInTripleQuotesBuilder(KeyBuilder key) : base(key) {
+    public char QuoteChar { get; }
+
+    public MultilineInTripleQuotesBuilder(KeyBuilder key, char quoteChar) : base(key) {
+        QuoteChar = quoteChar;
     }
 
     public sealed override Token Build(string s, ref int i) {
+        var q = QuoteChar;
         var c = s[i];
-        if (c == '"') {
+        if (c == q) {
             var mightBeTripleQuote = true;
             for (var j = 0; j < Line.Length; j++) {
                 if (char.IsWhiteSpace(Line[j]) == false) {
@@ -19,29 +23,17 @@ internal sealed class MultilineInTripleQuotesBuilder : MultiLineValueBuilder {
                 }
             }
             if (mightBeTripleQuote) {
-                if (Peek(s, i + 1, includeWhiteSpace: true) == '"') {
-                    if (Peek(s, i + 2, includeWhiteSpace: true) == '"') {
+                if (Peek(s, i + 1, includeWhiteSpace: true) == q) {
+                    if (Peek(s, i + 2, includeWhiteSpace: true) == q) {
                         if (s.Length == i + 3) {
                             i = i + 3;
-                            Cleanup();
-                            if (String.Length > 0) {
-                                return new Complete(Key, this);
-                            }
-                            else {
-                                return new KeyBuilder(Sep);
-                            }
+                            return Complete();
                         }
                         for (var j = i + 3; j < s.Length; j++) {
                             var k = s[j];
                             if (k == Sep) {
                                 i = j;
-                                Cleanup();
-                                if (String.Length > 0) {
-                                    return new Complete(Key, this);
-                                }
-                                else {
-                                    return new KeyBuilder(Sep);
-                                }
+                                return Complete();
                             }
                             if (char.IsWhiteSpace(k) == false) {
                                 break;
