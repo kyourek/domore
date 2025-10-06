@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -277,6 +278,87 @@ namespace Domore.Conf.Text.Parsing {
             }
             finally {
                 File.Delete(tmp);
+            }
+        }
+
+        class SpecialKeyCanHaveBrackets_Target {
+            public Dictionary<string, Foo> Dict { get; } = [];
+
+            public class Foo {
+                public string Bar { get; set; }
+            }
+        }
+
+        [Test]
+        public void SpecialKeyCanHaveBrackets() {
+            var conf = @"
+                @conf.key[target.dict[abcd]] = {
+                    Bar = efgh
+                }
+            ";
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new SpecialKeyCanHaveBrackets_Target(), "target");
+            Assert.That(obj.Dict["abcd"].Bar, Is.EqualTo("efgh"));
+        }
+
+        class SpecialKeyCanHaveMultipleSetsOfBrackets_Target {
+            public Dictionary<string, Foo> Foos { get; set; }
+
+            public class Foo {
+                public Dictionary<string, Bar> Bars { get; } = [];
+            }
+
+            public class Bar {
+                public Dictionary<int, Baz> Bazs { get; } = [];
+            }
+
+            public class Baz {
+                public double Qux { get; set; }
+                public string WhatsNext { get; set; }
+            }
+        }
+
+        [Test]
+        public void SpecialKeyCanHaveMultipleSetsOfBrackets() {
+            var conf = @"
+                @conf.key[target.Foos[abcd].bars[Ef[gH]].Bazs[34]] = {
+                    qux = 1.234
+                }
+            ";
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+            Assert.That(obj.Foos["abcd"].Bars["Ef[gH]"].Bazs[34].Qux, Is.EqualTo(1.234));
+        }
+
+        [Test]
+        public void SpecialKeyCanHaveACommaInsideBrackets() {
+            var conf = @"
+                @conf.key[target.Foos[abcd].bars[Ef[g,H]].Bazs[77]] = {
+                    qux = 123.4
+                }
+            ";
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+            Assert.That(obj.Foos["abcd"].Bars["Ef[g,H]"].Bazs[77].Qux, Is.EqualTo(123.4));
+        }
+
+        [Test]
+        public void SpecialKeyRespectsSpaceRulesInBrackets() {
+            var conf = @"
+                @conf.key[target.Foos[ abcd" + '\t' + @"].bars[" + '\t' + @"Ef [  g , H  ]  ].Bazs[77]] = {
+                    qux = 123.4
+                    whats next = This
+                }
+            ";
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].Qux, Is.EqualTo(123.4));
+                Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].WhatsNext, Is.EqualTo("This"));
             }
         }
     }

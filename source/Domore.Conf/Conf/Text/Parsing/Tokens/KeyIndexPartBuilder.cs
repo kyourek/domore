@@ -4,13 +4,14 @@ using System.Text;
 namespace Domore.Conf.Text.Parsing.Tokens;
 
 internal sealed class KeyIndexPartBuilder : TokenBuilder, IConfKeyIndexPart {
-    private StringBuilder WhiteSpace { get; } = new StringBuilder();
+    private int OpenBracket;
+    private StringBuilder WhiteSpace { get; } = new();
 
     protected sealed override string Create() {
         return String.ToString();
     }
 
-    public StringBuilder String { get; } = new StringBuilder();
+    public StringBuilder String { get; } = new();
     public KeyIndexBuilder KeyIndex { get; }
 
     public KeyIndexPartBuilder(KeyIndexBuilder keyIndex) : base((keyIndex ?? throw new ArgumentNullException(nameof(keyIndex))).Sep) {
@@ -20,12 +21,24 @@ internal sealed class KeyIndexPartBuilder : TokenBuilder, IConfKeyIndexPart {
 
     public sealed override Token Build(string s, ref int i) {
         var c = s[i];
-        if (c == Sep) return new KeyBuilder(Sep);
+        if (c == Sep) {
+            return new KeyBuilder(Sep);
+        }
         switch (c) {
+            case '[':
+                OpenBracket++;
+                goto default;
             case ']':
-                return KeyIndex.KeyPart;
+                if (OpenBracket == 0) {
+                    return KeyIndex.KeyPart;
+                }
+                OpenBracket--;
+                goto default;
             case ',':
-                return new KeyIndexPartBuilder(KeyIndex);
+                if (OpenBracket == 0) {
+                    return new KeyIndexPartBuilder(KeyIndex);
+                }
+                goto default;
             default:
                 if (char.IsWhiteSpace(c)) {
                     if (String.Length > 0) {
