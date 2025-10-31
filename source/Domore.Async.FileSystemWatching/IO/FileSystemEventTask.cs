@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public abstract class FileSystemEventTask : IDisposable {
     protected virtual void Dispose(bool disposing) {
     }

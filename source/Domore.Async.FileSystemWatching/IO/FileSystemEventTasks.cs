@@ -1,14 +1,13 @@
-﻿using Domore.Logs;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public sealed class FileSystemEventTasks {
-    private static readonly ILog Log = Logging.For(typeof(FileSystemEventTasks));
     private static readonly Dictionary<string, FileSystemEventTasks> Set = [];
 
     private readonly List<Item> List = [];
@@ -44,23 +43,16 @@ public sealed class FileSystemEventTasks {
                 }
             }
             catch (OperationCanceledException) when (item.Canceled) {
-                if (Log.Debug()) {
-                    Log.Debug("Canceled");
-                }
             }
             catch (Exception ex) {
-                if (Log.Error()) {
-                    Log.Error(ex);
-                }
+                // TODO: Something
             }
         });
         try {
             await Task.WhenAll(tasks);
         }
         catch (Exception ex) {
-            if (Log.Error()) {
-                Log.Error(ex);
-            }
+            // TODO: Something
         }
         finally {
             try {
@@ -91,7 +83,9 @@ public sealed class FileSystemEventTasks {
     }
 
     public static FileSystemEventTask Add(string path, Func<FileSystemEventArgs, CancellationToken, Task> task, CancellationToken token) {
-        ArgumentNullException.ThrowIfNull(task);
+        if (task is null) {
+            throw new ArgumentNullException(nameof(task));
+        }
         var inst = default(FileSystemEventTasks);
         var item = Item.Create(task, token);
         lock (Set) {

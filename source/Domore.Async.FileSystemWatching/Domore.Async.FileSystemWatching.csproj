@@ -1,10 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-    </PropertyGroup>
-    <ItemGroup>
-      <PackageReference Include="Domore.Logs" Version="10.1.1" />
-    </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\Domore.Win32\Domore.Win32.csproj" />
-    </ItemGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462;net6.0;net8.0</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.9" />
+    <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
+  </ItemGroup>
 </Project>

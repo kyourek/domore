@@ -1,4 +1,3 @@
-using Domore.Logs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,10 +6,9 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace Domore.IO; 
-internal sealed class FileSystemEventChannel {
-    private static readonly ILog Log = Logging.For(typeof(FileSystemEventChannel));
+namespace Domore.IO;
 
+internal sealed class FileSystemEventChannel {
     public string Path { get; set; }
     public string Filter { get; set; }
     public bool? IncludeSubdirectories { get; set; }
@@ -24,23 +22,12 @@ internal sealed class FileSystemEventChannel {
         var reader = channel.Reader;
         var writer = channel.Writer;
         void disposedHandler(object sender, EventArgs e) {
-            if (Log.Debug()) {
-                Log.Debug(nameof(FileSystemWatcher) + "[" + nameof(FileSystemWatcher.Disposed) + "][" + path + "]");
-            }
             writer.TryComplete();
         }
         void errorHandler(object sender, ErrorEventArgs e) {
-            if (Log.Debug()) {
-                Log.Debug(
-                    nameof(FileSystemWatcher) + "[" + nameof(FileSystemWatcher.Error) + "][" + path + "]",
-                    e?.GetException());
-            }
             writer.TryComplete(e?.GetException());
         }
         async void eventHandler(object sender, FileSystemEventArgs e) {
-            if (Log.Debug()) {
-                Log.Debug(nameof(FileSystemWatcher) + "[" + e?.ChangeType + "][" + e?.FullPath + "][" + path + "]");
-            }
             try {
                 await writer.WriteAsync(e, cancellationToken).ConfigureAwait(false);
             }

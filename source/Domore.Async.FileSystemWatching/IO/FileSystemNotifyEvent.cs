@@ -1,6 +1,7 @@
 ﻿using System.IO;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public delegate void FileSystemNotifyEventHandler(object sender, FileSystemNotifyEventArgs e);
 
 public sealed class FileSystemNotifyEventArgs {

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 internal static class FileSystemNotify {
     public const NotifyFilters All =
         NotifyFilters.Attributes |

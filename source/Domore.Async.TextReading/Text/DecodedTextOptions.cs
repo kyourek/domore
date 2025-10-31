@@ -19,7 +19,9 @@ public class DecodedTextOptions {
     }
 
     private BufferPool<T> Pool<T>(BufferOptions options) {
-        ArgumentNullException.ThrowIfNull(options);
+        if (options is null) {
+            throw new ArgumentNullException(nameof(options));
+        }
         var pool = options.CreatePool<T>();
         lock (Pools) {
             Pools.Add(pool);

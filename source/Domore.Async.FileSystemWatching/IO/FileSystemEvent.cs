@@ -1,29 +1,29 @@
-﻿using Domore.Logs;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using PATH = System.IO.Path;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public sealed class FileSystemEvent {
-    private static readonly ILog Log = Logging.For(typeof(FileSystemEvent));
     private static readonly Dictionary<string, string> Keys = [];
     private static readonly Dictionary<string, FileSystemEventPath> Cache = [];
-    private static readonly FileSystemPath FileSystemPath = new();
     private static readonly char[] FileSystemTrimChars = [PATH.DirectorySeparatorChar, PATH.AltDirectorySeparatorChar];
 
     private static string Key(string path) {
-        ArgumentNullException.ThrowIfNull(path);
+        if (path is null) {
+            throw new ArgumentNullException(nameof(path));
+        }
+        static string get(string path) {
+            path = FileSystemPath.IsCaseSensitive(path) ? path : path.ToUpper();
+            path = path.TrimEnd(FileSystemTrimChars);
+            return path;
+        }
         lock (Keys) {
             if (Keys.TryGetValue(path, out var key) == false) {
-                Keys[path] = key =
-                    (FileSystemPath.IsCaseSensitive(path) ? path : path.ToUpper())
-                    .TrimEnd(FileSystemTrimChars);
-                if (Log.Info()) {
-                    Log.Info($"{nameof(Key)}[{key}]");
-                }
+                Keys[path] = key = get(path);
             }
             return key;
         }
@@ -36,9 +36,6 @@ public sealed class FileSystemEvent {
                 Cache[key] = item = new FileSystemEventPath(path) {
                     SynchronizationContext = SynchronizationContext
                 };
-                if (Log.Info()) {
-                    Log.Info($"{nameof(Add)}[{path}]");
-                }
             }
             item.Add(handler);
         }
@@ -57,9 +54,6 @@ public sealed class FileSystemEvent {
                                 if (item.Remove()) {
                                     if (item.RemoveState == state) {
                                         item.Removed();
-                                        if (Log.Info()) {
-                                            Log.Info($"{nameof(Remove)}[{path}]");
-                                        }
                                         Cache.Remove(key);
                                     }
                                 }

@@ -1,19 +1,15 @@
-using Domore.Logs;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public sealed class FileSystemNotifier {
-    private static readonly ILog Log = Logging.For(typeof(FileSystemNotifier));
     private readonly object Locker = new();
     private readonly FileSystemEventChannel Channel;
 
     private async Task<Exception> RunOnce(CancellationToken cancellationToken) {
-        if (Log.Info()) {
-            Log.Info($"{nameof(RunOnce)}[{Path}]");
-        }
         var error = default(Exception);
         try {
             await foreach (var change in Channel.Read(cancellationToken).ConfigureAwait(false)) {
@@ -30,9 +26,6 @@ public sealed class FileSystemNotifier {
                     invoke(null);
                 }
                 if (e.Break) {
-                    if (Log.Info()) {
-                        Log.Info($"{nameof(e.Break)}[{e.Break}][{Path}]");
-                    }
                     break;
                 }
             }
@@ -46,9 +39,6 @@ public sealed class FileSystemNotifier {
         if (error != null) {
             var directoryExists = await Task.Run(() => Directory.Exists(Path), cancellationToken).ConfigureAwait(false);
             if (directoryExists == false) {
-                if (Log.Info()) {
-                    Log.Info($"{nameof(Directory.Exists)}[{directoryExists}][{Path}]");
-                }
                 error = null;
             }
         }
@@ -92,14 +82,9 @@ public sealed class FileSystemNotifier {
                     return null;
                 }
                 if (error is OperationCanceledException && cancellationToken.IsCancellationRequested) {
-                    if (Log.Info()) {
-                        Log.Info($"{nameof(OperationCanceledException)}[{Path}]");
-                    }
                     return null;
                 }
-                if (Log.Warn()) {
-                    Log.Warn($"{nameof(Path)}[{Path}]", error);
-                }
+                // TODO: Something
             }
         }
         finally {
@@ -122,14 +107,9 @@ public sealed class FileSystemNotifier {
         var run = TryRun(cancellationToken, out var running);
         if (run) {
             running.ContinueWith(task => {
-                if (Log.Info()) {
-                    Log.Info($"{nameof(task.IsCompleted)}[{Path}]");
-                }
-                var error = task.IsCompletedSuccessfully ? task.Result : task.Exception;
+                var error = task.Status == TaskStatus.RanToCompletion ? task.Result : task.Exception;
                 if (error != null) {
-                    if (Log.Error()) {
-                        Log.Error($"{nameof(Path)}[{Path}]", error);
-                    }
+                    // TODO: Something
                 }
             });
         }

@@ -1,7 +1,8 @@
 ﻿using System.IO;
 using System.Threading;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 internal sealed class FileSystemEventPath {
     private FileSystemNotifier Notifier =>
         _Notifier ?? (
