@@ -112,6 +112,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\workflow.yml = .github\workflows\workflow.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Async.TextReading", "source\Domore.Async.TextReading\Domore.Async.TextReading.csproj", "{699739C1-268E-BEA0-769D-53AE3DE14739}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Async.TextReading.Tests", "tests\Domore.Async.TextReading.Tests\Domore.Async.TextReading.Tests.csproj", "{BE4797AA-86E8-2381-8256-422D82A310D2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -202,6 +206,14 @@ Global
 		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2BF0F3FB-7A37-DC1F-315C-488E65609866}.Release|Any CPU.Build.0 = Release|Any CPU
+		{699739C1-268E-BEA0-769D-53AE3DE14739}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{699739C1-268E-BEA0-769D-53AE3DE14739}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{699739C1-268E-BEA0-769D-53AE3DE14739}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{699739C1-268E-BEA0-769D-53AE3DE14739}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE4797AA-86E8-2381-8256-422D82A310D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE4797AA-86E8-2381-8256-422D82A310D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE4797AA-86E8-2381-8256-422D82A310D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE4797AA-86E8-2381-8256-422D82A310D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,6 +254,8 @@ Global
 		{2BF0F3FB-7A37-DC1F-315C-488E65609866} = {DF9D6E2F-DE3E-4E8D-A004-D7B2C386C5C3}
 		{1BE433C3-21AD-422D-93FF-EFC3F8EC5790} = {269A45D1-2734-419C-8EAE-01B99861D568}
 		{F0A3FA8F-FC4E-40DB-8278-CA6349098E38} = {1BE433C3-21AD-422D-93FF-EFC3F8EC5790}
+		{699739C1-268E-BEA0-769D-53AE3DE14739} = {003E5404-5686-414F-A16F-2700D765EC53}
+		{BE4797AA-86E8-2381-8256-422D82A310D2} = {0BFAEF73-354A-4068-909F-B7DEBC196619}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}

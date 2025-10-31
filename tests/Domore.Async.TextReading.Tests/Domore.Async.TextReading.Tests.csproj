@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\success_unicode_1" />
+    <EmbeddedResource Include="Resources\success_unicode_2" />
+    <EmbeddedResource Include="Resources\success_unicode_3" />
+    <EmbeddedResource Include="Resources\success_unicode_4" />
+    <EmbeddedResource Include="Resources\success_unicode_5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\source\Domore.Async.TextReading\Domore.Async.TextReading.csproj" />
+  </ItemGroup>
+</Project>
