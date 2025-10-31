@@ -118,6 +118,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Async.TextReading.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Async.FileSystemWatching", "source\Domore.Async.FileSystemWatching\Domore.Async.FileSystemWatching.csproj", "{A56100AD-9294-2447-8842-D26A69DE4E2C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domore.Async.FileSystemWatching.Tests", "tests\Domore.Async.FileSystemWatching.Tests\Domore.Async.FileSystemWatching.Tests.csproj", "{C3310919-88C1-4020-B7D1-D0CA87ADC882}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -220,6 +222,10 @@ Global
 		{A56100AD-9294-2447-8842-D26A69DE4E2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A56100AD-9294-2447-8842-D26A69DE4E2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A56100AD-9294-2447-8842-D26A69DE4E2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3310919-88C1-4020-B7D1-D0CA87ADC882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3310919-88C1-4020-B7D1-D0CA87ADC882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3310919-88C1-4020-B7D1-D0CA87ADC882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3310919-88C1-4020-B7D1-D0CA87ADC882}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -263,6 +269,7 @@ Global
 		{699739C1-268E-BEA0-769D-53AE3DE14739} = {003E5404-5686-414F-A16F-2700D765EC53}
 		{BE4797AA-86E8-2381-8256-422D82A310D2} = {0BFAEF73-354A-4068-909F-B7DEBC196619}
 		{A56100AD-9294-2447-8842-D26A69DE4E2C} = {003E5404-5686-414F-A16F-2700D765EC53}
+		{C3310919-88C1-4020-B7D1-D0CA87ADC882} = {0BFAEF73-354A-4068-909F-B7DEBC196619}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7E967ECE-F2A1-4414-B4D6-563487A9AF82}

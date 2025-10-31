@@ -2,9 +2,9 @@
 
 namespace Domore.IO;
 
-public delegate void FileSystemNotifyEventHandler(object sender, FileSystemNotifyEventArgs e);
+internal delegate void FileSystemNotifyEventHandler(object sender, FileSystemNotifyEventArgs e);
 
-public sealed class FileSystemNotifyEventArgs {
+internal sealed class FileSystemNotifyEventArgs {
     public bool Break { get; set; }
 
     public RenamedEventArgs RenamedEvent { get; }

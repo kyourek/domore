@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Domore.IO;
 
-public sealed class FileSystemNotifier {
+internal sealed class FileSystemNotifier {
     private readonly object Locker = new();
     private readonly FileSystemEventChannel Channel;
 
