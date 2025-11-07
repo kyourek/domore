@@ -3,6 +3,8 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Domore.IO;
 
@@ -10,7 +12,7 @@ internal static class FileSystemPath {
 #if !NETFRAMEWORK
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    public static bool IsCaseSensitiveWin32(string path) {
+    private static bool IsCaseSensitiveWin32(string path) {
         const uint FILE_CS_FLAG_CASE_SENSITIVE_DIR = 0x00000001;
         var hFile = kernel32.CreateFileW(
             filename: path,
@@ -48,14 +50,19 @@ internal static class FileSystemPath {
         }
     }
 
-    public static bool IsCaseSensitive(string path) {
-#if !NETFRAMEWORK
-        if (OperatingSystem.IsWindows()) {
-            return IsCaseSensitiveWin32(path);
-        }
-        return true; // TODO: Not always the case.
+    public static Task<bool> IsCaseSensitive(string path, CancellationToken token) {
+        return Task.Run(cancellationToken: token, function: () => {
+            var isWindows =
+#if NETFRAMEWORK
+                true
 #else
-        return IsCaseSensitiveWin32(path);
+                OperatingSystem.IsWindows()
 #endif
+            ;
+            var isCaseSensitive = isWindows
+                ? IsCaseSensitiveWin32(path)
+                : true /* TODO: Not always the case. */;
+            return isCaseSensitive;
+        });
     }
 }
