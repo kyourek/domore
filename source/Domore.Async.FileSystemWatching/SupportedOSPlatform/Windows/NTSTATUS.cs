@@ -2914,7 +2914,6 @@ internal enum NTSTATUS : uint {
 
     /// <summary>
     /// The logon request failed because the trust relationship between this workstation and the primary domain failed.
-
     /// </summary>
     STATUS_TRUSTED_RELATIONSHIP_FAILURE = 0xC000018D,
 
@@ -4880,7 +4879,6 @@ internal enum NTSTATUS : uint {
 
     /// <summary>
     /// No receive buffer has been supplied in a synchronous request.
-
     /// </summary>
     STATUS_LPC_RECEIVE_BUFFER_EXPECTED = 0xC0000705,
 
@@ -6964,7 +6962,6 @@ internal enum NTSTATUS : uint {
 
     /// <summary>
     /// The operation requires an archive context.
-
     /// </summary>
     STATUS_LOG_ARCHIVE_NOT_IN_PROGRESS = 0xC01A0020,
 
@@ -8940,7 +8937,6 @@ internal enum NTSTATUS : uint {
     STATUS_IPSEC_DOSP_RECEIVED_MULTICAST = 0xC0368001,
 
     /// <summary>
-
     /// IPsec Dos Protection received an incorrectly formatted packet.
     /// </summary>
     STATUS_IPSEC_DOSP_INVALID_PACKET = 0xC0368002,

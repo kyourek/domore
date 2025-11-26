@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +12,11 @@ internal sealed class FileSystemEventProviderTest {
 
     [SetUp]
     public void SetUp() {
-        TempPath = Path.Combine(Path.GetTempPath(), "Domore", "Domore.Async.FileSystemWatching.Tests", nameof(FileSystemEventProviderTest));
+        TempPath = Path.Combine(
+            Path.GetTempPath(),
+            "Domore.Async.FileSystemWatching.Tests",
+            nameof(FileSystemEventProviderTest),
+            Guid.NewGuid().ToString());
         Directory.CreateDirectory(TempPath);
     }
 
@@ -29,8 +34,8 @@ internal sealed class FileSystemEventProviderTest {
     }
 
     [Test]
-    public void Foo() {
-        var path = Path.Combine(TempPath, nameof(Foo));
+    public void Events_ChangeType_IsChanged() {
+        var path = Path.Combine(TempPath, nameof(Events_ChangeType_IsChanged));
         File.WriteAllText(path, "foo");
         var ready = false;
         var actual = default(WatcherChangeTypes);

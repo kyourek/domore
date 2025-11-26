@@ -58,7 +58,6 @@ public sealed class FileSystemEventManager {
                     }
                     lock (item.Agent) {
                         if (item.Post.SubscriptionCount == 0) {
-                            item.Post.Dispose();
                             item.Agent.Clear(item.Key);
                         }
                     }
@@ -67,23 +66,23 @@ public sealed class FileSystemEventManager {
         }
     }
 
-    private readonly struct PostInfo(Agent agent, FileSystemEventPost post, FileSystemEventsKey key) {
+    private readonly struct PostInfo(Agent agent, FileSystemEventsPost post, FileSystemEventsKey key) {
         public readonly Agent Agent { get; } = agent;
         public readonly FileSystemEventsKey Key { get; } = key;
-        public readonly FileSystemEventPost Post { get; } = post;
+        public readonly FileSystemEventsPost Post { get; } = post;
     }
 
     private sealed class Agent {
-        private readonly Dictionary<FileSystemEventsKey, FileSystemEventPost> Lookup = [];
+        private readonly Dictionary<FileSystemEventsKey, FileSystemEventsPost> Lookup = [];
 
-        private FileSystemEventPost Create(FileSystemEventsKey key) {
+        private FileSystemEventsPost Create(FileSystemEventsKey key) {
             if (key is null) {
                 throw new ArgumentNullException(nameof(key));
             }
             return new(key.Path, key.Options);
         }
 
-        public FileSystemEventPost Get(FileSystemEventsKey key) {
+        public FileSystemEventsPost Get(FileSystemEventsKey key) {
             lock (Lookup) {
                 if (Lookup.TryGetValue(key, out var post) == false) {
                     Lookup[key] = post = Create(key);
@@ -92,9 +91,12 @@ public sealed class FileSystemEventManager {
             }
         }
 
-        public bool Clear(FileSystemEventsKey key) {
+        public void Clear(FileSystemEventsKey key) {
             lock (Lookup) {
-                return Lookup.Remove(key);
+                if (Lookup.TryGetValue(key, out var post)) {
+                    Lookup.Remove(key);
+                    post.Dispose();
+                }
             }
         }
     }

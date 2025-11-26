@@ -13,6 +13,6 @@ namespace Domore.IO {
         /// <param name="e">The file-system event argument.</param>
         /// <param name="token">The cancellation token for the task.</param>
         /// <returns>A task that completes when the file-system event has been handled.</returns>
-        public abstract Task Receive(FileSystemEventArgs e, CancellationToken token);
+        protected internal abstract Task Receive(FileSystemEventArgs e, CancellationToken token);
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Domore.IO;
 
-internal sealed class FileSystemEventPost : IDisposable {
+internal sealed class FileSystemEventsPost : IDisposable {
     private readonly object Locker = new();
 
     private bool Started;
@@ -14,16 +14,32 @@ internal sealed class FileSystemEventPost : IDisposable {
     private CancellationTokenSource TokenSource;
     private IReadOnlyList<FileSystemEventSubscription> Subscriptions = [];
 
-    private async void Start() {
+    private async Task Start(CancellationToken token) {
         var provider = new FileSystemEventProvider(Path, Options);
+        var events = provider.Events(
+            token: token,
+            ready: async _ => {
+                lock (Locker) {
+                    if (Disposed) {
+                        return;
+                    }
+                    Operational = true;
+                }
+                await Task.CompletedTask;
+            });
+        await foreach (var e in events) {
+            var tasks = Subscriptions.Select(s => s.Receive(e, token));
+            await Task.WhenAll(tasks);
+        }
+    }
+
+    private async void Start() {
         using (var tokenSource = TokenSource = new CancellationTokenSource()) {
             var token = tokenSource.Token;
-            var events = provider.Events(
-                token: token,
-                ready: async _ => Operational = await Task.FromResult(true));
-            await foreach (var e in events) {
-                var tasks = Subscriptions.Select(s => s.Receive(e, token));
-                await Task.WhenAll(tasks);
+            try {
+                await Start(token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) {
             }
         }
     }
@@ -50,7 +66,7 @@ internal sealed class FileSystemEventPost : IDisposable {
     public string Path { get; }
     public FileSystemEventOptions Options { get; }
 
-    public FileSystemEventPost(string path, FileSystemEventOptions options = null) {
+    public FileSystemEventsPost(string path, FileSystemEventOptions options = null) {
         Path = path;
         Options = options;
     }
@@ -62,7 +78,7 @@ internal sealed class FileSystemEventPost : IDisposable {
         if (Started == false) {
             lock (Locker) {
                 if (Disposed) {
-                    throw new ObjectDisposedException(nameof(FileSystemEventPost));
+                    throw new ObjectDisposedException(nameof(FileSystemEventsPost));
                 }
                 if (Started == false) {
                     Start();
@@ -84,7 +100,7 @@ internal sealed class FileSystemEventPost : IDisposable {
         GC.SuppressFinalize(this);
     }
 
-    ~FileSystemEventPost() {
+    ~FileSystemEventsPost() {
         Dispose(false);
     }
 }
