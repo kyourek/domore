@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net462;net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net462;net6.0;net8.0;net10.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.9" />
-    <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.0" />
   </ItemGroup>
 </Project>
