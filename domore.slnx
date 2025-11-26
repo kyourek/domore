@@ -1,28 +1,4 @@
 <Solution>
-  <Folder Name="/-/">
-    <File Path=".editorconfig" />
-    <File Path=".gitignore" />
-    <File Path="Directory.Build.props" />
-    <File Path="global.json" />
-    <File Path="LICENSE" />
-    <File Path="README.md" />
-  </Folder>
-  <Folder Name="/-/.github/" />
-  <Folder Name="/-/.github/workflows/">
-    <File Path=".github/workflows/workflow.yml" />
-  </Folder>
-  <Folder Name="/-/samples/">
-    <File Path="samples/Directory.Build.props" />
-  </Folder>
-  <Folder Name="/-/shared/">
-    <File Path="shared/Directory.Build.props" />
-  </Folder>
-  <Folder Name="/-/source/">
-    <File Path="source/Directory.Build.props" />
-  </Folder>
-  <Folder Name="/-/tests/">
-    <File Path="tests/Directory.Build.props" />
-  </Folder>
   <Folder Name="/async/">
     <Project Path="source/Domore.Async.FileSystemWatching/Domore.Async.FileSystemWatching.csproj" />
     <Project Path="source/Domore.Async.TaskCaching/Domore.Async.TaskCaching.csproj" />
@@ -76,5 +52,29 @@
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Domore.Sharing/Domore.Sharing.shproj" />
+  </Folder>
+  <Folder Name="/_/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/_/.github/" />
+  <Folder Name="/_/.github/workflows/">
+    <File Path=".github/workflows/workflow.yml" />
+  </Folder>
+  <Folder Name="/_/samples/">
+    <File Path="samples/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/shared/">
+    <File Path="shared/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/source/">
+    <File Path="source/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/tests/">
+    <File Path="tests/Directory.Build.props" />
   </Folder>
 </Solution>
