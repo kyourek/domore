@@ -3,7 +3,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 
-namespace Domore.Threading; 
+namespace Domore.Threading;
+
 internal sealed class BackgroundQueue : IDisposable {
     private Thread Thread;
     private readonly object ThreadLocker = new();

@@ -2,21 +2,20 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
-    <TargetFrameworks>net462;net47;net471;net472;net48;net481;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net462;net47;net471;net472;net48;net481;net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
     <ArtifactsPath>..\..\out\tests</ArtifactsPath>
     <IsPackable>false</IsPackable>
-    <SuppressTfmSupportBuildErrors>true</SuppressTfmSupportBuildErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.4.0" />
-    <PackageReference Include="NUnit.Analyzers" Version="4.10.0">
+    <PackageReference Include="NUnit.Analyzers" Version="4.11.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="NUnit3TestAdapter" Version="5.1.0">
+    <PackageReference Include="NUnit3TestAdapter" Version="5.2.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
   </ItemGroup>
 </Project>

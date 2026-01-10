@@ -1,0 +1,80 @@
+<Solution>
+  <Folder Name="/async/">
+    <Project Path="source/Domore.Async.FileSystemWatching/Domore.Async.FileSystemWatching.csproj" />
+    <Project Path="source/Domore.Async.TaskCaching/Domore.Async.TaskCaching.csproj" />
+    <Project Path="source/Domore.Async.TextReading/Domore.Async.TextReading.csproj" />
+  </Folder>
+  <Folder Name="/async/tests/">
+    <Project Path="tests/Domore.Async.FileSystemWatching.Tests/Domore.Async.FileSystemWatching.Tests.csproj" />
+    <Project Path="tests/Domore.Async.TaskCaching.Tests/Domore.Async.TaskCaching.Tests.csproj" />
+    <Project Path="tests/Domore.Async.TextReading.Tests/Domore.Async.TextReading.Tests.csproj" />
+  </Folder>
+  <Folder Name="/builds/">
+    <Project Path="source/Domore.Builds.SemanticVersioning/Domore.Builds.SemanticVersioning.csproj" />
+  </Folder>
+  <Folder Name="/builds/tests/">
+    <Project Path="tests/Domore.Builds.SemanticVersioning.Tests/Domore.Builds.SemanticVersioning.Tests.csproj" />
+  </Folder>
+  <Folder Name="/conf/">
+    <Project Path="source/Domore.Conf.Cli/Domore.Conf.Cli.csproj" />
+    <Project Path="source/Domore.Conf.ConfigurationManager/Domore.Conf.ConfigurationManager.csproj" />
+    <Project Path="source/Domore.Conf/Domore.Conf.csproj" />
+  </Folder>
+  <Folder Name="/conf/samples/">
+    <Project Path="samples/Domore.Conf.Sample.ConfigurationManager/Domore.Conf.Sample.ConfigurationManager.csproj" />
+    <Project Path="samples/Domore.Conf.Sample/Domore.Conf.Sample.csproj" />
+    <Project Path="samples/Domore.Conf.Tests.Helper/Domore.Conf.Tests.Helper.csproj" />
+  </Folder>
+  <Folder Name="/conf/tests/">
+    <Project Path="tests/Domore.Conf.Cli.Tests/Domore.Conf.Cli.Tests.csproj" />
+    <Project Path="tests/Domore.Conf.ConfigurationManager.Tests/Domore.Conf.ConfigurationManager.Tests.csproj" />
+    <Project Path="tests/Domore.Conf.Tests/Domore.Conf.Tests.csproj" />
+  </Folder>
+  <Folder Name="/indexing/">
+    <Project Path="source/Domore.Indexing/Domore.Indexing.csproj" />
+  </Folder>
+  <Folder Name="/indexing/tests/">
+    <Project Path="tests/Domore.Indexing.Tests/Domore.Indexing.Tests.csproj" />
+  </Folder>
+  <Folder Name="/logs/">
+    <Project Path="samples/Domore.Logs.Sample/Domore.Logs.Sample.csproj" />
+    <Project Path="source/Domore.Logs.Conf/Domore.Logs.Conf.csproj" />
+    <Project Path="source/Domore.Logs/Domore.Logs.csproj" />
+  </Folder>
+  <Folder Name="/logs/test/">
+    <Project Path="tests/Domore.Logs.Tests/Domore.Logs.Tests.csproj" />
+  </Folder>
+  <Folder Name="/notification/">
+    <Project Path="source/Domore.Notification/Domore.Notification.csproj" />
+  </Folder>
+  <Folder Name="/notification/test/">
+    <Project Path="tests/Domore.Notification.Tests/Domore.Notification.Tests.csproj" />
+  </Folder>
+  <Folder Name="/shared/">
+    <Project Path="shared/Domore.Sharing/Domore.Sharing.shproj" />
+  </Folder>
+  <Folder Name="/_/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/_/.github/" />
+  <Folder Name="/_/.github/workflows/">
+    <File Path=".github/workflows/workflow.yml" />
+  </Folder>
+  <Folder Name="/_/samples/">
+    <File Path="samples/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/shared/">
+    <File Path="shared/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/source/">
+    <File Path="source/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/_/tests/">
+    <File Path="tests/Directory.Build.props" />
+  </Folder>
+</Solution>
