@@ -45,7 +45,9 @@ public sealed class FileSystemEventProvider {
     /// directory for file system events.
     /// </summary>
     /// <param name="path">The path of the directory to monitor.</param>
-    /// <param name="options">Optional configuration settings for monitoring file system events. If null, default options are used.</param>
+    /// <param name="options">
+    /// Optional configuration settings for monitoring file system events. If null, default options are used.
+    /// </param>
     public FileSystemEventProvider(string path, FileSystemEventOptions options = null) {
         Path = path;
         Options = options;
@@ -71,7 +73,8 @@ public sealed class FileSystemEventProvider {
     /// Thrown if the <see cref="FileSystemWatcher"/> fails to initialize due to invalid configuration or other errors
     /// during setup.
     /// </exception>
-    public async IAsyncEnumerable<FileSystemEventArgs> Events(Func<CancellationToken, Task> ready = null, [EnumeratorCancellation] CancellationToken token = default) {
+    public async IAsyncEnumerable<FileSystemEventArgs> 
+    Events(Func<CancellationToken, Task> ready = null, [EnumeratorCancellation] CancellationToken token = default) {
         var path = Path;
         var channelOptions = new UnboundedChannelOptions { SingleReader = true, SingleWriter = false };
         var channel = Channel.CreateUnbounded<FileSystemEventArgs>(channelOptions);
@@ -117,7 +120,9 @@ public sealed class FileSystemEventProvider {
                 catch (Exception e2) {
                     innerException = new AggregateException(e1, e2);
                 }
-                throw new FileSystemWatcherInitializationException(nameof(FileSystemWatcherInitializationException), innerException);
+                throw new FileSystemWatcherInitializationException(
+                    nameof(FileSystemWatcherInitializationException), 
+                    innerException);
             }
         }
         using (var watcher = await Task.Run(createWatcher, token)) {

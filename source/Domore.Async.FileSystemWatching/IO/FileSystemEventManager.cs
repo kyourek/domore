@@ -31,7 +31,10 @@ public sealed class FileSystemEventManager {
     /// <param name="options">The options for watching the path.</param>
     /// <param name="token">The cancellation token for the task.</param>
     /// <returns>A task that completes when the event subscription has been added.</returns>
-    public async Task Add(FileSystemEventSubscription subscription, string path, FileSystemEventOptions options, CancellationToken token) {
+    public async Task Add(FileSystemEventSubscription subscription,
+                          string path,
+                          FileSystemEventOptions options,
+                          CancellationToken token) {
         var item = await Get(path, options, token).ConfigureAwait(false);
         lock (item.Agent) {
             item.Post.Add(subscription);
@@ -46,7 +49,10 @@ public sealed class FileSystemEventManager {
     /// <param name="options">The options for watching the path.</param>
     /// <param name="token">The cancellation token for the task.</param>
     /// <returns>A task that completes when the event subscription has been removed.</returns>
-    public async Task Remove(FileSystemEventSubscription subscription, string path, FileSystemEventOptions options, CancellationToken token) {
+    public async Task Remove(FileSystemEventSubscription subscription,
+                             string path,
+                             FileSystemEventOptions options,
+                             CancellationToken token) {
         var item = await Get(path, options, token).ConfigureAwait(false);
         lock (item.Agent) {
             var count = item.Post.Remove(subscription);

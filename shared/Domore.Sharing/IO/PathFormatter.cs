@@ -6,14 +6,17 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Domore.IO; 
-internal sealed class PathFormatter {
-    private static readonly ConcurrentBag<string> FolderKeys = new ConcurrentBag<string>(Enum.GetNames(typeof(Environment.SpecialFolder)));
-    private static readonly HashSet<char> InvalidFileNameChars = new HashSet<char>(Path.GetInvalidFileNameChars());
+namespace Domore.IO;
 
-    private static readonly ConcurrentDictionary<string, Environment.SpecialFolder> FolderLookup = new ConcurrentDictionary<string, Environment.SpecialFolder>(
+internal sealed class PathFormatter {
+    private static readonly ConcurrentBag<string> FolderKeys = [.. Enum.GetNames(typeof(Environment.SpecialFolder))];
+    private static readonly HashSet<char> InvalidFileNameChars = [.. Path.GetInvalidFileNameChars()];
+
+    private static readonly ConcurrentDictionary<string, Environment.SpecialFolder> FolderLookup = new(
         comparer: StringComparer.OrdinalIgnoreCase,
-        collection: FolderKeys.Select(folder => new KeyValuePair<string, Environment.SpecialFolder>(folder, (Environment.SpecialFolder)Enum.Parse(typeof(Environment.SpecialFolder), folder))));
+        collection: FolderKeys.Select(folder => new KeyValuePair<string, Environment.SpecialFolder>(
+            folder,
+            (Environment.SpecialFolder)Enum.Parse(typeof(Environment.SpecialFolder), folder))));
 
     private static readonly ConcurrentDictionary<Environment.SpecialFolder, string> FolderCache = new();
 
@@ -36,7 +39,8 @@ internal sealed class PathFormatter {
             return "";
         }
         if (parts[0][parts[0].Length - 1] == Path.VolumeSeparatorChar) {
-            if (path.StartsWith($"{parts[0]}{Path.DirectorySeparatorChar}") || path.StartsWith($"{parts[0]}{Path.AltDirectorySeparatorChar}")) {
+            if (path.StartsWith($"{parts[0]}{Path.DirectorySeparatorChar}") ||
+                path.StartsWith($"{parts[0]}{Path.AltDirectorySeparatorChar}")) {
                 parts[0] = parts[0] + Path.DirectorySeparatorChar;
             }
         }
@@ -84,10 +88,13 @@ internal sealed class PathFormatter {
                         var pathSubIndex = i + 1;
                         if (path.Length > pathSubIndex) {
                             var sub = path.Substring(pathSubIndex);
-                            if (sub.Length == 1 && (sub[0] == Path.DirectorySeparatorChar || sub[0] == Path.AltDirectorySeparatorChar)) {
+                            if (sub.Length == 1 && (sub[0] == Path.DirectorySeparatorChar ||
+                                                    sub[0] == Path.AltDirectorySeparatorChar)) {
                                 return specialPath + sub;
                             }
-                            return Path.Combine(specialPath, sub.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                            return Path.Combine(
+                                specialPath,
+                                sub.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                         }
                         return specialPath;
                     }

@@ -13,5 +13,6 @@ namespace Domore.IO;
 /// </remarks>
 /// <param name="message">The exception message.</param>
 /// <param name="innerException">The inner exception that caused this exception.</param>
-public sealed class FileSystemWatcherInitializationException(string message, Exception innerException) : Exception(message, innerException) {
+public sealed class FileSystemWatcherInitializationException(string message, Exception innerException) 
+    : Exception(message, innerException) {
 }
