@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 
-namespace Domore.Conf.Text.Parsing {
+namespace Domore.Conf.Text.Parsing; 
     [TestFixture]
     internal sealed class MultilineValueInBracesTest {
         class ObjWithString {
