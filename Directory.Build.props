@@ -18,5 +18,6 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <SuppressTfmSupportBuildErrors>true</SuppressTfmSupportBuildErrors>
   </PropertyGroup>
 </Project>
