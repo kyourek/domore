@@ -81,7 +81,7 @@ public sealed class FileSystemEventManager {
     private sealed class Agent {
         private readonly Dictionary<FileSystemEventsKey, FileSystemEventsPost> Lookup = [];
 
-        private FileSystemEventsPost Create(FileSystemEventsKey key) {
+        private static FileSystemEventsPost Create(FileSystemEventsKey key) {
             if (key is null) {
                 throw new ArgumentNullException(nameof(key));
             }
