@@ -3,70 +3,71 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Domore.Conf.Text.Parsing {
-    [TestFixture]
-    internal sealed class SpecialKeyTest {
-        class ObjWithProps {
-            public string StringProp { get; set; }
-            public double DoubleProp { get; set; }
-        }
+namespace Domore.Conf.Text.Parsing;
 
-        [TestCase(@"
+[TestFixture]
+internal sealed class SpecialKeyTest {
+    class ObjWithProps {
+        public string StringProp { get; set; }
+        public double DoubleProp { get; set; }
+    }
+
+    [TestCase(@"
             @conf.key[the-obj] = '''
                 string prop = abcd
                 double prop = 1234
             '''
         ")]
-        [TestCase(@"
+    [TestCase(@"
             something.else = 9876
             @conf.key[the-obj] = '''
                 string prop = abcd
                 double prop = 1234
             '''
         ")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj] = '''
                 string prop = abcd
                 something.else = 9876
                 double prop = 1234
             '''
         ")]
-        public void SpecialKeyConfiguresObject(string conf) {
-            var obj = new ObjWithProps();
-            Conf.Contain(conf)
-                .Configure(obj, "the-obj");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.StringProp, Is.EqualTo("abcd"));
-                Assert.That(obj.DoubleProp, Is.EqualTo(1234));
-            }
+    public void SpecialKeyConfiguresObject(string conf) {
+        var obj = new ObjWithProps();
+        Conf.Contain(conf)
+            .Configure(obj, "the-obj");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.StringProp, Is.EqualTo("abcd"));
+            Assert.That(obj.DoubleProp, Is.EqualTo(1234));
         }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj.] = '''
                 string prop = abcd
                 double prop = 1234
             '''")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[.the-obj] = '''
                 string prop = abcd
                 double prop = 1234
             '''")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj] = '''
                 .string prop = abcd
                 .double prop = 1234
             '''")]
-        public void ExtraDotsAreNotAllowed(string conf) {
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new ObjWithProps(), "the-obj");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.StringProp, Is.Default);
-                Assert.That(obj.DoubleProp, Is.Default);
-            }
+    public void ExtraDotsAreNotAllowed(string conf) {
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new ObjWithProps(), "the-obj");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.StringProp, Is.Default);
+            Assert.That(obj.DoubleProp, Is.Default);
         }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             theobj.stringprop = efgh            
             @conf.key[the-obj] = '''
                 string prop = abcd
@@ -74,7 +75,7 @@ namespace Domore.Conf.Text.Parsing {
             '''
             theobj.doubleprop = 5678
         ")]
-        [TestCase(@"
+    [TestCase(@"
             theobj.stringprop = efgh            
             @conf.key[the-obj] = '''
                 string prop = abcd
@@ -83,21 +84,21 @@ namespace Domore.Conf.Text.Parsing {
             '''
             theobj.doubleprop = 5678
         ")]
-        public void SpecialKeyDoesNotAffectOtherObjects(string conf) {
-            var obj = new ObjWithProps();
-            Conf.Contain(conf)
-                .Configure(obj, "theobj");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.StringProp, Is.EqualTo("efgh"));
-                Assert.That(obj.DoubleProp, Is.EqualTo(5678));
-            }
+    public void SpecialKeyDoesNotAffectOtherObjects(string conf) {
+        var obj = new ObjWithProps();
+        Conf.Contain(conf)
+            .Configure(obj, "theobj");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.StringProp, Is.EqualTo("efgh"));
+            Assert.That(obj.DoubleProp, Is.EqualTo(5678));
         }
+    }
 
-        class MoreComplexObj {
-            public ObjWithProps OtherObj { get; set; }
-        }
+    class MoreComplexObj {
+        public ObjWithProps OtherObj { get; set; }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[MoreComplexObj] = {
                 other obj . string prop = '''
                     the
@@ -107,7 +108,7 @@ namespace Domore.Conf.Text.Parsing {
                 otherobj.doubleprop = 1.234
             }
         ")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[MoreComplexObj] = {
                 other obj . string prop = '''
                     the
@@ -120,24 +121,24 @@ namespace Domore.Conf.Text.Parsing {
                 otherobj.doubleprop = 1.234
             }
         ")]
-        public void SpecialKeyConfiguresNestedObjects(string conf) {
-            var obj = new MoreComplexObj();
-            Conf.Contain(conf)
-                .Configure(obj);
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.OtherObj.StringProp.Split('\n').Select(s => s.Trim()), Is.EqualTo(["the", "other", "string"]));
-                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1.234));
-            }
+    public void SpecialKeyConfiguresNestedObjects(string conf) {
+        var obj = new MoreComplexObj();
+        Conf.Contain(conf)
+            .Configure(obj);
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.OtherObj.StringProp.Split('\n').Select(s => s.Trim()), Is.EqualTo(["the", "other", "string"]));
+            Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1.234));
         }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[complex] = {
                 @conf.key[other obj] = '''
                     stringprop = dcba
                     double prop = 2.345
                 '''
             }")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[complex] = {
                 otherobj.stringprop = abcd
                 @conf.key[other obj] = '''
@@ -145,17 +146,17 @@ namespace Domore.Conf.Text.Parsing {
                     double prop = 2.345
                 '''
             }")]
-        public void SpecialKeysCanBeNested(string conf) {
-            var obj =
-                Conf.Contain(conf)
-                    .Configure(new MoreComplexObj(), "complex");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("dcba"));
-                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(2.345));
-            }
+    public void SpecialKeysCanBeNested(string conf) {
+        var obj =
+            Conf.Contain(conf)
+                .Configure(new MoreComplexObj(), "complex");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.OtherObj.StringProp, Is.EqualTo("dcba"));
+            Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(2.345));
         }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[complex] = {
                 @conf.key[other obj] = '''
                     stringprop = dcba
@@ -165,22 +166,22 @@ namespace Domore.Conf.Text.Parsing {
             complex.other obj.string prop = overridden
             complex.otherobj.doubleprop = 1000
         ")]
-        public void SpecialKeysCanBeOverridden(string conf) {
-            var obj =
-                Conf.Contain(conf)
-                    .Configure(new MoreComplexObj(), "complex");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("overridden"));
-                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1000));
-            }
+    public void SpecialKeysCanBeOverridden(string conf) {
+        var obj =
+            Conf.Contain(conf)
+                .Configure(new MoreComplexObj(), "complex");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.OtherObj.StringProp, Is.EqualTo("overridden"));
+            Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(1000));
         }
+    }
 
-        class SimilarObj {
-            public string StringProp { get; set; }
-            public double DoubleProp { get; set; }
-        }
+    class SimilarObj {
+        public string StringProp { get; set; }
+        public double DoubleProp { get; set; }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             string prop = my string
             double prop = 987.654
             @conf.key[the-obj] = '''
@@ -188,178 +189,177 @@ namespace Domore.Conf.Text.Parsing {
                 double prop = 1234
             '''
         ")]
-        public void SpecialKeysDoNotAffectSimilarObjects(string conf) {
-            var obj =
-                Conf.Contain(conf)
-                    .Configure(new SimilarObj(), "");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.StringProp, Is.EqualTo("my string"));
-                Assert.That(obj.DoubleProp, Is.EqualTo(987.654));
-            }
+    public void SpecialKeysDoNotAffectSimilarObjects(string conf) {
+        var obj =
+            Conf.Contain(conf)
+                .Configure(new SimilarObj(), "");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.StringProp, Is.EqualTo("my string"));
+            Assert.That(obj.DoubleProp, Is.EqualTo(987.654));
         }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj] = otherobj.string prop = Hello, World!")]
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj.other obj] = string prop = Hello, World!
         ")]
-        public void SpecialKeyCanBeOnASingleLine(string conf) {
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new MoreComplexObj(), "the-obj");
-            Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Hello, World!"));
-        }
+    public void SpecialKeyCanBeOnASingleLine(string conf) {
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new MoreComplexObj(), "the-obj");
+        Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Hello, World!"));
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             other obj . string prop = Goodbye, Earth.
             OtherObj.DoubleProp=65.87", "the-obj")]
-        [TestCase(@"
+    [TestCase(@"
             string prop = Goodbye, Earth.
             DoubleProp=65.87", "the-obj.otherObj")]
-        public void SpecialKeyValueCanBeAFilePath(string conf, string key) {
-            var tmp = Path.GetTempFileName();
-            try {
-                File.WriteAllText(tmp, conf);
-                var obj = Conf
-                    .Contain($"@conf.key[{key}] = {tmp}")
-                    .Configure(new MoreComplexObj(), "the-obj");
-                using (Assert.EnterMultipleScope()) {
-                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
-                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
-                }
-            }
-            finally {
-                File.Delete(tmp);
+    public void SpecialKeyValueCanBeAFilePath(string conf, string key) {
+        var tmp = Path.GetTempFileName();
+        try {
+            File.WriteAllText(tmp, conf);
+            var obj = Conf
+                .Contain($"@conf.key[{key}] = {tmp}")
+                .Configure(new MoreComplexObj(), "the-obj");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
             }
         }
+        finally {
+            File.Delete(tmp);
+        }
+    }
 
-        [TestCase(@"
+    [TestCase(@"
             @conf.key[the-obj] = {
             other obj . string prop = Goodbye, Earth.
             OtherObj.DoubleProp=65.87
             }")]
-        public void IncludedFileCanUseSpecialKeys(string conf) {
-            var tmp = Path.GetTempFileName();
-            try {
-                File.WriteAllText(tmp, conf);
-                var obj = Conf
-                    .Contain($"@conf . Include =  {tmp} ")
-                    .Configure(new MoreComplexObj(), "the-obj");
-                using (Assert.EnterMultipleScope()) {
-                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
-                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
-                }
-            }
-            finally {
-                File.Delete(tmp);
+    public void IncludedFileCanUseSpecialKeys(string conf) {
+        var tmp = Path.GetTempFileName();
+        try {
+            File.WriteAllText(tmp, conf);
+            var obj = Conf
+                .Contain($"@conf . Include =  {tmp} ")
+                .Configure(new MoreComplexObj(), "the-obj");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
             }
         }
+        finally {
+            File.Delete(tmp);
+        }
+    }
 
-        [Test]
-        public void SpecialKeyCanUseInclude() {
-            var tmp = Path.GetTempFileName();
-            try {
-                File.WriteAllText(tmp, @"
+    [Test]
+    public void SpecialKeyCanUseInclude() {
+        var tmp = Path.GetTempFileName();
+        try {
+            File.WriteAllText(tmp, @"
                     other obj . string prop = Goodbye, Earth.
                     OtherObj.DoubleProp=65.87                    
                 ");
-                var conf = @"
+            var conf = @"
                     @conf.key[the-obj] = '''
                         @conf.include = " + tmp + @"
                     '''
                 ";
-                var obj = Conf
-                    .Contain(conf)
-                    .Configure(new MoreComplexObj(), "the-obj");
-                using (Assert.EnterMultipleScope()) {
-                    Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
-                    Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
-                }
-            }
-            finally {
-                File.Delete(tmp);
+            var obj = Conf
+                .Contain(conf)
+                .Configure(new MoreComplexObj(), "the-obj");
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(obj.OtherObj.StringProp, Is.EqualTo("Goodbye, Earth."));
+                Assert.That(obj.OtherObj.DoubleProp, Is.EqualTo(65.87));
             }
         }
-
-        class SpecialKeyCanHaveBrackets_Target {
-            public Dictionary<string, Foo> Dict { get; } = [];
-
-            public class Foo {
-                public string Bar { get; set; }
-            }
+        finally {
+            File.Delete(tmp);
         }
+    }
 
-        [Test]
-        public void SpecialKeyCanHaveBrackets() {
-            var conf = @"
+    class SpecialKeyCanHaveBrackets_Target {
+        public Dictionary<string, Foo> Dict { get; } = [];
+
+        public class Foo {
+            public string Bar { get; set; }
+        }
+    }
+
+    [Test]
+    public void SpecialKeyCanHaveBrackets() {
+        var conf = @"
                 @conf.key[target.dict[abcd]] = {
                     Bar = efgh
                 }
             ";
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new SpecialKeyCanHaveBrackets_Target(), "target");
-            Assert.That(obj.Dict["abcd"].Bar, Is.EqualTo("efgh"));
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new SpecialKeyCanHaveBrackets_Target(), "target");
+        Assert.That(obj.Dict["abcd"].Bar, Is.EqualTo("efgh"));
+    }
+
+    class SpecialKeyCanHaveMultipleSetsOfBrackets_Target {
+        public Dictionary<string, Foo> Foos { get; set; }
+
+        public class Foo {
+            public Dictionary<string, Bar> Bars { get; } = [];
         }
 
-        class SpecialKeyCanHaveMultipleSetsOfBrackets_Target {
-            public Dictionary<string, Foo> Foos { get; set; }
-
-            public class Foo {
-                public Dictionary<string, Bar> Bars { get; } = [];
-            }
-
-            public class Bar {
-                public Dictionary<int, Baz> Bazs { get; } = [];
-            }
-
-            public class Baz {
-                public double Qux { get; set; }
-                public string WhatsNext { get; set; }
-            }
+        public class Bar {
+            public Dictionary<int, Baz> Bazs { get; } = [];
         }
 
-        [Test]
-        public void SpecialKeyCanHaveMultipleSetsOfBrackets() {
-            var conf = @"
+        public class Baz {
+            public double Qux { get; set; }
+            public string WhatsNext { get; set; }
+        }
+    }
+
+    [Test]
+    public void SpecialKeyCanHaveMultipleSetsOfBrackets() {
+        var conf = @"
                 @conf.key[target.Foos[abcd].bars[Ef[gH]].Bazs[34]] = {
                     qux = 1.234
                 }
             ";
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
-            Assert.That(obj.Foos["abcd"].Bars["Ef[gH]"].Bazs[34].Qux, Is.EqualTo(1.234));
-        }
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+        Assert.That(obj.Foos["abcd"].Bars["Ef[gH]"].Bazs[34].Qux, Is.EqualTo(1.234));
+    }
 
-        [Test]
-        public void SpecialKeyCanHaveACommaInsideBrackets() {
-            var conf = @"
+    [Test]
+    public void SpecialKeyCanHaveACommaInsideBrackets() {
+        var conf = @"
                 @conf.key[target.Foos[abcd].bars[Ef[g,H]].Bazs[77]] = {
                     qux = 123.4
                 }
             ";
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
-            Assert.That(obj.Foos["abcd"].Bars["Ef[g,H]"].Bazs[77].Qux, Is.EqualTo(123.4));
-        }
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+        Assert.That(obj.Foos["abcd"].Bars["Ef[g,H]"].Bazs[77].Qux, Is.EqualTo(123.4));
+    }
 
-        [Test]
-        public void SpecialKeyRespectsSpaceRulesInBrackets() {
-            var conf = @"
+    [Test]
+    public void SpecialKeyRespectsSpaceRulesInBrackets() {
+        var conf = @"
                 @conf.key[target.Foos[ abcd" + '\t' + @"].bars[" + '\t' + @"Ef [  g , H  ]  ].Bazs[77]] = {
                     qux = 123.4
                     whats next = This
                 }
             ";
-            var obj = Conf
-                .Contain(conf)
-                .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
-            using (Assert.EnterMultipleScope()) {
-                Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].Qux, Is.EqualTo(123.4));
-                Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].WhatsNext, Is.EqualTo("This"));
-            }
+        var obj = Conf
+            .Contain(conf)
+            .Configure(new SpecialKeyCanHaveMultipleSetsOfBrackets_Target(), "Target");
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].Qux, Is.EqualTo(123.4));
+            Assert.That(obj.Foos["abcd"].Bars["Ef [  g , H  ]"].Bazs[77].WhatsNext, Is.EqualTo("This"));
         }
     }
 }
