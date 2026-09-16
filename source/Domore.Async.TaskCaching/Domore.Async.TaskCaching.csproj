@@ -1,13 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more async task caching</Description>
     <PackageTags>async;task;cache</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
-    <PackageReference Include="Microsoft.Bcl.Async" Version="1.0.168" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Bcl.Async" />
   </ItemGroup>
 </Project>

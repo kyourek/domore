@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more logs conf</Description>
     <PackageTags>Log;Logs;Logging;Logger</PackageTags>
@@ -6,8 +6,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
 </Project>
