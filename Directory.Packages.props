@@ -7,14 +7,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.Bcl.Async" Version="1.0.168" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.12" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <PackageVersion Include="NUnit" Version="4.4.0" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.11.2" />
-    <PackageVersion Include="NUnit3TestAdapter" Version="5.2.0" />
-    <PackageVersion Include="System.Threading.Channels" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="NUnit" Version="4.6.1" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.3.0" />
+    <PackageVersion Include="System.Threading.Channels" Version="10.0.12" />
   </ItemGroup>
   <!--
     System.Configuration.ConfigurationManager ships a major version per .NET release,
@@ -26,7 +26,7 @@
     <PackageVersion Condition="'$(TargetFramework)' == 'net7.0'" Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageVersion Condition="'$(TargetFramework)' == 'net8.0'" Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
     <PackageVersion Condition="'$(TargetFramework)' == 'net9.0'" Include="System.Configuration.ConfigurationManager" Version="9.0.0" />
-    <PackageVersion Condition="'$(TargetFramework)' == 'net10.0'" Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
+    <PackageVersion Condition="'$(TargetFramework)' == 'net10.0'" Include="System.Configuration.ConfigurationManager" Version="10.0.12" />
     <PackageVersion Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'netstandard2.1' Or '$(TargetFramework)' == 'netcoreapp2.0' Or '$(TargetFramework)' == 'netcoreapp3.1'" Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
   </ItemGroup>
 </Project>
