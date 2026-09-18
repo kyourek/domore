@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   DOTNET_VERSION: '10.x'
@@ -33,6 +34,13 @@ jobs:
 #    - name: Test
 #      run: dotnet test --no-restore --configuration Release --no-build --verbosity normal
 
+    - name: NuGet login
+      if: github.event_name == 'release'
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
     - name: Pack
       if: github.event_name == 'release'
       run: dotnet pack --no-restore --configuration Release --no-build --output ${{ env.CUSTOM_PACK_OUTPUT }}
@@ -41,5 +49,5 @@ jobs:
       if: github.event_name == 'release'
       run: |
            foreach($file in (Get-ChildItem "${{ env.CUSTOM_PACK_OUTPUT }}" -Recurse -Include *.nupkg)) {
-             dotnet nuget push $file --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+             dotnet nuget push $file --api-key "${{steps.login.outputs.NUGET_API_KEY}}" --source https://api.nuget.org/v3/index.json --skip-duplicate
            }
