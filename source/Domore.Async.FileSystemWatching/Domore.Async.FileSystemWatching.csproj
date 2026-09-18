@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Description>Do more async file-system watching</Description>
+    <PackageTags>FileSystemWatcher</PackageTags>
     <TargetFrameworks>net462;net6.0;net8.0;net10.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

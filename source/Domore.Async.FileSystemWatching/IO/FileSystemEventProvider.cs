@@ -73,7 +73,7 @@ public sealed class FileSystemEventProvider {
     /// Thrown if the <see cref="FileSystemWatcher"/> fails to initialize due to invalid configuration or other errors
     /// during setup.
     /// </exception>
-    public async IAsyncEnumerable<FileSystemEventArgs> 
+    public async IAsyncEnumerable<FileSystemEventArgs>
     Events(Func<CancellationToken, Task> ready = null, [EnumeratorCancellation] CancellationToken token = default) {
         var path = Path;
         var channelOptions = new UnboundedChannelOptions { SingleReader = true, SingleWriter = false };
@@ -86,13 +86,8 @@ public sealed class FileSystemEventProvider {
         void errorHandler(object sender, ErrorEventArgs e) {
             writer.TryComplete(e?.GetException());
         }
-        async void eventHandler(object sender, FileSystemEventArgs e) {
-            try {
-                await writer.WriteAsync(e, token).ConfigureAwait(false);
-            }
-            catch (Exception ex) {
-                writer.TryComplete(ex);
-            }
+        void eventHandler(object sender, FileSystemEventArgs e) {
+            writer.TryWrite(e);
         }
         FileSystemWatcher createWatcher() {
             var watcher = default(FileSystemWatcher);
@@ -121,14 +116,15 @@ public sealed class FileSystemEventProvider {
                     innerException = new AggregateException(e1, e2);
                 }
                 throw new FileSystemWatcherInitializationException(
-                    nameof(FileSystemWatcherInitializationException), 
+                    nameof(FileSystemWatcherInitializationException),
                     innerException);
             }
         }
-        using (var watcher = await Task.Run(createWatcher, token)) {
+        var watcher = await Task.Run(createWatcher, token).ConfigureAwait(false);
+        using (watcher) {
             var readyTask = ready?.Invoke(token);
             if (readyTask is not null) {
-                await readyTask;
+                await readyTask.ConfigureAwait(false);
             }
             for (; ; ) {
                 var reading = await reader.WaitToReadAsync(token).ConfigureAwait(false);

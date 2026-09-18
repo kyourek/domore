@@ -34,6 +34,18 @@ internal sealed class FileSystemEventProviderTest {
     }
 
     [Test]
+    public void Options_AreSetInConstructor() {
+        var expected = new FileSystemEventOptions {
+            FileFilter = "*.txt",
+            IncludeSubdirectories = true,
+            InternalBufferSize = 8192,
+            NotifyFilter = NotifyFilters.LastWrite
+        };
+        var subject = new FileSystemEventProvider(TempPath, expected);
+        Assert.That(subject.Options, Is.SameAs(expected));
+    }
+
+    [Test]
     public void Events_ChangeType_IsChanged() {
         var path = Path.Combine(TempPath, nameof(Events_ChangeType_IsChanged));
         File.WriteAllText(path, "foo");

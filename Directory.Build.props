@@ -2,11 +2,11 @@
 <Project>
   <PropertyGroup>
     <Authors>Ken Yourek</Authors>
-    <Copyright>Copyright © Ken Yourek 2023-2025</Copyright>
+    <Copyright>Copyright © Ken Yourek 2023-2026</Copyright>
     <RootNamespace>Domore</RootNamespace>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <LangVersion>14.0</LangVersion>
-    <VersionPrefix>10.2.1</VersionPrefix>
+    <VersionPrefix>10.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageProjectUrl>https://github.com/kyourek/domore</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>

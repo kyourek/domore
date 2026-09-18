@@ -9,7 +9,7 @@ namespace Domore.IO.FileSystemEventSubscriptions;
 /// Represents a file system event subscription that delegates event handling to a user-provided asynchronous agent.
 /// </summary>
 public sealed class ProxyFileSystemEventSubscription : FileSystemEventSubscription {
-    protected internal sealed override Task Receive(FileSystemEventArgs e, CancellationToken token) {
+    protected sealed override Task Receive(FileSystemEventArgs e, CancellationToken token) {
         if (token.IsCancellationRequested) {
             return Task.FromCanceled(token);
         }
