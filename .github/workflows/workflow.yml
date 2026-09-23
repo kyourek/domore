@@ -2,7 +2,7 @@ name: Workflow
 
 on:
   push:
-    branches: [ master ]
+    branches: [ dev ]
   release:
     types: [ published ]
 
@@ -24,6 +24,36 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Version
+      if: github.event_name == 'release'
+      env:
+        RELEASE_NAME: ${{ github.event.release.name }}
+      run: |
+           $name = $env:RELEASE_NAME
+           if ([string]::IsNullOrWhiteSpace($name)) {
+             throw "The release name is empty."
+           }
+           $prefix, $suffix = $name.Trim() -split '-', 2
+           if ([string]::IsNullOrWhiteSpace($prefix)) {
+             throw "The release name '$name' has no version prefix."
+           }
+           if ($null -eq $suffix) {
+             $suffix = ''
+           }
+           $file = Resolve-Path 'Directory.Build.props'
+           $props = New-Object System.Xml.XmlDocument
+           $props.PreserveWhitespace = $true
+           $props.Load($file)
+           $prefixNode = $props.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
+           $suffixNode = $props.SelectSingleNode('/Project/PropertyGroup/VersionSuffix')
+           if ($null -eq $prefixNode -or $null -eq $suffixNode) {
+             throw "'$file' has no VersionPrefix or VersionSuffix element."
+           }
+           $prefixNode.InnerText = $prefix
+           $suffixNode.InnerText = $suffix
+           $props.Save($file)
+           Write-Host "VersionPrefix=$prefix VersionSuffix=$suffix"
 
     - name: Restore
       run: dotnet restore

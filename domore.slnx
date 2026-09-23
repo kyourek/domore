@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/workflow.yml" />
+  </Folder>
   <Folder Name="/async/">
     <Project Path="source/Domore.Async.FileSystemWatching/Domore.Async.FileSystemWatching.csproj" />
     <Project Path="source/Domore.Async.TaskCaching/Domore.Async.TaskCaching.csproj" />
@@ -61,10 +65,6 @@
     <File Path="global.json" />
     <File Path="LICENSE" />
     <File Path="README.md" />
-  </Folder>
-  <Folder Name="/_/.github/" />
-  <Folder Name="/_/.github/workflows/">
-    <File Path=".github/workflows/workflow.yml" />
   </Folder>
   <Folder Name="/_/samples/">
     <File Path="samples/Directory.Build.props" />
