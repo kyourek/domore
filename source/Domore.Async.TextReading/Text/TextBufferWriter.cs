@@ -9,6 +9,8 @@ internal sealed class TextBufferWriter : IBufferWriter<char> {
 
     private int Cursor;
     private char[] Buffer;
+    private char[] SegmentBuffer;
+    private int SegmentStart;
     private SequenceSegment<char> StartSegment;
     private SequenceSegment<char> EndSegment;
 
@@ -16,6 +18,20 @@ internal sealed class TextBufferWriter : IBufferWriter<char> {
         Cursor = 0;
         Buffer = BufferPool.Rent(sizeHint);
         return Buffer;
+    }
+
+    private char[] BufferFor(int sizeHint) {
+        if (sizeHint < 0) {
+            throw new ArgumentOutOfRangeException(nameof(sizeHint));
+        }
+        if (sizeHint == 0) {
+            sizeHint = 1;
+        }
+        var buffer = Buffer;
+        if (buffer != null && buffer.Length - Cursor >= sizeHint) {
+            return buffer;
+        }
+        return NewBuffer(sizeHint);
     }
 
     public long Written { get; private set; }
@@ -33,29 +49,34 @@ internal sealed class TextBufferWriter : IBufferWriter<char> {
     }
 
     void IBufferWriter<char>.Advance(int count) {
-        var memory = Buffer.AsMemory(Cursor, count);
+        if (count < 0 || count > (Buffer?.Length ?? 0) - Cursor) {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
         if (StartSegment == null) {
-            StartSegment = EndSegment = new SequenceSegment<char>(memory);
+            StartSegment = EndSegment = new SequenceSegment<char>(Buffer.AsMemory(Cursor, count));
+            SegmentBuffer = Buffer;
+            SegmentStart = Cursor;
+        }
+        else if (ReferenceEquals(SegmentBuffer, Buffer)) {
+            EndSegment.Grow(Buffer.AsMemory(SegmentStart, Cursor + count - SegmentStart));
         }
         else {
-            EndSegment = EndSegment.Append(memory);
+            EndSegment = EndSegment.Append(Buffer.AsMemory(Cursor, count));
+            SegmentBuffer = Buffer;
+            SegmentStart = Cursor;
         }
-        TextSequence.Update(StartSegment, EndSegment);
         Cursor += count;
         Written += count;
+        TextSequence.Update(StartSegment, EndSegment);
     }
 
     Memory<char> IBufferWriter<char>.GetMemory(int sizeHint) {
-        if (Cursor < Buffer?.Length) {
-            return Buffer.AsMemory(Cursor, Buffer.Length - Cursor);
-        }
-        return NewBuffer(sizeHint);
+        var buffer = BufferFor(sizeHint);
+        return buffer.AsMemory(Cursor, buffer.Length - Cursor);
     }
 
     Span<char> IBufferWriter<char>.GetSpan(int sizeHint) {
-        if (Cursor < Buffer?.Length) {
-            return Buffer.AsSpan(Cursor, Buffer.Length - Cursor);
-        }
-        return NewBuffer(sizeHint);
+        var buffer = BufferFor(sizeHint);
+        return buffer.AsSpan(Cursor, buffer.Length - Cursor);
     }
 }

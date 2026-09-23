@@ -14,7 +14,8 @@ internal sealed class StreamSequenceSegmenter {
         BufferPool = bufferPool ?? throw new ArgumentNullException(nameof(bufferPool));
     }
 
-    public async IAsyncEnumerable<SequenceSegment<byte>> Segments(Stream stream, [EnumeratorCancellation] CancellationToken cancellationToken) {
+    public async IAsyncEnumerable<SequenceSegment<byte>>
+    Segments(Stream stream, [EnumeratorCancellation] CancellationToken cancellationToken) {
         if (stream is null) {
             throw new ArgumentNullException(nameof(stream));
         }
@@ -26,7 +27,9 @@ internal sealed class StreamSequenceSegmenter {
                 cursor = 0;
                 buffer = BufferPool.Rent();
             }
-            var bytesRead = await stream.ReadAsync(buffer, cursor, buffer.Length - cursor, cancellationToken).ConfigureAwait(false);
+            var bytesRead = await stream
+                .ReadAsync(buffer, cursor, buffer.Length - cursor, cancellationToken)
+                .ConfigureAwait(false);
             if (bytesRead == 0) {
                 break;
             }

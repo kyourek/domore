@@ -11,25 +11,16 @@ internal class StreamTextReader {
     private bool PreambleDetected;
     private StreamTextReader Agent;
 
-    private bool PreambleRequired =>
-        _PreambleRequired ?? (
-        _PreambleRequired = Encoding.Preamble.Length > 0).Value;
-    private bool? _PreambleRequired;
+    private TextEncodingDetector EncodingDetector => field ??= new();
+    private Decoder Decoder => field ??= Encoding.GetDecoder();
 
-    private TextEncodingDetector EncodingDetector =>
-        _EncodingDetector ?? (
-        _EncodingDetector = new());
-    private TextEncodingDetector _EncodingDetector;
+    public string EncodingName => Agent is null
+        ? Encoding.EncodingName
+        : Agent.EncodingName;
 
-    private Decoder Decoder =>
-        _Decoder ?? (
-        _Decoder = Encoding.GetDecoder());
-    private Decoder _Decoder;
-
-    public string EncodingName =>
-        Agent == null
-            ? Encoding.EncodingName
-            : Agent.EncodingName;
+    public string EncodingWebName => Agent is null
+        ? Encoding.WebName
+        : Agent.EncodingWebName;
 
     public Encoding Encoding { get; }
 
@@ -37,25 +28,38 @@ internal class StreamTextReader {
         Encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
     }
 
-    public void Decode(in ReadOnlySequence<byte> sequence, IBufferWriter<char> writer) {
+    public void Decode(in ReadOnlySequence<byte> sequence, IBufferWriter<char> writer, bool complete) {
         if (Agent != null) {
-            Agent.Decode(sequence, writer);
+            Agent.Decode(sequence, writer, complete);
             return;
         }
         if (PreambleDetected == false) {
-            if (PreambleRequired == true) {
-                var detected = PreambleDetected = EncodingDetector.TryDetect(sequence, out var encoding, out var preambleLength);
-                if (detected) {
-                    if (encoding != null) {
-                        if (encoding.CodePage == Encoding.CodePage) {
-                            BytesUsed = preambleLength;
-                        }
-                        else {
-                            Agent = new StreamTextReader(encoding) { PreambleDetected = true, BytesUsed = preambleLength };
-                            Agent.Decode(sequence, writer);
-                            return;
-                        }
-                    }
+            var detected = EncodingDetector.TryDetect(sequence,
+                                                      complete,
+                                                      out var encoding,
+                                                      out var preambleLength);
+            if (detected == false) {
+                return;
+            }
+            PreambleDetected = true;
+            if (encoding is not null) {
+                if (encoding.CodePage == Encoding.CodePage) {
+                    BytesUsed = preambleLength;
+                }
+                else {
+                    /*
+                     * The detected encoding always throws on invalid bytes, so it takes on
+                     * the fallback that was configured for this reader's encoding.
+                     */
+                    var
+                    agentEncoding = (Encoding)encoding.Clone();
+                    agentEncoding.DecoderFallback = Encoding.DecoderFallback;
+                    Agent = new(agentEncoding) {
+                        PreambleDetected = true,
+                        BytesUsed = preambleLength,
+                    };
+                    Agent.Decode(sequence, writer, complete);
+                    return;
                 }
             }
         }
@@ -66,12 +70,21 @@ internal class StreamTextReader {
                     if (memory.IsEmpty == false) {
                         var span = memory.Span;
                         var spanLength = span.Length;
-                        Decoder.Convert(span, writer, flush: false, out var charsUsed, out var complete);
+                        Decoder.Convert(span, writer, flush: false, out var charsUsed, out _);
                         CharsUsed += charsUsed;
                         BytesUsed += spanLength;
                     }
                 }
             }
         }
+    }
+
+    public void Flush(IBufferWriter<char> writer) {
+        if (Agent != null) {
+            Agent.Flush(writer);
+            return;
+        }
+        Decoder.Convert(ReadOnlySpan<byte>.Empty, writer, flush: true, out var charsUsed, out _);
+        CharsUsed += charsUsed;
     }
 }

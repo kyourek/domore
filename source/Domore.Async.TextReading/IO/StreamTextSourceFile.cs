@@ -14,7 +14,15 @@ internal sealed class StreamTextSourceFile : StreamTextSource {
     }
 
     public sealed override Stream StreamText() {
-        return FileInfo.OpenRead();
+        /*
+         * Buffering is disabled because StreamSequenceSegmenter reads into its own pooled buffers.
+         */
+        return new FileStream(FileInfo.FullName,
+                              FileMode.Open,
+                              FileAccess.Read,
+                              FileShare.Read,
+                              bufferSize: 1,
+                              FileOptions.Asynchronous);
     }
 
     public override string ToString() {

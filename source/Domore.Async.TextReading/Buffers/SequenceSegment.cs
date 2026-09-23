@@ -23,4 +23,19 @@ internal sealed class SequenceSegment<T> : ReadOnlySequenceSegment<T> {
         Next = segment;
         return segment;
     }
+
+    /// <summary>
+    /// Replaces the memory of this segment with <paramref name="memory"/>, which must start with
+    /// the current memory. Sequences that already end at this segment are unaffected, because
+    /// they are bounded by the end index they were created with.
+    /// </summary>
+    public void Grow(ReadOnlyMemory<T> memory) {
+        if (Next is not null) {
+            throw new InvalidOperationException();
+        }
+        if (memory.Length < Memory.Length) {
+            throw new ArgumentOutOfRangeException(nameof(memory));
+        }
+        Memory = memory;
+    }
 }
