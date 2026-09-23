@@ -133,4 +133,133 @@ public sealed class TaskCacheTest {
         actual.Add(await subject.Refreshed(CancellationToken.None));
         Assert.That(actual, Is.EqualTo(expected));
     }
+
+    [Test]
+    public void Constructor_ThrowsArgumentNullExceptionIfFactoryIsNull() {
+        Assert.That(() => new TaskCache<object>(null), Throws.ArgumentNullException);
+    }
+
+    [Test]
+    public void Ready_ThrowsInvalidOperationExceptionIfFactoryReturnsNull() {
+        var subject = new TaskCache<object>(_ => null);
+        Assert.That(async () => await subject.Ready(CancellationToken.None), Throws.InvalidOperationException);
+    }
+
+    [Test]
+    public void Result_IsDefaultBeforeTaskCompletes() {
+        var subject = new TaskCache<object>(async _ => await Get(new object()));
+        Assert.That(subject.Result, Is.Null);
+    }
+
+    [Test]
+    public async Task Result_IsCachedValueAfterTaskCompletes() {
+        var expected = new object();
+        var subject = new TaskCache<object>(async _ => await Get(expected));
+        await subject.Ready(CancellationToken.None);
+        Assert.That(subject.Result, Is.SameAs(expected));
+    }
+
+    [Test]
+    public async Task Result_IsDefaultAfterRefresh() {
+        var subject = new TaskCache<object>.WithRefresh(async _ => await Get(new object()));
+        await subject.Ready(CancellationToken.None);
+        await subject.Refresh(CancellationToken.None);
+        Assert.That(subject.Result, Is.Null);
+    }
+
+    [Test]
+    public async Task Ready_CallsFactoryOnlyOnceAfterSuccess() {
+        var calls = 0;
+        var subject = new TaskCache<object>(async _ => {
+            Interlocked.Increment(ref calls);
+            return await Get(new object());
+        });
+        await subject.Ready(CancellationToken.None);
+        await subject.Ready(CancellationToken.None);
+        await subject.Ready(CancellationToken.None);
+        Assert.That(calls, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Ready_CachesResultOfFirstSuccessAfterFailures() {
+        var n = 0;
+        var expected = new object();
+        var subject = new TaskCache<object>(async _ => {
+            if (n++ < 2) {
+                throw new InvalidOperationException();
+            }
+            return await Get(expected);
+        });
+        for (var i = 0; i < 2; i++) {
+            try {
+                await subject.Ready(CancellationToken.None);
+            }
+            catch (InvalidOperationException) {
+            }
+        }
+        var actual = await subject.Ready(CancellationToken.None);
+        Assert.That(actual, Is.SameAs(expected));
+    }
+
+    [Test]
+    public async Task Ready_DoesNotCacheResultOfTaskStartedBeforeRefresh() {
+        var n = 0;
+        var gate = new TaskCompletionSource<object>();
+        var expected = new[] { new object(), new object() };
+        var subject = new TaskCache<object>.WithRefresh(async _ => {
+            var result = expected[n++];
+            if (result == expected[0]) {
+                await gate.Task;
+            }
+            return result;
+        });
+        var stale = subject.Ready(CancellationToken.None);
+        await subject.Refresh(CancellationToken.None);
+        gate.SetResult(null);
+        await stale;
+        var actual = await subject.Ready(CancellationToken.None);
+        Assert.That(actual, Is.SameAs(expected[1]));
+    }
+
+    [Test]
+    public async Task Ready_CancelsTheUnderlyingOperationForAllCallers() {
+        var gate = new TaskCompletionSource<object>();
+        var subject = new TaskCache<object>(async token => {
+            await gate.Task;
+            token.ThrowIfCancellationRequested();
+            return new object();
+        });
+        using (var tokenSource = new CancellationTokenSource()) {
+            var first = subject.Ready(tokenSource.Token);
+            var second = subject.Ready(CancellationToken.None);
+            tokenSource.Cancel();
+            gate.SetResult(null);
+            try {
+                await first;
+            }
+            catch (OperationCanceledException) {
+            }
+            Assert.That(async () => await second, Throws.InstanceOf<OperationCanceledException>());
+        }
+    }
+
+    [Test]
+    public async Task Ready_CallsFactoryAgainAfterCancellation() {
+        var expected = new object();
+        var subject = new TaskCache<object>(async token => {
+            await Get(new object());
+            token.ThrowIfCancellationRequested();
+            return expected;
+        });
+        using (var tokenSource = new CancellationTokenSource()) {
+            tokenSource.Cancel();
+            try {
+                await subject.Ready(tokenSource.Token);
+            }
+            catch (OperationCanceledException) {
+            }
+        }
+        var actual = await subject.Ready(CancellationToken.None);
+        Assert.That(actual, Is.SameAs(expected));
+    }
 }

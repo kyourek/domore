@@ -22,9 +22,20 @@ public class TaskCache<TResult> {
 
     private readonly object Locker = new();
 
-    private bool Cached;
-    private bool CacheResets;
+    private volatile Box Cache;
+    private volatile int Generation;
     private Task<TResult> Task;
+
+    /// <summary>
+    /// Holds the cached result so that it can be published with a single volatile reference write.
+    /// </summary>
+    private sealed class Box {
+        public TResult Value { get; }
+
+        public Box(TResult value) {
+            Value = value;
+        }
+    }
 
     /// <summary>
     /// Gets a flag that indicates whether or not awaited tasks are continued on the captured context.
@@ -35,7 +46,7 @@ public class TaskCache<TResult> {
     /// Gets the value of the result of the task that was cached due to successful completion of the task,
     /// or the default value of <typeparamref name="TResult"/> if the task has not yet successfully completed.
     /// </summary>
-    public TResult Result { get; private set; }
+    public TResult Result => Cache is Box box ? box.Value : default;
 
     /// <summary>
     /// Gets the callback used to create the instance of the task whose result is cached.
@@ -64,27 +75,38 @@ public class TaskCache<TResult> {
     /// <summary>
     /// Returns the result of the task returned from the <see cref="Factory"/> callback upon its first successful completion.
     /// </summary>
-    /// <param name="token">The cancellation token passed to the <see cref="Factory"/> callback.</param>
+    /// <param name="token">
+    /// The cancellation token passed to the <see cref="Factory"/> callback. Canceling this token cancels the underlying
+    /// operation itself, and the canceled task is discarded so that the next call invokes the callback again.
+    /// </param>
+    /// <remarks>
+    /// An instance is expected to be private to a single consumer. The task returned from the <see cref="Factory"/> callback
+    /// is created with the token of the caller that starts it and is shared by any callers that arrive while it is still
+    /// running, so canceling that first token cancels the operation for all of them. Callers that arrive later observe the
+    /// resulting <see cref="OperationCanceledException"/> even though their own tokens were not canceled.
+    /// </remarks>
     /// <returns>
     /// The cached instance of <see cref="System.Threading.Tasks.Task"/> that was the result of the first successful completion 
     /// of the task returned from the <see cref="Factory"/> callback, or the most recent instance returned from the callback if
     /// the task completes with a fault or cancellation.
     /// </returns>
     /// <exception cref="InvalidOperationException">Thrown if the <see cref="Factory"/> callback returns null.</exception>
+    /// <exception cref="OperationCanceledException">Thrown if the underlying operation is canceled.</exception>
     public async Task<TResult> Ready(CancellationToken token) {
-        if (Cached && CacheResets == false) {
-            return Result;
+        var cache = Cache;
+        if (cache is not null) {
+            return cache.Value;
         }
         var task = default(Task<TResult>);
+        var generation = 0;
         lock (Locker) {
-            if (Cached) {
-                return Result;
+            cache = Cache;
+            if (cache is not null) {
+                return cache.Value;
             }
-            var t = task = Task;
-            if (t is null) {
-                task = Task = Factory(token) ??
-                    throw new InvalidOperationException("The returned task from the factory is null.");
-            }
+            generation = Generation;
+            task = Task ??= Factory(token) ??
+                throw new InvalidOperationException("The returned task from the factory is null.");
         }
         var result = default(TResult);
         try {
@@ -92,19 +114,20 @@ public class TaskCache<TResult> {
         }
         catch {
             lock (Locker) {
-                Task = null;
-                throw;
+                if (ReferenceEquals(Task, task)) {
+                    Task = null;
+                }
             }
+            throw;
         }
         lock (Locker) {
-            if (Cached) {
-                return Result;
+            cache = Cache;
+            if (cache is not null) {
+                return cache.Value;
             }
-            var c = true;
-            var r = result;
-            Thread.MemoryBarrier();
-            Cached = c;
-            Result = r;
+            if (Generation == generation) {
+                Cache = new Box(result);
+            }
         }
         return result;
     }
@@ -119,7 +142,6 @@ public class TaskCache<TResult> {
         /// <param name="continueOnCapturedContext">Whether or not to continue awaited tasks on the captured context.</param>
         /// <param name="factory">The callback used to create the instance of <see cref="System.Threading.Tasks.Task"/> whose result is cached.</param>
         public WithRefresh(bool continueOnCapturedContext, Func<CancellationToken, Task<TResult>> factory) : base(continueOnCapturedContext, factory) {
-            CacheResets = true;
         }
 
         /// <summary>
@@ -150,8 +172,8 @@ public class TaskCache<TResult> {
         public TASK Refresh(CancellationToken token) {
             lock (Locker) {
                 Task = null;
-                Cached = false;
-                Result = default;
+                Cache = null;
+                Generation++;
             }
             return CompletedTask;
         }
