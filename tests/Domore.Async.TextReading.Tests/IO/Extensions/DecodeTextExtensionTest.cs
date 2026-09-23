@@ -43,7 +43,7 @@ public class DecodeTextExtensionTest {
             var builder = new Builder();
             var decoded = await file.DecodeText(builder, options, CancellationToken.None);
             Assert.That(decoded.Success, Is.True);
-            Assert.That(decoded.Encoding, Is.EqualTo(encoding.EncodingName));
+            Assert.That(decoded.EncodingName, Is.EqualTo(encoding.EncodingName));
 
             var resourceText = await r.Text();
             var resourceTextLength = resourceText.Length;
@@ -59,7 +59,10 @@ public class DecodeTextExtensionTest {
         await DecodeText_Success(resource, encoding, options);
     }
 
-    private async Task DecodeText_Success_UTF16(string resource, bool bigEndian, bool bom, DecodedTextOptions options) {
+    private async Task DecodeText_Success_UTF16(string resource,
+                                                bool bigEndian,
+                                                bool bom,
+                                                DecodedTextOptions options) {
         var encoding = new UnicodeEncoding(bigEndian, bom);
         await DecodeText_Success(resource, encoding, options);
     }

@@ -25,7 +25,7 @@ internal sealed class TextDecoder {
     }
 
     private TextDecoderStates Complete(TextDecoderStates state, Exception exception = null) {
-        Event = null;
+        Volatile.Write(ref Event, null);
         Exception = exception;
         ByteSequence.Updated -= ByteSequence_Updated;
         BufferWriter.Complete();
@@ -39,14 +39,15 @@ internal sealed class TextDecoder {
             return States;
         }
         lock (Ch) {
+            // Each event carries every byte read so far, so only the latest one needs decoding.
+            var e = Interlocked.Exchange(ref Event, null);
             if (States.HasFlag(TextDecoderStates.Complete)) {
                 return States;
             }
             if (CancellationToken.IsCancellationRequested) {
                 return Complete(TextDecoderStates.Canceled);
             }
-            var e = Event;
-            if (e == null) {
+            if (e is null) {
                 return States;
             }
             var sequence = e.Sequence;
@@ -54,7 +55,10 @@ internal sealed class TextDecoder {
             var writer = BufferWriter;
             var written = writer.Written;
             try {
-                StreamReader.Decode(sequence, BufferWriter);
+                StreamReader.Decode(sequence, BufferWriter, complete: sequenceComplete);
+                if (sequenceComplete) {
+                    StreamReader.Flush(BufferWriter);
+                }
             }
             catch (Exception ex) {
                 return Complete(TextDecoderStates.Error, ex);
@@ -69,30 +73,77 @@ internal sealed class TextDecoder {
         }
     }
 
-    private void ByteSequence_Updated(object sender, SequenceUpdatedEventArgs<byte> e) {
-        Event = e;
-        Task.Run(Update);
+    private void TryUpdate() {
+        var exception = default(Exception);
+        try {
+            Update();
+        }
+        catch (Exception ex) {
+            exception = ex;
+        }
+        if (exception is not null) {
+            lock (Ch) {
+                if (States.HasFlag(TextDecoderStates.Complete)) {
+                    return;
+                }
+                try {
+                    Complete(TextDecoderStates.Error, exception);
+                }
+                catch (Exception ex) {
+                    /*
+                     * Faulting the channel surfaces the failure to the caller awaiting Decode.
+                     */
+                    Ch.Writer.TryComplete(new AggregateException(exception, ex));
+                }
+            }
+        }
     }
 
+    private void ByteSequence_Updated(object sender, SequenceUpdatedEventArgs<byte> e) {
+        Volatile.Write(ref Event, e);
+        Task.Run(TryUpdate);
+    }
+
+    internal void Win() {
+        if (!States.HasFlag(TextDecoderStates.Success)) {
+            throw new InvalidOperationException();
+        }
+        var sequence = BufferWriter.Sequence;
+        var text = string.Create(checked((int)sequence.Length), sequence, static (span, s) => s.CopyTo(span));
+        Volatile.Write(ref _TextWinner, text);
+    }
+
+    internal string TextWinner => Volatile.Read(ref _TextWinner);
+    private string _TextWinner;
+
     public ReadOnlySequence<char> TextSequence =>
-        BufferWriter.Sequence;
+        TextWinner is { } text
+            ? new ReadOnlySequence<char>(text.AsMemory())
+            : BufferWriter.Sequence;
 
     public long TextLength =>
         BufferWriter.Written;
 
-    public string EncodingUsed =>
+    public string EncodingUsedName =>
         StreamReader.EncodingName;
+
+    public string EncodingUsedWebName =>
+        StreamReader.EncodingWebName;
 
     public SequenceUpdater<byte> ByteSequence { get; }
     public Exception Exception { get; private set; }
     public TextDecoderStates States { get; private set; }
-    public CancellationToken CancellationToken { get; set; }
+    public CancellationToken CancellationToken { get; }
 
     public string EncodingName { get; }
     public string ReplacementFallback { get; }
     public BufferPool<char> BufferPool { get; }
 
-    public TextDecoder(string encodingName, string replacementFallback, SequenceUpdater<byte> byteSequence, BufferPool<char> bufferPool) {
+    public TextDecoder(string encodingName,
+                       string replacementFallback,
+                       SequenceUpdater<byte> byteSequence,
+                       BufferPool<char> bufferPool,
+                       CancellationToken cancellationToken) {
         ByteSequence = byteSequence ?? throw new ArgumentNullException(nameof(byteSequence));
         ByteSequence.Updated += ByteSequence_Updated;
         BufferPool = bufferPool;
@@ -103,6 +154,7 @@ internal sealed class TextDecoder {
             ? new DecoderExceptionFallback()
             : new DecoderReplacementFallback(ReplacementFallback));
         StreamReader = new StreamTextReader(Encoding);
+        CancellationToken = cancellationToken;
     }
 
     public async Task<DecodedText> Decode(CancellationToken cancellationToken) {
