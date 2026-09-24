@@ -10,6 +10,7 @@ namespace Domore.Conf;
 [TestFixture]
 internal sealed class ConfContentProviderTest {
     private string HelperPath => field ??= GetHelperPath();
+    private string HelperAssemblyPath => field ??= Path.ChangeExtension(HelperPath, ".dll");
     private string HelperDir => field ??= Path.GetDirectoryName(HelperPath);
     private string ConfPath => field ??= Path.ChangeExtension(HelperPath, ".conf");
     private string ConfDefaultPath => field ??= ConfPath + ".default";
@@ -21,6 +22,14 @@ internal sealed class ConfContentProviderTest {
     }
 
     private string RunProcess(params string[] args) {
+        return RunProcess(HelperPath, string.Join(" ", args));
+    }
+
+    private string RunDotnetProcess() {
+        return RunProcess("dotnet", $"\"{HelperAssemblyPath}\"");
+    }
+
+    private string RunProcess(string fileName, string arguments) {
 #if NET8_0_OR_GREATER
 #else
         Assert.Ignore();
@@ -28,8 +37,8 @@ internal sealed class ConfContentProviderTest {
         var error = new StringBuilder();
         var output = new StringBuilder();
         using (var process = new Process()) {
-            process.StartInfo.Arguments = string.Join(" ", args);
-            process.StartInfo.FileName = HelperPath;
+            process.StartInfo.Arguments = arguments;
+            process.StartInfo.FileName = fileName;
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.UseShellExecute = false;
@@ -58,6 +67,19 @@ internal sealed class ConfContentProviderTest {
         File.WriteAllText(ConfDefaultPath, $"Program.Greeting = {greeting}");
         var output = RunProcess();
         Assert.That(output.Trim(), Is.EqualTo(greeting));
+    }
+
+    [Test]
+    public void ConfDefaultIsUsedWhenLaunchedWithDotnetHost() {
+        const string greeting = "Hello from app.conf!";
+        File.WriteAllText(ConfDefaultPath, $"Program.Greeting = {greeting}");
+
+        var output = RunDotnetProcess();
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(output.Trim(), Is.EqualTo(greeting));
+            Assert.That(File.Exists(ConfPath), Is.True);
+        }
     }
 
     [TestCase("Hello, World!")]

@@ -1,8 +1,16 @@
 ﻿using Domore.Conf.Threading;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using PATH = System.IO.Path;
+using LOCK =
+#if NET9_0_OR_GREATER
+    System.Threading.Lock
+#else
+    System.Object
+#endif
+;
 
 namespace Domore.Conf;
 
@@ -10,45 +18,19 @@ namespace Domore.Conf;
 /// A file with conf content that may populate an object upon file-system events.
 /// </summary>
 public sealed class ConfFile : IDisposable {
-    private readonly object WatcherLocker = new();
-    private readonly object ConfigureLocker = new();
+    private readonly LOCK WatcherLocker = new();
+    private readonly LOCK ConfigureLocker = new();
+    private readonly LOCK DelayLocker = new();
     private readonly DelayedState DelayedState = new() { Delay = 1000 };
+    private readonly List<Action> PendingDelayCancellations = [];
     private volatile FileSystemWatcher Watcher;
-    private Action CancelDelay;
     private string CanonicalName;
-    private bool Disposed;
-
-    private void Dispose(bool disposing) {
-        if (disposing) {
-            lock (ConfigureLocker) {
-                lock (WatcherLocker) {
-                    using (Watcher) {
-                        Disposed = true;
-                    }
-                }
-            }
-        }
-    }
-
-    private void Watcher_Event(object sender, FileSystemEventArgs e) {
-        if (e != null) {
-            if (e.Name == Name || e.Name == CanonicalName) {
-                CancelDelay?.Invoke();
-                CancelDelay = DelayedState.Attempt(() => {
-                    try {
-                        Configure();
-                        Configured?.Invoke(this, EventArgs.Empty);
-                    }
-                    catch (Exception ex) {
-                        ConfigureError?.Invoke(this, new ErrorEventArgs(ex));
-                    }
-                });
-            }
-        }
-    }
+    private volatile bool Disposed;
 
     private void Watcher_Error(object sender, ErrorEventArgs e) {
-        WatchError?.Invoke(this, e);
+        if (Disposed == false) {
+            WatchError?.Invoke(this, e);
+        }
     }
 
     private string Read() {
@@ -58,11 +40,55 @@ public sealed class ConfFile : IDisposable {
         catch (FileNotFoundException) {
             return "";
         }
+        catch (DirectoryNotFoundException) {
+            return "";
+        }
+    }
+
+    internal void Watcher_Event(object sender, FileSystemEventArgs e) {
+        if (e is null || (e.Name != Name && e.Name != CanonicalName)) {
+            return;
+        }
+        Action[] previous;
+        lock (DelayLocker) {
+            if (Disposed) {
+                return;
+            }
+            previous = [.. PendingDelayCancellations];
+            PendingDelayCancellations.Add(DelayedState.Attempt(() => {
+                try {
+                    if (Disposed) {
+                        return;
+                    }
+                    Configure();
+                    if (Disposed == false) {
+                        Configured?.Invoke(this, EventArgs.Empty);
+                    }
+                }
+                catch (Exception ex) {
+                    if (Disposed == false) {
+                        ConfigureError?.Invoke(this, new ErrorEventArgs(ex));
+                    }
+                }
+            }));
+        }
+        foreach (var cancel in previous) {
+            cancel();
+        }
+        lock (DelayLocker) {
+            foreach (var cancel in previous) {
+                PendingDelayCancellations.Remove(cancel);
+            }
+        }
     }
 
     /// <summary>
     /// Gets or sets the delay, in milliseconds, between events.
     /// </summary>
+    /// <remarks>
+    /// The value must be nonnegative or <see cref="System.Threading.Timeout.Infinite"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if the value is less than <see cref="System.Threading.Timeout.Infinite"/>.</exception>
     public int Delay {
         get => DelayedState.Delay;
         set => DelayedState.Delay = value;
@@ -88,12 +114,20 @@ public sealed class ConfFile : IDisposable {
                     CanonicalName = canonicalFile?.Name;
                 }
             }
-            var text = Read();
-            var conf = Conf.Contain(text);
-            conf.Configure(Target, key: Key);
+            var text = Read()?.Trim() ?? "";
+            if (text != "") {
+                var conf = new ConfContainer {
+                    Source = text,
+                    Special = Conf.Special,
+                    SourceDirectory = Directory,
+                    InitialSources = [Path],
+                    ContentProvider = Conf.ContentProvider
+                };
+                conf.Configure(Target, key: Key);
+            }
         }
         if (watch == true) {
-            if (Watcher == null) {
+            if (Watcher is null) {
                 lock (WatcherLocker) {
                     if (Disposed) {
                         throw new ObjectDisposedException(nameof(ConfFile));
@@ -115,12 +149,12 @@ public sealed class ConfFile : IDisposable {
             }
         }
         if (watch == false) {
-            if (Watcher != null) {
+            if (Watcher is not null) {
                 lock (WatcherLocker) {
                     if (Disposed) {
                         throw new ObjectDisposedException(nameof(ConfFile));
                     }
-                    if (Watcher != null) {
+                    if (Watcher is not null) {
                         using (Watcher) {
                             Watcher.Changed -= Watcher_Event;
                             Watcher.Created -= Watcher_Event;
@@ -186,21 +220,41 @@ public sealed class ConfFile : IDisposable {
         Key = key;
         Path = path;
         Name = PATH.GetFileName(Path);
-        Directory = PATH.GetDirectoryName(Path);
+        Directory = PATH.GetDirectoryName(Path) switch {
+            var dir when !string.IsNullOrEmpty(dir) => dir,
+            _ => "."
+        };
     }
 
     /// <summary>
     /// Disposes of resources used by the instance.
     /// </summary>
     public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>
-    /// Destructor of <see cref="ConfFile"/>.
-    /// </summary>
-    ~ConfFile() {
-        Dispose(false);
+        Action[] cancellations;
+        lock (DelayLocker) {
+            Disposed = true;
+            cancellations = PendingDelayCancellations.ToArray();
+        }
+        foreach (var cancel in cancellations) {
+            cancel();
+        }
+        lock (DelayLocker) {
+            PendingDelayCancellations.Clear();
+        }
+        lock (ConfigureLocker) {
+            lock (WatcherLocker) {
+                var
+                watcher = Watcher;
+                Watcher = null;
+                if (watcher is not null) {
+                    watcher.Changed -= Watcher_Event;
+                    watcher.Created -= Watcher_Event;
+                    watcher.Deleted -= Watcher_Event;
+                    watcher.Renamed -= Watcher_Event;
+                    watcher.Error -= Watcher_Error;
+                    watcher.Dispose();
+                }
+            }
+        }
     }
 }

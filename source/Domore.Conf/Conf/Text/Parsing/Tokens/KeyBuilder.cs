@@ -10,7 +10,7 @@ internal sealed class KeyBuilder : TokenBuilder, IConfKey {
         return string.Join(".", Parts);
     }
 
-    public ConfCollection<KeyPartBuilder> Parts { get; } = new ConfCollection<KeyPartBuilder>();
+    public ConfCollection<KeyPartBuilder> Parts { get; } = [];
 
     public KeyBuilder(char sep) : base(sep) {
     }

@@ -14,7 +14,8 @@ internal sealed class KeyIndexPartBuilder : TokenBuilder, IConfKeyIndexPart {
     public StringBuilder String { get; } = new();
     public KeyIndexBuilder KeyIndex { get; }
 
-    public KeyIndexPartBuilder(KeyIndexBuilder keyIndex) : base((keyIndex ?? throw new ArgumentNullException(nameof(keyIndex))).Sep) {
+    public KeyIndexPartBuilder(KeyIndexBuilder keyIndex)
+    : base((keyIndex ?? throw new ArgumentNullException(nameof(keyIndex))).Sep) {
         KeyIndex = keyIndex ?? throw new ArgumentNullException(nameof(keyIndex));
         KeyIndex.Parts.Add(this);
     }

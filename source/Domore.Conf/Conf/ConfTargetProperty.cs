@@ -1,6 +1,7 @@
 ﻿using Domore.Conf.Converters;
 using Domore.Conf.Extensions;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
@@ -14,9 +15,8 @@ internal class ConfTargetProperty {
     private ConfProperty Property => field ??=
         Cache.Get(TargetType, Key.Content);
 
-    public string IndexString => _IndexString ??=
+    public string IndexString => field ??=
         string.Join("", Key.Indices.Select(i => $"[{string.Join(",", i.Parts.Select(p => p.Content))}]"));
-    private string _IndexString;
 
     public object[] Index {
         get {
@@ -26,6 +26,13 @@ internal class ConfTargetProperty {
                     return null;
                 }
                 var parameters = PropertyInfo.GetIndexParameters();
+                var indexParts = indices[0].Parts;
+                if (indexParts.Count != parameters.Length) {
+                    throw new ConfException(
+                        $"Property '{PropertyInfo.Name}' expects {parameters.Length} index parts, " +
+                        $"but {indexParts.Count} were provided.",
+                        null);
+                }
                 object convert(string s, Type type) {
                     var t = Nullable.GetUnderlyingType(type) ?? type;
                     if (t != null) {
@@ -33,10 +40,9 @@ internal class ConfTargetProperty {
                             return new ConfEnumFlagsConverter().Convert(s, t);
                         }
                     }
-                    return Convert.ChangeType(s, type);
+                    return Convert.ChangeType(s, t, CultureInfo.InvariantCulture);
                 }
-                field = [.. indices[0] // TODO: Allow multiple indices.
-                    .Parts
+                field = [.. indexParts // TODO: Allow multiple indices.
                     .Select((v, i) => convert(v.Content, parameters[i].ParameterType))];
             }
             return field;
@@ -66,10 +72,10 @@ internal class ConfTargetProperty {
 
     public ConfItemProperty Item {
         get {
-            if (field == null) {
+            if (field is null) {
                 if (Key.Indices.Count > 0) {
                     var itemTarget = PropertyValue;
-                    if (itemTarget == null) {
+                    if (itemTarget is null) {
                         itemTarget = PropertyValue = Activator.CreateInstance(PropertyInfo.PropertyType);
                     }
                     field = ConfItemProperty.Create(itemTarget, new ItemKey(Key.Indices[0]), Cache);

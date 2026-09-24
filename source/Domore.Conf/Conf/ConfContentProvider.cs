@@ -1,7 +1,8 @@
 ﻿using Domore.Conf.IO;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 
 namespace Domore.Conf;
 
@@ -10,12 +11,15 @@ internal sealed class ConfContentProvider : ConfContentProviderBase {
     private string ConfFile => field ??= GetConfFile();
 
     private static string GetConfFile() {
-        var proc = Process.GetCurrentProcess();
-        var procFile = proc?.MainModule?.FileName?.Trim() ?? "";
-        if (procFile == "") {
-            return "";
+        var appFile = Assembly.GetEntryAssembly()?.Location?.Trim() ?? "";
+        if (appFile == "") {
+            var appName = AppDomain.CurrentDomain.FriendlyName?.Trim() ?? "";
+            if (appName == "") {
+                return "";
+            }
+            appFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, appName);
         }
-        var confFile = Path.ChangeExtension(procFile, ".conf");
+        var confFile = Path.ChangeExtension(appFile, ".conf");
         var confFileExists = File.Exists(confFile);
         if (confFileExists == false && confFile.Contains(".vshost")) {
             confFile = confFile.Replace(".vshost", "");

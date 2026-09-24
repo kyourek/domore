@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -9,6 +10,12 @@ using System.Text;
 namespace Domore.Conf.Text;
 
 internal sealed class TextSourceProvider {
+    private static string Format(object value) {
+        return value is IFormattable formattable
+            ? formattable.ToString(null, CultureInfo.InvariantCulture)
+            : Convert.ToString(value, CultureInfo.InvariantCulture);
+    }
+
     private static string Multiline(string s) {
         if (s?.Contains('\n') != true) {
             return s;
@@ -39,7 +46,9 @@ internal sealed class TextSourceProvider {
         return string.Join(Environment.NewLine, open, s, close);
     }
 
-    private IEnumerable<KeyValuePair<string, string>> ListConfContents(IList list, string key, List<object> referenceList) {
+    private IEnumerable<KeyValuePair<string, string>> ListConfContents(IList list,
+                                                                       string key,
+                                                                       List<object> referenceList) {
         if (null == list) throw new ArgumentNullException(nameof(list));
         if (key == null) {
             var listType = list.GetType();
@@ -49,14 +58,14 @@ internal sealed class TextSourceProvider {
             }
         }
         for (var i = 0; i < list.Count; i++) {
-            var k = $"{key}[{i}]";
+            var k = $"{key}[{Format(i)}]";
             var v = list[i];
-            if (v != null) {
+            if (v is not null) {
                 var vType = v.GetType();
                 if (vType.IsValueType || vType == typeof(string)) {
                     yield return new KeyValuePair<string, string>(
                         key: k,
-                        value: Multiline($"{v}"));
+                        value: Multiline(Format(v)));
                 }
                 else {
                     foreach (var kvp in ConfContents(v, k, help: false, referenceList)) {
@@ -67,9 +76,13 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> DictionaryConfContents(IDictionary dictionary, string key, List<object> referenceList) {
-        if (null == dictionary) throw new ArgumentNullException(nameof(dictionary));
-        if (key == null) {
+    private IEnumerable<KeyValuePair<string, string>> DictionaryConfContents(IDictionary dictionary,
+                                                                             string key,
+                                                                             List<object> referenceList) {
+        if (dictionary is null) {
+            throw new ArgumentNullException(nameof(dictionary));
+        }
+        if (key is null) {
             var dictType = dictionary.GetType();
             var dictArgs = dictType.GetGenericArguments();
             if (dictArgs.Length == 2) {
@@ -77,16 +90,16 @@ internal sealed class TextSourceProvider {
             }
         }
         var dKeys = dictionary.Keys;
-        if (dKeys != null) {
+        if (dKeys is not null) {
             foreach (var dKey in dKeys) {
-                var k = $"{key}[{dKey}]";
+                var k = $"{key}[{Format(dKey)}]";
                 var v = dictionary[dKey];
-                if (v != null) {
+                if (v is not null) {
                     var vType = v.GetType();
                     if (vType.IsValueType || vType == typeof(string)) {
                         yield return new KeyValuePair<string, string>(
                             key: k,
-                            value: Multiline($"{v}"));
+                            value: Multiline(Format(v)));
                     }
                     else {
                         foreach (var kvp in ConfContents(v, k, help: false, referenceList)) {
@@ -98,7 +111,10 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source, string key, bool help, List<object> referenceList) {
+    private IEnumerable<KeyValuePair<string, string>> DefaultConfContents(object source,
+                                                                          string key,
+                                                                          bool help,
+                                                                          List<object> referenceList) {
         var type = source.GetType();
         var properties = type
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -113,17 +129,19 @@ internal sealed class TextSourceProvider {
                     var parameters = property.GetIndexParameters();
                     if (parameters.Length == 0) {
                         var propertyValue = property.GetValue(source, null);
-                        if (propertyValue != null) {
+                        if (propertyValue is not null) {
                             var helpTxt = !help ? null : property.GetHelpAttribute()?.Format("# ");
-                            if (helpTxt != null) {
+                            if (helpTxt is not null) {
                                 yield return new KeyValuePair<string, string>("", null);
                                 yield return new KeyValuePair<string, string>(helpTxt, null);
                             }
                             var propertyValueType = propertyValue.GetType();
-                            if (propertyValueType.IsValueType || propertyValueType == typeof(string)) {
+                            if (propertyValueType.IsValueType || propertyValueType == typeof(string) || propertyValue is Type) {
                                 if (property.CanWrite) {
                                     var pairKey = k(property.Name);
-                                    var pairValue = Convert.ToString(propertyValue);
+                                    var pairValue = propertyValue is Type representedType
+                                        ? representedType.AssemblyQualifiedName ?? representedType.FullName ?? representedType.ToString()
+                                        : Format(propertyValue);
                                     if (pairValue.Contains("\n")) {
                                         pairValue = Multiline(pairValue);
                                     }
@@ -147,7 +165,10 @@ internal sealed class TextSourceProvider {
         }
     }
 
-    private IEnumerable<KeyValuePair<string, string>> ConfContents(object source, string key, bool help, List<object> referenceList) {
+    private IEnumerable<KeyValuePair<string, string>> ConfContents(object source,
+                                                                   string key,
+                                                                   bool help,
+                                                                   List<object> referenceList) {
         if (referenceList is null) {
             throw new ArgumentNullException(nameof(referenceList));
         }
@@ -157,22 +178,31 @@ internal sealed class TextSourceProvider {
         if (referenceList.Any(r => ReferenceEquals(r, source))) {
             throw new ConfCircularReferenceException(source);
         }
-        else {
-            referenceList.Add(source);
+        referenceList.Add(source);
+        try {
+            IEnumerable<KeyValuePair<string, string>> contents;
+            if (source is IList list) {
+                contents = ListConfContents(list, key, referenceList);
+            }
+            else if (source is IDictionary dictionary) {
+                contents = DictionaryConfContents(dictionary, key, referenceList);
+            }
+            else {
+                contents = DefaultConfContents(source, key, help, referenceList);
+            }
+            foreach (var item in contents) {
+                yield return item;
+            }
         }
-        if (source is IList list) {
-            return ListConfContents(list, key, referenceList);
+        finally {
+            referenceList.RemoveAt(referenceList.Count - 1);
         }
-        if (source is IDictionary dictionary) {
-            return DictionaryConfContents(dictionary, key, referenceList);
-        }
-        return DefaultConfContents(source, key, help, referenceList);
     }
 
     public string GetConfSource(object obj, string key = null, bool? multiline = null) {
         var equals = multiline == false ? "=" : " = ";
         var separator = multiline == false ? ";" : Environment.NewLine;
-        var confContents = ConfContents(obj, key, help: multiline != false, new());
+        var confContents = ConfContents(obj, key, help: multiline != false, []);
         return string
             .Join(separator, confContents
                 .Select(pair => pair.Value == null

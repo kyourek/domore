@@ -7,10 +7,11 @@ internal sealed class KeyIndexBuilder : TokenBuilder, IConfKeyIndex {
         return string.Join(",", Parts);
     }
 
-    public ConfCollection<KeyIndexPartBuilder> Parts { get; } = new ConfCollection<KeyIndexPartBuilder>();
+    public ConfCollection<KeyIndexPartBuilder> Parts { get; } = [];
     public KeyPartBuilder KeyPart { get; }
 
-    public KeyIndexBuilder(KeyPartBuilder keyPart) : base((keyPart ?? throw new ArgumentNullException(nameof(keyPart))).Sep) {
+    public KeyIndexBuilder(KeyPartBuilder keyPart)
+    : base((keyPart ?? throw new ArgumentNullException(nameof(keyPart))).Sep) {
         KeyPart = keyPart ?? throw new ArgumentNullException(nameof(keyPart));
         KeyPart.Indices.Add(this);
     }

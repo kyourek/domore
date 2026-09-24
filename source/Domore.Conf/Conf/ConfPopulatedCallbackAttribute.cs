@@ -7,6 +7,13 @@ using System.Reflection;
 
 namespace Domore.Conf;
 
+/// <summary>
+/// Marks an instance method to be called after an object is populated from conf content.
+/// </summary>
+/// <remarks>
+/// The method must have no parameters or one parameter that can accept an <see cref="IConf"/> instance.
+/// Inherited callbacks are invoked from base classes to derived classes.
+/// </remarks>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class ConfPopulatedCallbackAttribute : Attribute {
     private static readonly ConcurrentDictionary<Type, ReadOnlyCollection<DecoratedMethod>> Cache = [];

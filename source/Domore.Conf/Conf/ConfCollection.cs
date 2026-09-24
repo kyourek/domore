@@ -4,11 +4,7 @@ using System.Collections.Generic;
 namespace Domore.Conf;
 
 internal sealed class ConfCollection<T> : IConfCollection<T> {
-    private readonly List<T> List;
-
-    public ConfCollection() {
-        List = new List<T>();
-    }
+    private readonly List<T> List = [];
 
     public ConfCollection(IEnumerable<T> collection) {
         List = [.. collection];

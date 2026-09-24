@@ -18,14 +18,14 @@ public class ConfValueConverter {
         }
         var converter = state.TypeConverter;
         try {
-            return converter.ConvertFromString(value);
+            return converter.ConvertFromInvariantString(value);
         }
         catch {
             var type = state.Property.PropertyType;
             if (type == typeof(Type)) {
                 return Type.GetType(value, throwOnError: true, ignoreCase: true);
             }
-            if (type == typeof(bool)) {
+            if (type == typeof(bool) || Nullable.GetUnderlyingType(type) == typeof(bool)) {
                 return DefaultBooleanConverter.Convert(value, state);
             }
             if (type.IsEnum || (Nullable.GetUnderlyingType(type)?.IsEnum == true)) {
@@ -35,7 +35,8 @@ public class ConfValueConverter {
                 return DefaultListItemsConverter.Convert(value, state);
             }
             var instanceType = Type.GetType(value, throwOnError: false, ignoreCase: true);
-            if (instanceType != null) {
+            var targetType = Nullable.GetUnderlyingType(type) ?? type;
+            if (instanceType != null && targetType.IsAssignableFrom(instanceType)) {
                 return Activator.CreateInstance(instanceType);
             }
             throw;

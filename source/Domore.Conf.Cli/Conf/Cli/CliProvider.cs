@@ -46,7 +46,7 @@ public sealed class CliProvider {
         var confLines = description.Conf(line);
         var conf = string.Join(Environment.NewLine, confLines);
         try {
-            target.ConfFrom(conf, key: "");
+            target.ConfFrom(conf, key: "", includeEmptyStrings: true);
         }
         catch (ConfValueConverterException ex) {
             throw new CliConversionException(ex);

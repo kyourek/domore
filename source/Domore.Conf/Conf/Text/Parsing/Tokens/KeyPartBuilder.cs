@@ -10,11 +10,12 @@ internal sealed class KeyPartBuilder : TokenBuilder, IConfKeyPart {
     }
 
     public StringBuilder String { get; } = new StringBuilder();
-    public ConfCollection<KeyIndexBuilder> Indices { get; } = new ConfCollection<KeyIndexBuilder>();
+    public ConfCollection<KeyIndexBuilder> Indices { get; } = [];
 
     public KeyBuilder Key { get; }
 
-    public KeyPartBuilder(KeyBuilder key) : base((key ?? throw new ArgumentNullException(nameof(key))).Sep) {
+    public KeyPartBuilder(KeyBuilder key)
+    : base((key ?? throw new ArgumentNullException(nameof(key))).Sep) {
         Key = key ?? throw new ArgumentNullException(nameof(key));
         Key.Parts.Add(this);
     }

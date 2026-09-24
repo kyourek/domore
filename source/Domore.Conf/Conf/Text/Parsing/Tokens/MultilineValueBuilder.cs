@@ -22,11 +22,6 @@ internal abstract class MultiLineValueBuilder : ValueBuilder {
                 String.Clear();
             }
         }
-        if (String.Length > 0) {
-            return new Complete(Key, this);
-        }
-        else {
-            return new KeyBuilder(Sep);
-        }
+        return new Complete(Key, this);
     }
 }

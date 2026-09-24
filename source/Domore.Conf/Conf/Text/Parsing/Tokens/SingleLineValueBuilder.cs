@@ -11,10 +11,7 @@ internal sealed class SingleLineValueBuilder : ValueBuilder {
     public sealed override Token Build(string s, ref int i) {
         var c = s[i];
         if (c == Sep) {
-            if (String.Length > 0) {
-                return new Complete(Key, this);
-            }
-            return new KeyBuilder(Sep);
+            return new Complete(Key, this);
         }
         switch (c) {
             case '{':

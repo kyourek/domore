@@ -4,6 +4,12 @@ using CONVERT = System.Convert;
 
 namespace Domore.Conf.Converters;
 
+/// <summary>
+/// Converts a configuration value to a boolean.
+/// </summary>
+/// <remarks>
+/// Recognizes <c>true</c>, <c>false</c>, <c>yes</c>, <c>no</c>, <c>1</c>, and <c>0</c>, ignoring case.
+/// </remarks>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 public sealed class ConfBooleanAttribute : ConfConverterAttribute {
     private static readonly Dictionary<string, bool> Map = new(StringComparer.OrdinalIgnoreCase) {
