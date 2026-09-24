@@ -1,4 +1,5 @@
-﻿namespace Domore.Conf.Cli; 
+﻿namespace Domore.Conf.Cli;
+
 internal sealed class CliArgumentNotFoundException : CliException {
     public sealed override string Message =>
         $"Unexpected argument: {Argument}";

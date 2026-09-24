@@ -4,13 +4,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 internal static class TargetPropertyKind {
-    private static readonly HashSet<Type> Numbers = new(new[] { typeof(decimal), typeof(double), typeof(float) });
-    private static readonly HashSet<Type> Integers = new(new[] { typeof(byte), typeof(sbyte), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(short), typeof(ushort) });
+    private static readonly HashSet<Type> Numbers = [typeof(decimal), typeof(double), typeof(float)];
+    private static readonly HashSet<Type> Integers = [
+        typeof(byte), typeof(sbyte), typeof(int), typeof(uint),
+        typeof(long), typeof(ulong), typeof(short), typeof(ushort)];
 
     private static string For(Type type) {
-        if (type == null) {
+        if (type is null) {
             return null;
         }
         if (typeof(bool) == type) {
@@ -41,20 +44,22 @@ internal static class TargetPropertyKind {
                 : ",<" + itemKind + ">";
         }
         var underlyingType = Nullable.GetUnderlyingType(type);
-        if (underlyingType != null) {
+        if (underlyingType is not null) {
             return For(underlyingType);
         }
         return null;
     }
 
     public static string For(TargetPropertyDescription target) {
-        if (null == target) throw new ArgumentNullException(nameof(target));
+        if (target is null) {
+            throw new ArgumentNullException(nameof(target));
+        }
         var type = target.PropertyType;
         if (typeof(IList).IsAssignableFrom(type)) {
             var itemType = ConfType.GetItemType(type);
             var itemKind = For(itemType);
             var itemSeparator = target.ConfListItemsAttribute.Separator;
-            return itemKind == null || itemType == typeof(string) || itemType == typeof(object)
+            return itemKind is null || itemType == typeof(string) || itemType == typeof(object)
                 ? (itemSeparator)
                 : (itemSeparator + '<' + itemKind + '>');
         }

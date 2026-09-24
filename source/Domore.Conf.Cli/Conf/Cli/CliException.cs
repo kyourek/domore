@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 public class CliException : Exception {
     public CliException() {
     }

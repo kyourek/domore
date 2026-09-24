@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class CliValidationAttribute : Attribute {
     public int Order { get; }

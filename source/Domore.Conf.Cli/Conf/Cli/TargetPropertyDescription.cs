@@ -5,7 +5,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 internal sealed class TargetPropertyDescription {
     private readonly Dictionary<int, string> Manuals = new(capacity: 1);
 
@@ -66,11 +67,10 @@ internal sealed class TargetPropertyDescription {
     public int ArgumentOrder => _ArgumentOrder ??= (Attribute<CliArgumentAttribute>()?.Order ?? -1);
     private int? _ArgumentOrder;
 
-    public string ArgumentName => _ArgumentName ??= (
+    public string ArgumentName => field ??= (
         ArgumentOrder < 0
             ? ""
             : DisplayName);
-    private string _ArgumentName;
 
     public bool ArgumentList => _ArgumentList ??= (Attribute<CliArgumentsAttribute>() != null);
     private bool? _ArgumentList;
@@ -78,46 +78,34 @@ internal sealed class TargetPropertyDescription {
     public bool ParameterSet => _ParameterSet ??= (Attribute<CliParametersAttribute>() != null);
     private bool? _ParameterSet;
 
-    public string PropertyName => _PropertyName ??= PropertyInfo.Name;
-    private string _PropertyName;
+    public string PropertyName => field ??= PropertyInfo.Name;
 
-    public Type PropertyType => _PropertyType ??= PropertyInfo.PropertyType;
-    private Type _PropertyType;
+    public Type PropertyType => field ??= PropertyInfo.PropertyType;
 
-    public ReadOnlyCollection<string> ConfNames => _ConfNames ??=
-        new ReadOnlyCollection<string>(PropertyInfo
+    public ReadOnlyCollection<string> ConfNames => field ??=
+        new ReadOnlyCollection<string>([.. PropertyInfo
             .GetCustomAttributes(typeof(ConfAttribute), inherit: true)
             .OfType<ConfAttribute>()
-            .SelectMany(attribute => attribute.Names)
-            .ToList());
-    private ReadOnlyCollection<string> _ConfNames;
+            .SelectMany(attribute => attribute.Names)]);
 
-    public ReadOnlyCollection<string> AllNames => _AllNames ??=
-        new ReadOnlyCollection<string>(new[] { PropertyName }
-            .Concat(ConfNames)
-            .ToList());
-    private ReadOnlyCollection<string> _AllNames;
+    public ReadOnlyCollection<string> AllNames => field ??=
+        new ReadOnlyCollection<string>([PropertyName, .. ConfNames]);
 
-    public CliDisplayAttribute DisplayAttribute => _DisplayAttribute ??= (Attribute<CliDisplayAttribute>() ?? new CliDisplayAttribute());
-    private CliDisplayAttribute _DisplayAttribute;
+    public CliDisplayAttribute DisplayAttribute => field ??=
+        (Attribute<CliDisplayAttribute>() ?? new CliDisplayAttribute());
 
-    public CliDisplayOverrideAttribute DisplayOverrideAttribute => _DisplayOverrideAttribute ??= (Attribute<CliDisplayOverrideAttribute>() ?? new CliDisplayOverrideAttribute());
-    private CliDisplayOverrideAttribute _DisplayOverrideAttribute;
+    public CliDisplayOverrideAttribute DisplayOverrideAttribute => field ??=
+        (Attribute<CliDisplayOverrideAttribute>() ?? new CliDisplayOverrideAttribute());
 
-    public ConfListItemsAttribute ConfListItemsAttribute => _ConfListItemsAttribute ??= (Attribute<ConfListItemsAttribute>() ?? new ConfListItemsAttribute());
-    private ConfListItemsAttribute _ConfListItemsAttribute;
+    public ConfListItemsAttribute ConfListItemsAttribute => field ??=
+        (Attribute<ConfListItemsAttribute>() ?? new ConfListItemsAttribute());
 
-    public ConfHelpAttribute ConfHelpAttribute => _ConfHelpAttribute ??= (Attribute<ConfHelpAttribute>() ?? new ConfHelpAttribute(null));
-    private ConfHelpAttribute _ConfHelpAttribute;
+    public ConfHelpAttribute ConfHelpAttribute => field ??=
+        (Attribute<ConfHelpAttribute>() ?? new ConfHelpAttribute(null));
 
-    public string DisplayName => _DisplayName ??= (ConfNames.FirstOrDefault() ?? PropertyName.ToLowerInvariant());
-    private string _DisplayName;
-
-    public string DisplayKind => _DisplayKind ??= (TargetPropertyKind.For(this) ?? PropertyType.Name.ToLowerInvariant());
-    private string _DisplayKind;
-
-    public string Display => _Display ??= (DisplayOverrideAttribute.Display ?? DisplayFactory());
-    private string _Display;
+    public string DisplayName => field ??= (ConfNames.FirstOrDefault() ?? PropertyName.ToLowerInvariant());
+    public string DisplayKind => field ??= (TargetPropertyKind.For(this) ?? PropertyType.Name.ToLowerInvariant());
+    public string Display => field ??= (DisplayOverrideAttribute.Display ?? DisplayFactory());
 
     public PropertyInfo PropertyInfo { get; }
 

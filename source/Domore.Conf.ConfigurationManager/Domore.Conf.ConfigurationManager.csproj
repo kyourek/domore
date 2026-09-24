@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more conf in app.config</Description>
-    <PackageTags>.NET App Config;App Config</PackageTags>
+    <PackageTags>app-config;appconfig;app.config;ConfigurationManager;configuration;conf;domore</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />

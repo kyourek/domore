@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more conf</Description>
-    <PackageTags>.NET Conf;.NET Config;.NET Configuration;Conf Files;Config Files;Configuration Files;Conf;Config;Configuration</PackageTags>
+    <PackageTags>conf;config;configuration;conf-files;config-files;configuration-files;settings;dotnet;domore</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>

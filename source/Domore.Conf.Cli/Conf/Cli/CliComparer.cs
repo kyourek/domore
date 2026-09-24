@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 public sealed class CliComparer : IEqualityComparer, IEqualityComparer<string> {
     public bool Equals(string x, string y) {
         return Token.Equals(x, y);
