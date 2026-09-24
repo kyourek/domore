@@ -215,7 +215,7 @@ public partial class Notifier : NotifyPropertyChangedImplementation, INotifyProp
 
     public event PropertyChangingEventHandler PropertyChanging;
 
-#if NET45_OR_GREATER || NETCOREAPP
+#if NET45_OR_GREATER || NETCOREAPP || NET || NETSTANDARD2_0_OR_GREATER
     /// <summary>
     /// An implementation of <see cref="INotifyDataErrorInfo"/>.
     /// </summary>

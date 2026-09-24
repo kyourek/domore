@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Domore.Conf; 
+namespace Domore.Conf;
+
 /// <summary>
 /// Provider of serialization to and from conf content.
 /// </summary>

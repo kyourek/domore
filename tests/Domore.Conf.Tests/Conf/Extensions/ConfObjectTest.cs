@@ -663,6 +663,45 @@ more lines{
                 .Contains(nameof(CircularParent)));
     }
 
+    private sealed class SharedReferenceParent {
+        public SharedReferenceChild First { get; set; }
+        public SharedReferenceChild Second { get; set; }
+    }
+
+    private sealed class SharedReferenceChild {
+        public string Value { get; set; }
+    }
+
+    [Test]
+    public void ConfText_SerializesSharedReferences() {
+        var child = new SharedReferenceChild { Value = "shared" };
+        var actual = new SharedReferenceParent {
+            First = child,
+            Second = child
+        }.ConfText(key: "");
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(actual, Does.Contain("First.Value = shared"));
+            Assert.That(actual, Does.Contain("Second.Value = shared"));
+        }
+    }
+
+    private sealed class TypeProperty {
+        public Type Value { get; set; }
+    }
+
+    [Test]
+    public void ConfText_CanRoundTripTypeProperty() {
+        var expected = typeof(SharedReferenceChild);
+        var text = new TypeProperty { Value = expected }.ConfText(key: "");
+        var actual = new TypeProperty().ConfFrom(text, key: "").Value;
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(text, Does.Contain(expected.AssemblyQualifiedName));
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+    }
+
     class Foo {
         public string String { get; set; }
     }

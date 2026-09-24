@@ -1,6 +1,7 @@
 ﻿using System;
 
 namespace Domore.Conf.Converters;
+
 /// <summary>
 /// Converts conf content to enum flags.
 /// </summary>

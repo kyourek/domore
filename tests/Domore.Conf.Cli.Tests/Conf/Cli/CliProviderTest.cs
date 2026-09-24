@@ -674,6 +674,25 @@ baz [word=<z/s>]".Trim();
         Assert.That(target.TheSwitch, Is.EqualTo(""));
     }
 
+    [TestCase("dothis theswitch=\"\"")]
+    [TestCase("dothis theswitch=")]
+    public void EmptySwitchValuesUseCliStringBehavior(string line) {
+        var target = new TypeWithArgumentAndSwitch { TheSwitch = "some-value" };
+
+        Subject.Configure(target, line);
+
+        Assert.That(target.TheSwitch, Is.Empty);
+    }
+
+    [Test]
+    public void EmptyNonStringSwitchDoesNotOverrideExistingValue() {
+        var move = new Move { Speed = 12.5 };
+
+        Subject.Configure(move, "left speed=''");
+
+        Assert.That(move.Speed, Is.EqualTo(12.5));
+    }
+
     [CliExample("foo 1", "Do one to foo.")]
     private class LongManualBase {
         [CliArgument, CliRequired, ConfHelp(@"

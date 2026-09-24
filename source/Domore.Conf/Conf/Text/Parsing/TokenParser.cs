@@ -10,7 +10,7 @@ internal sealed class TokenParser {
             throw new ArgumentNullException(nameof(s));
         }
         var sContainsNewLine = s.Contains(
-#if NETCOREAPP
+#if NETCOREAPP || NET
             '\n'
 #else
             "\n"
@@ -20,7 +20,7 @@ internal sealed class TokenParser {
         var key = new KeyBuilder(sep);
         var token = key as Token;
         for (var i = 0; i < s.Length; i++) {
-            if (token == null) {
+            if (token is null) {
                 return key;
             }
             if (token is Invalid) {
@@ -36,12 +36,12 @@ internal sealed class TokenParser {
         return key;
     }
 
-    public IEnumerable<IConfPair> Pairs(string text) {
+    public IEnumerable<IConfPair> Pairs(string text, bool includeEmptyValues = false) {
         if (text is null) {
             throw new ArgumentNullException(nameof(text));
         }
         var textContainsNewLine = text.Contains(
-#if NETCOREAPP
+#if NETCOREAPP || NET
             '\n'
 #else
             "\n"
@@ -65,11 +65,13 @@ internal sealed class TokenParser {
                 token = builder.Build(text, ref i);
             }
             if (token is Complete complete) {
-                yield return complete;
+                if (includeEmptyValues || complete.Value.ToString().Length > 0) {
+                    yield return complete;
+                }
                 token = new KeyBuilder(sep);
             }
         }
-        if (token is ValueBuilder value) {
+        if (token is ValueBuilder value && (includeEmptyValues || value.ToString().Length > 0)) {
             yield return new Complete(value.Key, value);
         }
     }

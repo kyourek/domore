@@ -1,6 +1,7 @@
 ﻿using Domore.Conf.Extensions;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 
@@ -66,18 +67,23 @@ public sealed class ConfListItemsAttribute : ConfConverterAttribute {
             }
             var typeConverter = itemConverter as TypeConverter;
             var valueConverter = itemConverter as ConfValueConverter;
+            var items = new List<object>();
             var itemSeparator = Separator;
             var itemStrings = value.Split(new[] { itemSeparator }, StringSplitOptions.RemoveEmptyEntries).Select(s => s?.Trim() ?? "").Where(s => s != "");
             foreach (var itemString in itemStrings) {
                 if (typeConverter != null) {
-                    list.Add(typeConverter.ConvertFromString(itemString));
+                    items.Add(typeConverter.ConvertFromInvariantString(itemString));
                     continue;
                 }
                 if (valueConverter != null) {
-                    list.Add(valueConverter.Convert(itemString, state));
+                    items.Add(valueConverter.Convert(itemString, state));
                     continue;
                 }
-                list.Add(itemString);
+                items.Add(itemString);
+            }
+            list.Clear();
+            foreach (var item in items) {
+                list.Add(item);
             }
             return list;
         }

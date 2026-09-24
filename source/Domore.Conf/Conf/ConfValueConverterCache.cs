@@ -8,6 +8,11 @@ internal sealed class ConfValueConverterCache {
     private readonly Dictionary<Type, ConfValueConverter> Cache = [];
 
     private static ConfValueConverter Create(Type type) {
+        if (typeof(ConfValueConverter).IsAssignableFrom(type) == false) {
+            throw new ArgumentException(
+                $"Converter type '{type}' must derive from {nameof(ConfValueConverter)}.",
+                nameof(type));
+        }
         return (ConfValueConverter)Activator.CreateInstance(type);
     }
 

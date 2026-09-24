@@ -7,13 +7,10 @@ namespace Domore.Conf;
 internal sealed class ConfLookup : IConfLookup {
     private static readonly IEnumerable<string> Empty = new string[] { };
 
-    private ILookup<IConfKey, IConfValue> Lookup =>
-        _Lookup ?? (
-        _Lookup = Pairs.ToLookup(
+    private ILookup<IConfKey, IConfValue> Lookup => field ??= Pairs.ToLookup(
             keySelector: p => p.Key,
             elementSelector: p => p.Value,
-            comparer: ConfKey.Comparer));
-    private ILookup<IConfKey, IConfValue> _Lookup;
+            comparer: ConfKey.Comparer);
 
     private bool Contains(string key, out IConfKey conf) {
         conf = ConfKey.Build(key);

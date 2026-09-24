@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Domore.Conf.Extensions;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -65,6 +66,21 @@ public sealed class ConfContainerTest {
             ";
         var man = Subject.Configure(new Man());
         Assert.That(man.BestFriend.Color, Is.EqualTo("red"));
+    }
+
+    private class ObjWithInvalidConverter {
+        [ConfConverter(typeof(string))]
+        public int Value { get; set; }
+    }
+
+    [Test]
+    public void Configure_RejectsConverterTypeThatDoesNotDeriveFromConfValueConverter() {
+        Content = "ObjWithInvalidConverter.Value = 1";
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            Subject.Configure(new ObjWithInvalidConverter()));
+
+        Assert.That(exception.Message, Does.Contain(nameof(ConfValueConverter)));
     }
 
     [TestCase("penny.Color")]
@@ -167,15 +183,152 @@ public sealed class ConfContainerTest {
         Assert.That(obj.YesIgnored, Is.Null);
     }
 
+    private class ObjWithNullableBool {
+        public bool? Value { get; set; }
+    }
+
+    [TestCase("yes", true)]
+    [TestCase("no", false)]
+    [TestCase("1", true)]
+    [TestCase("0", false)]
+    public void Configure_ConvertsBooleanAliasesToNullableBool(string value, bool expected) {
+        Content = $"ObjWithNullableBool.Value = {value}";
+
+        var actual = Subject.Configure(new ObjWithNullableBool()).Value;
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    private class ObjWithIntValue {
+        public int Value { get; set; } = 27;
+    }
+
+    [TestCase("ObjWithIntValue.Value =", 27)]
+    [TestCase("ObjWithIntValue.Value =\nObjWithIntValue.Value = 42", 42)]
+    [TestCase("ObjWithIntValue.Value = 42\nObjWithIntValue.Value =", 42)]
+    public void Configure_IgnoresEmptyValuesConsistently(string content, int expected) {
+        Content = content;
+
+        var actual = Subject.Configure(new ObjWithIntValue()).Value;
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    private class ObjWithStringValue {
+        public string Value { get; set; } = "existing";
+    }
+
+    [TestCase("ObjWithStringValue.Value =")]
+    [TestCase("ObjWithStringValue.Value =\n")]
+    [TestCase("ObjWithStringValue.Value = first\nObjWithStringValue.Value =")]
+    [TestCase("ObjWithStringValue.Value = first\nObjWithStringValue.Value =\n")]
+    [TestCase("ObjWithStringValue.Value = {\n}")]
+    public void Configure_IgnoresEmptyStringValues(string content) {
+        Content = content;
+
+        var actual = Subject.Configure(new ObjWithStringValue()).Value;
+
+        Assert.That(actual, Is.EqualTo(content.Contains("first") ? "first" : "existing"));
+    }
+
+    [TestCase("ObjWithStringValue.Value =")]
+    [TestCase("ObjWithStringValue.Value =\n")]
+    [TestCase("ObjWithStringValue.Value = first\nObjWithStringValue.Value =")]
+    [TestCase("ObjWithStringValue.Value = first\nObjWithStringValue.Value =\n")]
+    [TestCase("ObjWithStringValue.Value = {\n}")]
+    public void ConfFrom_CanIncludeEmptyStringValues(string content) {
+        var actual = new ObjWithStringValue().ConfFrom(content, includeEmptyStrings: true).Value;
+
+        Assert.That(actual, Is.Empty);
+    }
+
+    private class ObjWithNestedEmptyValues {
+        public ObjWithIntValue Number { get; set; }
+        public ObjWithStringValue Text { get; set; }
+        public List<int> Numbers { get; set; }
+        public List<string> Strings { get; set; }
+    }
+
+    [Test]
+    public void ConfFrom_EmptyNonStringsDoNotCreateNestedObjects() {
+        var content = "ObjWithNestedEmptyValues.Number.Value =\nObjWithNestedEmptyValues.Numbers[0] =";
+
+        var actual = new ObjWithNestedEmptyValues().ConfFrom(content, key: null, includeEmptyStrings: true);
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(actual.Number, Is.Null);
+            Assert.That(actual.Numbers, Is.Null);
+        }
+    }
+
+    [Test]
+    public void ConfFrom_EmptyStringsPopulateNestedAndIndexedProperties() {
+        var content = "ObjWithNestedEmptyValues.Text.Value =\nObjWithNestedEmptyValues.Strings[0] =";
+
+        var actual = new ObjWithNestedEmptyValues().ConfFrom(content, key: null, includeEmptyStrings: true);
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(actual.Text.Value, Is.Empty);
+            Assert.That(actual.Strings[0], Is.Empty);
+        }
+    }
+
+    private struct Point {
+        public int X { get; set; }
+    }
+
+    private class ObjWithPoint {
+        public Point P { get; set; }
+    }
+
+    [Test]
+    public void Configure_WritesBackNestedStructProperty() {
+        Content = "ObjWithPoint.P.X = 3";
+
+        var actual = Subject.Configure(new ObjWithPoint()).P.X;
+
+        Assert.That(actual, Is.EqualTo(3));
+    }
+
+    private class ObjWithPointList {
+        public List<Point> Points { get; set; } = [];
+    }
+
+    [Test]
+    public void Configure_WritesBackNestedStructListItem() {
+        Content = "ObjWithPointList.Points[0].X = 3";
+
+        var actual = Subject.Configure(new ObjWithPointList()).Points[0].X;
+
+        Assert.That(actual, Is.EqualTo(3));
+    }
+
     private class Kid { public Pet Pet { get; set; } }
     private class Pet { }
     private class Cat : Pet { public string Color { get; set; } }
+
+    private static int UnrelatedInstanceCount;
+
+    private class Unrelated {
+        public Unrelated() {
+            UnrelatedInstanceCount++;
+        }
+    }
 
     [Test]
     public void Configure_CreatesInstanceOfType() {
         Content = @"Kid.Pet = Domore.Conf.ConfContainerTest+Cat, Domore.Conf.Tests";
         var kid = Subject.Configure(new Kid());
         Assert.That(kid.Pet, Is.InstanceOf(typeof(Cat)));
+    }
+
+    [Test]
+    public void Configure_DoesNotInstantiateIncompatibleType() {
+        UnrelatedInstanceCount = 0;
+        Content = $"Kid.Pet = {typeof(Unrelated).AssemblyQualifiedName}";
+
+        Assert.That(() => Subject.Configure(new Kid()), Throws.TypeOf<ConfValueConverterException>());
+        Assert.That(UnrelatedInstanceCount, Is.Zero);
     }
 
     private class Mom { public IList<string> Jobs { get; } = new Collection<string>(); }
@@ -1011,6 +1164,18 @@ public sealed class ConfContainerTest {
     }
 
     [Test]
+    public void NestedIncludeIsExpandedOnlyOnce() {
+        var t1 = TempFile();
+        var t2 = TempFile();
+        File.WriteAllText(t1, "depth = 25");
+        File.WriteAllText(t2, $"##.include = {t1}");
+        Content = $"##.include = {t2}";
+        Subject.Special = "##";
+
+        Assert.That(Subject.Lookup.All("depth").ToArray(), Is.EqualTo(new[] { "25" }));
+    }
+
+    [Test]
     public void LastIncludeInAListOverridesOthersWhenOthersAreNested() {
         var t1 = TempFile();
         var t2 = TempFile();
@@ -1030,5 +1195,76 @@ public sealed class ConfContainerTest {
         var actual = Subject.Configure(new Shipwreck(), key: "").Depth;
         var expected = 27;
         Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void IncludeCycleThrowsConfException() {
+        var path = TempFile();
+        File.WriteAllText(path, $"##.include = {path}");
+
+        var conf = Conf.Contain(path, "##");
+
+        Assert.That(() => conf.Configure(new Shipwreck(), key: ""), Throws.TypeOf<ConfException>());
+    }
+
+    [Test]
+    public void PrefixCycleThrowsConfException() {
+        var path = TempFile();
+        File.WriteAllText(path, $"##.key[prefix] = {path}");
+
+        var conf = Conf.Contain(path, "##");
+
+        Assert.That(() => conf.Configure(new Shipwreck(), key: ""), Throws.TypeOf<ConfException>());
+    }
+
+    [Test]
+    public void MutuallyIncludedFilesThrowConfException() {
+        var first = TempFile();
+        var second = TempFile();
+        File.WriteAllText(first, $"##.include = {second}");
+        File.WriteAllText(second, $"##.include = {first}");
+
+        var conf = Conf.Contain(first, "##");
+
+        Assert.That(() => conf.Configure(new Shipwreck(), key: ""), Throws.TypeOf<ConfException>());
+    }
+
+    [Test]
+    public void RelativeNestedIncludesResolveFromEachFileAndAppearInSources() {
+        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var nestedDirectory = Path.Combine(directory, "nested");
+        Directory.CreateDirectory(nestedDirectory);
+        var rootPath = Path.Combine(directory, "root.conf");
+        var childPath = Path.Combine(nestedDirectory, "child.conf");
+        var leafPath = Path.Combine(nestedDirectory, "leaf.conf");
+        const string rootText = "##.include = nested/child.conf";
+        const string childText = "##.include = leaf.conf";
+        const string leafText = "depth = 31";
+        try {
+            File.WriteAllText(rootPath, rootText);
+            File.WriteAllText(childPath, childText);
+            File.WriteAllText(leafPath, leafText);
+
+            var conf = Conf.Contain(rootPath, "##");
+            var actual = conf.Configure(new Shipwreck(), key: "").Depth;
+            var sources = conf.Sources.OfType<string>().ToArray();
+
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(actual, Is.EqualTo(31));
+                Assert.That(sources, Does.Contain(rootPath));
+                Assert.That(sources, Does.Contain(childPath));
+                Assert.That(sources, Does.Contain(leafPath));
+                Assert.That(sources, Does.Contain(rootText));
+                Assert.That(sources, Does.Contain(childText));
+                Assert.That(sources, Does.Contain(leafText));
+            }
+        }
+        finally {
+            File.Delete(rootPath);
+            File.Delete(childPath);
+            File.Delete(leafPath);
+            Directory.Delete(nestedDirectory);
+            Directory.Delete(directory);
+        }
     }
 }

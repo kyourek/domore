@@ -15,10 +15,16 @@ internal sealed class ConfContainer : IConfContainer {
         return
             provider is not ConfContentProviderBase providerBase
                 ? provider.GetConfContent(Source)
-                : providerBase.GetConfContent(Source, null, new ConfContentProviderContext {
-                    Special = Special
+                : providerBase.GetConfContent(Source, InitialSources, new ConfContentProviderContext {
+                    Special = Special,
+                    BaseDirectory = SourceDirectory,
+                    IncludeEmptyValues = IncludeEmptyStrings
                 });
     }
+
+    internal IEnumerable<object> InitialSources { get; set; }
+    internal string SourceDirectory { get; set; }
+    internal bool IncludeEmptyStrings { get; set; }
 
     public IConfContentProvider ContentProvider {
         get => _ContentProvider ??= new ConfContentProvider();
@@ -65,13 +71,20 @@ internal sealed class ConfContainer : IConfContainer {
     public T Configure<T>(T target, string key = null) {
         if (null == target) throw new ArgumentNullException(nameof(target));
         var k = key ?? target?.GetType()?.Name ?? typeof(T).Name;
-        var p = k == "" ? Content.Pairs : Content.Pairs.Where(pair => pair.Key.StartsWith(k)).Select(pair => new ConfPair(pair.Key.Skip(), pair.Value));
-        Populator.Populate(target, this, p);
+        var p = k == ""
+            ? Content.Pairs
+            : Content.Pairs.Where(pair => pair.Key.StartsWith(k))
+                           .Select(pair => new ConfPair(pair.Key.Skip(), pair.Value));
+        Populator.Populate(target, this, p, IncludeEmptyStrings);
         return target;
     }
 
-    public IEnumerable<T> Configure<T>(Func<T> factory, string key = null, IEqualityComparer<string> comparer = null) {
-        if (null == factory) throw new ArgumentNullException(nameof(factory));
+    public IEnumerable<T> Configure<T>(Func<T> factory,
+                                       string key = null,
+                                       IEqualityComparer<string> comparer = null) {
+        if (factory is null) {
+            throw new ArgumentNullException(nameof(factory));
+        }
         var k = key ?? typeof(T).Name;
         var groups = Content.Pairs
             .Where(pair => pair.Key.StartsWith(k))
@@ -83,13 +96,17 @@ internal sealed class ConfContainer : IConfContainer {
         foreach (var group in groups) {
             var target = factory();
             var pairs = group.Select(pair => new ConfPair(pair.Key.Skip(), pair.Value));
-            Populator.Populate(target, this, pairs);
+            Populator.Populate(target, this, pairs, IncludeEmptyStrings);
             yield return target;
         }
     }
 
-    public IEnumerable<KeyValuePair<string, T>> Configure<T>(Func<string, T> factory, string key = null, IEqualityComparer<string> comparer = null) {
-        if (null == factory) throw new ArgumentNullException(nameof(factory));
+    public IEnumerable<KeyValuePair<string, T>> Configure<T>(Func<string, T> factory,
+                                                             string key = null,
+                                                             IEqualityComparer<string> comparer = null) {
+        if (factory is null) {
+            throw new ArgumentNullException(nameof(factory));
+        }
         var k = key ?? typeof(T).Name;
         var groups = Content.Pairs
             .Where(pair => pair.Key.StartsWith(k))
@@ -101,7 +118,7 @@ internal sealed class ConfContainer : IConfContainer {
         foreach (var group in groups) {
             var target = factory(group.Key);
             var pairs = group.Select(pair => new ConfPair(pair.Key.Skip(), pair.Value));
-            Populator.Populate(target, this, pairs);
+            Populator.Populate(target, this, pairs, IncludeEmptyStrings);
             yield return new KeyValuePair<string, T>(group.Key, target);
         }
     }

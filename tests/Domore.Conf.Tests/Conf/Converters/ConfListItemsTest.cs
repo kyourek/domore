@@ -25,6 +25,15 @@ public sealed class ConfListItemsTest {
     }
 
     [Test]
+    public void ReconfigurationReplacesAnnotatedListItems() {
+        var kid = new Kid { FavoriteColors = ["Existing"] };
+        kid.ConfFrom("kid.FavoriteColors = Red, green");
+        kid.ConfFrom("kid.FavoriteColors = BLUE");
+
+        Assert.That(kid.FavoriteColors, Is.EqualTo(new[] { "BLUE" }));
+    }
+
+    [Test]
     public void ConvertsItemsIntoListWithSpecifiedName() {
         var actual = new Kid().ConfFrom($"kid.pets= Little Bit & Penny").PetNames;
         var expected = new[] { "Little Bit", "Penny" };
@@ -34,6 +43,19 @@ public sealed class ConfListItemsTest {
     private class Pi {
         [ConfListItems]
         public List<int> Digits { get; set; }
+    }
+
+    private class UnannotatedList {
+        public List<string> Items { get; set; } = [];
+    }
+
+    [Test]
+    public void ReconfigurationReplacesDefaultListItems() {
+        var list = new UnannotatedList();
+        list.ConfFrom("UnannotatedList.Items = first, second");
+        list.ConfFrom("UnannotatedList.Items = third");
+
+        Assert.That(list.Items, Is.EqualTo(new[] { "third" }));
     }
 
     [Test]
