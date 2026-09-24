@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Domore.Conf.Extensions; 
+namespace Domore.Conf.Extensions;
+
 internal static class CliType {
     public static Dictionary<MemberInfo, string> GetEnumDisplay(this Type type) {
         var alias = ConfType.GetEnumAlias(type);

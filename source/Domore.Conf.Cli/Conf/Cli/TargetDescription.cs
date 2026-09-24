@@ -6,12 +6,11 @@ using System.Reflection;
 namespace Domore.Conf.Cli;
 
 internal sealed class TargetDescription {
-    private IEnumerable<TargetPropertyDescription> DisplayedProperties => _DisplayedProperties ??=
+    private IEnumerable<TargetPropertyDescription> DisplayedProperties => field ??=
         Properties
             .Where(p => p.DisplayAttribute.Include ?? DisplayDefault)
             .OrderBy(p => p.ArgumentOrder > -1 ? p.ArgumentOrder : int.MaxValue)
             .ToList();
-    private IEnumerable<TargetPropertyDescription> _DisplayedProperties;
 
     private CliSetup Setup { get; }
 
@@ -29,39 +28,33 @@ internal sealed class TargetDescription {
 
     public Type TargetType { get; }
 
-    public ConfHelpAttribute ConfHelpAttribute => _ConfHelpAttribute ??= (Attribute<ConfHelpAttribute>() ?? new ConfHelpAttribute(null));
-    private ConfHelpAttribute _ConfHelpAttribute;
+    public ConfHelpAttribute ConfHelpAttribute => field ??=
+        (Attribute<ConfHelpAttribute>() ?? new ConfHelpAttribute(null));
 
-    public IEnumerable<TargetPropertyDescription> Properties => _Properties ??=
+    public IEnumerable<TargetPropertyDescription> Properties => field ??=
         TargetType
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(propertyInfo => propertyInfo.CanRead && propertyInfo.CanWrite)
             .Select(propertyInfo => new TargetPropertyDescription(propertyInfo))
             .ToList();
-    private IEnumerable<TargetPropertyDescription> _Properties;
 
-    public string Example => _Example ??= new Func<string>(() => {
+    public string Example => field ??= new Func<string>(() => {
         var examples = TargetType
             .GetCustomAttributes(typeof(CliExampleAttribute), inherit: true)
             .OfType<CliExampleAttribute>()
             .Select(attribute => attribute.Format(CommandInvoke));
         return string.Join(Environment.NewLine + Environment.NewLine, examples).Trim();
     })();
-    private string _Example;
 
-    public string CommandName => _CommandName ??= (Setup.CommandName(TargetType) ?? TargetType.Name.ToLowerInvariant());
-    private string _CommandName;
+    public string CommandName => field ??= (Setup.CommandName(TargetType) ?? TargetType.Name.ToLowerInvariant());
+    public string CommandSpace => field ??= (Setup.CommandSpace(TargetType) ?? "");
 
-    public string CommandSpace => _CommandSpace ??= (Setup.CommandSpace(TargetType) ?? "");
-    private string _CommandSpace;
-
-    public string CommandInvoke => _CommandInvoke ??= new Func<string>(() => {
+    public string CommandInvoke => field ??= new Func<string>(() => {
         var name = CommandName;
         var space = CommandSpace;
         var invoke = string.IsNullOrWhiteSpace(space) ? name : $"{space} {name}";
         return invoke;
     })();
-    private string _CommandInvoke;
 
     public bool DisplayDefault => _DisplayDefault ??= (
         Properties.Any(p => p.DisplayAttribute.Include == true) ? false :
@@ -69,10 +62,10 @@ internal sealed class TargetDescription {
         true);
     private bool? _DisplayDefault;
 
-    public string Display => _Display ??= string.Join(" ", new[] { CommandName }.Concat(DisplayedProperties.Select(p => p.Display)));
-    private string _Display;
+    public string Display => field ??=
+        string.Join(" ", new[] { CommandName }.Concat(DisplayedProperties.Select(p => p.Display)));
 
-    public string Manual => _Manual ??= new Func<string>(() => {
+    public string Manual => field ??= new Func<string>(() => {
         var display = Display;
         var properties = DisplayedProperties;
         if (properties.Any() == false) {
@@ -89,9 +82,8 @@ internal sealed class TargetDescription {
             .Concat(string.IsNullOrWhiteSpace(Example) ? [] : [Example]));
         return manual;
     })();
-    private string _Manual;
 
-    public IEnumerable<TargetMethodValidation> Validations => _Validations ??=
+    public IEnumerable<TargetMethodValidation> Validations => field ??=
         TargetType
             .GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Select(method => new {
@@ -105,7 +97,6 @@ internal sealed class TargetDescription {
             .OrderBy(item => item.Attribute.Order)
             .Select(item => new TargetMethodValidation(item.Method, item.Attribute))
             .ToList();
-    private IEnumerable<TargetMethodValidation> _Validations;
 
     public IEnumerable<string> Conf(string cli) {
         var properties = Properties;

@@ -1,8 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Do more conf CLI</Description>
-    <PackageTags>CLI</PackageTags>
+    <PackageTags>cli;command-line;commandline;arguments;args;parser;console;conf;domore</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Domore.Conf\Domore.Conf.csproj" />
   </ItemGroup>

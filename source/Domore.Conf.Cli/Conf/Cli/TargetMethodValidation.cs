@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 internal sealed class TargetMethodValidation {
     public MethodInfo MethodInfo { get; }
     public CliValidationAttribute Attribute { get; }

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 internal sealed class CliRequiredNotFoundException : CliException {
     public sealed override string Message => _Message ??=
         $"Missing required: {string.Join(", ", NotFound.Select(p => p.DisplayName))}";

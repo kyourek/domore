@@ -1,15 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 
-namespace Domore.Conf.Cli; 
-internal struct Token {
+namespace Domore.Conf.Cli;
+
+internal readonly struct Token {
     private Token(string key, string value) {
         Key = key;
         Value = value;
     }
 
-    public string Key { get; }
-    public string Value { get; }
+    public readonly string Key { get; }
+    public readonly string Value { get; }
 
     public static IEnumerable<Token> Parse(string line) {
         var s = line?.Trim() ?? "";

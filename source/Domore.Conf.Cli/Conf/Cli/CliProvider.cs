@@ -4,7 +4,8 @@ using System.Collections;
 using System.Linq;
 using System.Threading;
 
-namespace Domore.Conf.Cli; 
+namespace Domore.Conf.Cli;
+
 public sealed class CliProvider {
     private readonly Lazy<TargetDescription.Cache> LazyTargetDescription;
 
