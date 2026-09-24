@@ -2,5 +2,9 @@
   <PropertyGroup>
     <Description>Do more notification</Description>
     <PackageTags>INotifyPropertyChanged;MVVM</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>
