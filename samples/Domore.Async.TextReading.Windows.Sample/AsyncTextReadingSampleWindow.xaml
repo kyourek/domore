@@ -1,0 +1,45 @@
+﻿<Window x:Class="Domore.AsyncTextReadingSampleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:domore="http://schemas.domore.local/winfx/2026/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Domore Async Text Reading Sample"
+        Height="450"
+        Width="800">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition/>
+    </Grid.RowDefinitions>
+    <Grid Grid.Row="0">
+      <Grid.Style>
+        <Style TargetType="Grid">
+          <Setter Property="Margin" Value="10"/>
+        </Style>
+      </Grid.Style>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition/>
+      </Grid.ColumnDefinitions>
+      <Label Grid.Column="0">
+        <Label.Style>
+          <Style TargetType="Label">
+            <Setter Property="Content" Value="File path"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+          </Style>
+        </Label.Style>
+      </Label>
+      <TextBox Grid.Column="1" x:Name="TextReaderSourceTextBox">
+        <TextBox.Style>
+          <Style TargetType="TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+          </Style>
+        </TextBox.Style>
+      </TextBox>
+    </Grid>
+    <Grid Grid.Row="1">
+      <domore:TextReader TextReaderSource="{Binding ElementName=TextReaderSourceTextBox,
+                                                    Path=Text,
+                                                    UpdateSourceTrigger=PropertyChanged}" />
+    </Grid>
+  </Grid>
+</Window>

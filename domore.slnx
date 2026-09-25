@@ -6,7 +6,11 @@
   <Folder Name="/async/">
     <Project Path="source/Domore.Async.FileSystemWatching/Domore.Async.FileSystemWatching.csproj" />
     <Project Path="source/Domore.Async.TaskCaching/Domore.Async.TaskCaching.csproj" />
+    <Project Path="source/Domore.Async.TextReading.Windows/Domore.Async.TextReading.Windows.csproj" />
     <Project Path="source/Domore.Async.TextReading/Domore.Async.TextReading.csproj" />
+  </Folder>
+  <Folder Name="/async/samples/">
+    <Project Path="samples/Domore.Async.TextReading.Windows.Sample/Domore.Async.TextReading.Windows.Sample.csproj" />
   </Folder>
   <Folder Name="/async/tests/">
     <Project Path="tests/Domore.Async.FileSystemWatching.Tests/Domore.Async.FileSystemWatching.Tests.csproj" />
