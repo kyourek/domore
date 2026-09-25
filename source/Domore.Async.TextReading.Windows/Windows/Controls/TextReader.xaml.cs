@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Domore.Windows.Controls;
@@ -87,6 +88,7 @@ partial class TextReader {
             SourceLengthMax = TextReaderSourceLengthMax,
             Options = TextReaderOptions
         };
+        Refresh();
     }
 
     private async void Refresh() {
@@ -161,6 +163,16 @@ partial class TextReader {
         }
     }
 
+    private void OnTextReaderEncodingLabelStyleChanged(DependencyPropertyChangedEventArgs e) {
+        var newValue = e.NewValue as Style;
+        if (newValue is null) {
+            var defaultValue = TryFindResource("TextReaderEncodingLabelStyleDefault") as Style;
+            if (defaultValue is not null) {
+                SetCurrentValue(TextReaderEncodingLabelStyleProperty, defaultValue);
+            }
+        }
+    }
+
     internal async Task AddText(ReadOnlyMemory<char> memory, CancellationToken cancellationToken) {
         var s = new string(memory.Span);
         await Dispatcher.InvokeAsync(
@@ -184,6 +196,16 @@ partial class TextReader {
                     textBox.Clear();
                 }
             });
+    }
+
+    public override void OnApplyTemplate() {
+        base.OnApplyTemplate();
+        if (TextReaderEncodingLabelStyle is null) {
+            var defaultValue = TryFindResource("TextReaderEncodingLabelStyleDefault") as Style;
+            if (defaultValue is not null) {
+                SetCurrentValue(TextReaderEncodingLabelStyleProperty, defaultValue);
+            }
+        }
     }
 
     public static readonly RoutedEvent TextReaderSourceChangedEvent = EventManager.RegisterRoutedEvent(
@@ -258,6 +280,46 @@ partial class TextReader {
                 }
             }));
 
+    public static readonly DependencyProperty TextReaderEncodingLabelStyleProperty = DependencyProperty.Register(
+        name: nameof(TextReaderEncodingLabelStyle),
+        propertyType: typeof(Style),
+        ownerType: typeof(TextReader),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: null,
+            propertyChangedCallback: (s, e) => {
+                if (s is TextReader self) {
+                    self.OnTextReaderEncodingLabelStyleChanged(e);
+                }
+            }));
+
+    public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty = DependencyProperty.Register(
+        name: nameof(HorizontalScrollBarVisibility),
+        propertyType: typeof(ScrollBarVisibility),
+        ownerType: typeof(TextReader),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: ScrollBarVisibility.Auto));
+
+    public static readonly DependencyProperty VerticalScrollBarVisibilityProperty = DependencyProperty.Register(
+        name: nameof(VerticalScrollBarVisibility),
+        propertyType: typeof(ScrollBarVisibility),
+        ownerType: typeof(TextReader),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: ScrollBarVisibility.Auto));
+
+    public static readonly DependencyProperty TextWrappingProperty = DependencyProperty.Register(
+        name: nameof(TextWrapping),
+        propertyType: typeof(TextWrapping),
+        ownerType: typeof(TextReader),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: TextWrapping.NoWrap));
+
+    public static readonly DependencyProperty SelectionTextBrushProperty = DependencyProperty.Register(
+        name: nameof(SelectionTextBrush),
+        propertyType: typeof(Brush),
+        ownerType: typeof(TextReader),
+        typeMetadata: new PropertyMetadata(
+            defaultValue: null));
+
     public static readonly DependencyProperty TextReaderSuccessProperty =
         TextReaderSuccessPropertyKey.DependencyProperty;
 
@@ -320,6 +382,31 @@ partial class TextReader {
     public string TextReaderEncoding {
         get => GetValue(TextReaderEncodingProperty) as string;
         private set => SetValue(TextReaderEncodingPropertyKey, value);
+    }
+
+    public Style TextReaderEncodingLabelStyle {
+        get => GetValue(TextReaderEncodingLabelStyleProperty) as Style;
+        set => SetValue(TextReaderEncodingLabelStyleProperty, value);
+    }
+
+    public ScrollBarVisibility HorizontalScrollBarVisibility {
+        get => (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty);
+        set => SetValue(HorizontalScrollBarVisibilityProperty, value);
+    }
+
+    public ScrollBarVisibility VerticalScrollBarVisibility {
+        get => (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty);
+        set => SetValue(VerticalScrollBarVisibilityProperty, value);
+    }
+
+    public TextWrapping TextWrapping {
+        get => (TextWrapping)GetValue(TextWrappingProperty);
+        set => SetValue(TextWrappingProperty, value);
+    }
+
+    public Brush SelectionTextBrush {
+        get => GetValue(SelectionTextBrushProperty) as Brush;
+        set => SetValue(SelectionTextBrushProperty, value);
     }
 
     public TextReader() {

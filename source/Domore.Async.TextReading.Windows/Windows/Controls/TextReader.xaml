@@ -2,8 +2,16 @@
          xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
          xmlns:local="clr-namespace:Domore.Windows.Controls">
+  <Control.Resources>
+    <Style TargetType="Label" x:Key="TextReaderEncodingLabelStyleDefault">
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="FontFamily" Value="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"/>
+      <Setter Property="FontSize" Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"/>
+    </Style>
+  </Control.Resources>
   <Control.Template>
-    <ControlTemplate>
+    <ControlTemplate TargetType="{x:Type local:TextReader}">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition/>
@@ -11,23 +19,20 @@
         </Grid.RowDefinitions>
         <TextBox Grid.Row="0"
              x:Name="PART_TextBox" 
-             Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             Focusable="{Binding Focusable, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             HorizontalScrollBarVisibility="Auto" 
-             VerticalScrollBarVisibility="Auto"/>
-        <TextBox Grid.Row="1"
-             BorderThickness="0"
-             Focusable="False"
-             FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"
-             FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"                 
-             IsEnabled="False"
-             MaxLines="1"
-             Text="{Binding TextReaderEncoding, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type local:TextReader}}}"/>
+             Background="{TemplateBinding Background}"
+             BorderThickness="{TemplateBinding BorderThickness}"
+             Focusable="{TemplateBinding Focusable}"
+             FontFamily="{TemplateBinding FontFamily}"
+             FontSize="{TemplateBinding FontSize}"
+             FontWeight="{TemplateBinding FontWeight}"
+             Foreground="{TemplateBinding Foreground}"
+             HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+             SelectionTextBrush="{TemplateBinding SelectionTextBrush}"
+             TextWrapping="{TemplateBinding TextWrapping}"
+             VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
+        <Label Grid.Row="1"
+               Content="{TemplateBinding TextReaderEncoding}"
+               Style="{TemplateBinding TextReaderEncodingLabelStyle}"/>
       </Grid>
     </ControlTemplate>
   </Control.Template>

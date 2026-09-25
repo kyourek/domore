@@ -37,7 +37,19 @@
       </TextBox>
     </Grid>
     <Grid Grid.Row="1">
-      <domore:TextReader TextReaderSource="{Binding ElementName=TextReaderSourceTextBox,
+      <domore:TextReader Background="LightGray"
+                         Foreground="Black"
+
+
+
+                         SelectionTextBrush="Orange"
+
+
+
+
+
+                         FontFamily="Consolas"
+                         TextReaderSource="{Binding ElementName=TextReaderSourceTextBox,
                                                     Path=Text,
                                                     UpdateSourceTrigger=PropertyChanged}" />
     </Grid>
