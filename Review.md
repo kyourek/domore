@@ -51,25 +51,12 @@ refresh's result.
 
 ### 3. Old text stays visible when no new text is loaded
 
-`TextReaderWorker.Work`, `TextReaderTextBuilder`
+`TextReader.xaml.cs`: `Refresh`
 
-The `TextBox` is cleared only through `DecodedTextBuilder.Clear`, and that is called only when a decode
-produces data. In these cases, `Work` returns before a decode starts, so the previous file's text stays on
-screen:
-
-- `TextReaderSource` is set to `null`, an empty string, a path that does not exist, or an unsupported type.
-- `TextReaderEnabled` is `false`.
-- The file is larger than `TextReaderSourceLengthMax`.
-- `StreamReady` or `StreamText` returns `null`.
-
-In each case, `TextReaderEncoding` becomes `null` and `TextReaderSuccess` becomes `false`, but the old text
-remains visible.
-
-Canceled or failed decodes also leave partial text, because `TextReaderTextBuilder` does not override
-`Fail`.
-
-**Fix:** Clear the `TextBox` at the start of `Refresh()`, or when `Work` returns `null`. Consider overriding
-`Fail` to clear the text or to mark it as partial.
+**Fixed:** Each current refresh clears the `TextBox` before starting the worker, so early returns leave it
+empty. If decoding completes without success, the refresh clears any partial output before reporting its
+result. Both operations use the refresh cancellation token, so an obsolete refresh cannot clear output from
+a newer one.
 
 ### 4. Changing `TextReaderEnabled`, `TextReaderOptions`, or `TextReaderSourceLengthMax` does nothing visible
 
@@ -86,11 +73,8 @@ There is also no public way to reload the same source, for example after the fil
 
 ### 5. Unloading and loading again leaves partial text
 
-`This_Unloaded` cancels the current load, which can leave partial text in the template's `TextBox`. The
-`TextBox` survives an unload and reload, for example when the control is on a `TabItem`. `This_Loaded`
-creates a new worker but does not refresh, so the partial text stays on screen.
-
-Fixing #1 fixes this too.
+**Fixed by #1 and #3:** `This_Loaded` now starts a refresh, and the refresh clears the existing text before
+decoding again.
 
 ### 6. The text box can be edited, and it records undo history
 

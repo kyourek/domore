@@ -97,6 +97,14 @@ partial class TextReader {
                !cancellation.IsCancellationRequested;
     }
 
+    private async Task ClearTextForRefresh(CancellationToken cancellationToken) {
+        try {
+            await ClearText(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+        }
+    }
+
     private async void Refresh() {
         var cancellation = Cancellation;
         if (cancellation != null) {
@@ -120,11 +128,21 @@ partial class TextReader {
                 if (!IsCurrentRefresh(worker, c)) {
                     return;
                 }
+                await ClearTextForRefresh(c.Token);
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
                 var decoded = await worker.Refresh(
                     builder: new TextReaderTextBuilder(this),
                     cancellationToken: c.Token);
                 if (!IsCurrentRefresh(worker, c)) {
                     return;
+                }
+                if (decoded?.Success != true) {
+                    await ClearTextForRefresh(c.Token);
+                    if (!IsCurrentRefresh(worker, c)) {
+                        return;
+                    }
                 }
                 TextReaderSuccess = decoded?.Success == true;
                 if (!IsCurrentRefresh(worker, c)) {
