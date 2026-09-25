@@ -27,6 +27,8 @@
              FontWeight="{TemplateBinding FontWeight}"
              Foreground="{TemplateBinding Foreground}"
              HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+             IsReadOnly="True"
+             IsUndoEnabled="False"
              SelectionTextBrush="{TemplateBinding SelectionTextBrush}"
              TextWrapping="{TemplateBinding TextWrapping}"
              VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>

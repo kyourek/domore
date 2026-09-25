@@ -191,6 +191,7 @@ partial class TextReader {
         var worker = Worker;
         if (worker is not null) {
             worker.Options = TextReaderOptions;
+            Refresh();
         }
     }
 
@@ -198,6 +199,7 @@ partial class TextReader {
         var worker = Worker;
         if (worker is not null) {
             worker.Enabled = TextReaderEnabled;
+            Refresh();
         }
     }
 
@@ -205,6 +207,7 @@ partial class TextReader {
         var worker = Worker;
         if (worker is not null) {
             worker.SourceLengthMax = TextReaderSourceLengthMax;
+            Refresh();
         }
     }
 

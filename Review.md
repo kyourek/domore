@@ -60,16 +60,13 @@ a newer one.
 
 ### 4. Changing `TextReaderEnabled`, `TextReaderOptions`, or `TextReaderSourceLengthMax` does nothing visible
 
-`OnTextReaderEnabledChanged`, `OnTextReaderOptionsChanged`, and `OnTextReaderSourceLengthMaxChanged` update
-the worker but do not call `Refresh()`. As a result:
+**Fixed:** `OnTextReaderEnabledChanged`, `OnTextReaderOptionsChanged`, and
+`OnTextReaderSourceLengthMaxChanged` now refresh the active worker after updating its settings. Enabling a
+reader loads its current source; disabling it cancels the active load and clears the display; option and
+length-limit changes are applied to the current source.
 
-- Changing `TextReaderEnabled` from `false` to `true` does not load the current source.
-- Changing it from `true` to `false` does not cancel an in-progress load or clear the text.
-- A new encoding in `TextReaderOptions`, or a larger maximum length, has no effect until the source changes.
-
-There is also no public way to reload the same source, for example after the file changes on disk.
-
-**Fix:** Call `Refresh()` from these callbacks, and consider adding a public `Reload()` method.
+There is still no public way to reload the same source, for example after the file changes on disk; that
+would be a separate API enhancement.
 
 ### 5. Unloading and loading again leaves partial text
 
@@ -80,15 +77,14 @@ decoding again.
 
 `TextReader.xaml`: `PART_TextBox`
 
-The control is a reader, but `PART_TextBox` is not `IsReadOnly="True"`. Users can type into it while text
-is still being appended. Their edits then mix with the decoded text, and `AppendText` is always added at the
-end, whatever the user changed.
+The control is a reader, but `PART_TextBox` was not read-only. Users could type into it while text was
+being appended, potentially mixing their edits with the decoded text.
 
-`IsUndoEnabled` is also still `true`. Every `AppendText` call creates an undo unit, which wastes a lot of
-memory for large files.
+`IsUndoEnabled` was also `true`, so every `AppendText` call created an undo unit and used memory for large
+files.
 
-**Fix:** Set `IsReadOnly="True"` and `IsUndoEnabled="False"`. Use `IsReadOnlyCaretVisible="True"` if a caret
-is still wanted.
+**Fixed:** `PART_TextBox` now sets `IsReadOnly="True"` to prevent edits and `IsUndoEnabled="False"` to avoid
+retaining an undo history for appended content.
 
 ### 7. Adding text at `Render` priority can block input on large files
 
