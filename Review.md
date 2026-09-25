@@ -37,33 +37,13 @@ The sample does not show this problem because its binding source `TextBox` start
 
 `TextReader.xaml.cs`: `Refresh`
 
-`Refresh` is `async void`, and it can run again before the previous call finishes. For refresh A followed by
-refresh B:
+**Fixed:** Each refresh now receives its own `DecodedText` result, and only the refresh that still owns the
+current worker and cancellation source can update UI state. Cancellation ownership is cleared in `finally`
+only if it still belongs to that refresh. These checks also guard against refreshes triggered reentrantly by
+property-change event handlers.
 
-1. B cancels `cA` and sets `Cancellation = cB`.
-2. A resumes and runs `Cancellation = null;`. This **overwrites `cB`**.
-3. A sets `TextReaderSuccess = false`, `TextReaderEncoding = null`, and **`TextReaderLoading = false` while
-   B is still loading**.
-4. A disposes `cA`.
-
-Because `Cancellation` is now `null`, B cannot be canceled by the next `Refresh()` or by `This_Unloaded`.
-If the source changes again (C), B and C both call `AddText` and `ClearText` on the same `TextBox`, which
-interleaves text from both sources. B can also finish after C and overwrite `TextReaderEncoding` and
-`TextReaderSuccess` with values for the wrong source.
-
-**Fix:** When a refresh finishes, update state only if it is still the current refresh. For example:
-
-```csharp
-if (ReferenceEquals(Cancellation, c)) {
-    Cancellation = null;
-    TextReaderSuccess = ...;
-    TextReaderEncoding = ...;
-    TextReaderLoading = false;
-}
-```
-
-Also apply the result returned by this refresh instead of reading the shared `worker.Decoded` field.
-Alternatively, have `TextReaderWorker.Refresh` return the `DecodedText`.
+The worker no longer stores a shared `Decoded` result, so an older completion cannot report a newer
+refresh's result.
 
 ---
 

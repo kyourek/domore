@@ -91,6 +91,12 @@ partial class TextReader {
         Refresh();
     }
 
+    private bool IsCurrentRefresh(TextReaderWorker worker, CancellationTokenSource cancellation) {
+        return ReferenceEquals(Worker, worker) &&
+               ReferenceEquals(Cancellation, cancellation) &&
+               !cancellation.IsCancellationRequested;
+    }
+
     private async void Refresh() {
         var cancellation = Cancellation;
         if (cancellation != null) {
@@ -105,15 +111,36 @@ partial class TextReader {
             return;
         }
         using (var c = Cancellation = new CancellationTokenSource()) {
-            TextReaderLoading = true;
-            TextReaderSuccess = false;
-            await worker.Refresh(
-                builder: new TextReaderTextBuilder(this),
-                cancellationToken: c.Token);
-            Cancellation = null;
-            TextReaderSuccess = worker.Decoded?.Success == true;
-            TextReaderEncoding = worker.Decoded?.EncodingName;
-            TextReaderLoading = false;
+            try {
+                TextReaderLoading = true;
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
+                TextReaderSuccess = false;
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
+                var decoded = await worker.Refresh(
+                    builder: new TextReaderTextBuilder(this),
+                    cancellationToken: c.Token);
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
+                TextReaderSuccess = decoded?.Success == true;
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
+                TextReaderEncoding = decoded?.EncodingName;
+                if (!IsCurrentRefresh(worker, c)) {
+                    return;
+                }
+                TextReaderLoading = false;
+            }
+            finally {
+                if (ReferenceEquals(Cancellation, c)) {
+                    Cancellation = null;
+                }
+            }
         }
     }
 

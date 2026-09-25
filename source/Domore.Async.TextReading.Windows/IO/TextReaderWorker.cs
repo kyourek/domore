@@ -50,9 +50,8 @@ internal class TextReaderWorker {
     public long? SourceLengthMax { get; set; }
     public IStreamText Source { get; set; }
     public DecodedTextOptions Options { get; set; }
-    public DecodedText Decoded { get; private set; }
 
-    public async Task Refresh(DecodedTextBuilder builder, CancellationToken cancellationToken) {
-        Decoded = await Work(builder, cancellationToken);
+    public Task<DecodedText> Refresh(DecodedTextBuilder builder, CancellationToken cancellationToken) {
+        return Work(builder, cancellationToken);
     }
 }
