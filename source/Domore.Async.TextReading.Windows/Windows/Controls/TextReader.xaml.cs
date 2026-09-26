@@ -19,30 +19,32 @@ namespace Domore.Windows.Controls;
 /// </summary>
 partial class TextReader {
     private static readonly ILog Log = Logging.For(typeof(TextReader));
-    private static readonly Style TextReaderEncodingLabelStyleDefault;
+    // Initialized by a field initializer so it is set before TextReaderEncodingLabelStyleProperty registers it as the default.
+    private static readonly Style TextReaderEncodingLabelStyleDefault = CreateTextReaderEncodingLabelStyleDefault();
     private static readonly StreamTextProvider Provider = new();
+
+    private static Style CreateTextReaderEncodingLabelStyleDefault() {
+        var
+        style = new Style(typeof(Label));
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
+        style.Setters.Add(new Setter(
+            Control.FontFamilyProperty,
+            new Binding(nameof(FontFamily)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        style.Setters.Add(new Setter(
+            Control.FontSizeProperty,
+            new Binding(nameof(FontSize)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        return style;
+    }
 
     static TextReader() {
         BackgroundProperty.OverrideMetadata(
             typeof(TextReader),
             new FrameworkPropertyMetadata(SystemColors.WindowBrush));
-        TextReaderEncodingLabelStyleDefault = new Func<Style>(() => {
-            var
-            style = new Style(typeof(Label));
-            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
-            style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
-            style.Setters.Add(new Setter(
-                Control.FontFamilyProperty,
-                new Binding(nameof(FontFamily)) {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-                }));
-            style.Setters.Add(new Setter(
-                Control.FontSizeProperty,
-                new Binding(nameof(FontSize)) {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-                }));
-            return style;
-        })();
     }
 
     private TextReaderWorker Worker;
