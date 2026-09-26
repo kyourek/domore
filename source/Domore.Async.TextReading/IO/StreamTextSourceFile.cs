@@ -29,7 +29,7 @@ internal sealed class StreamTextSourceFile : StreamTextSource {
                               FileOptions.Asynchronous);
     }
 
-    public override string ToString() {
+    public sealed override string ToString() {
         return FileInfo.ToString();
     }
 }

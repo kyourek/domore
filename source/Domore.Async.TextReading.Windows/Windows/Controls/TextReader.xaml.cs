@@ -19,77 +19,37 @@ namespace Domore.Windows.Controls;
 /// </summary>
 partial class TextReader {
     private static readonly ILog Log = Logging.For(typeof(TextReader));
+    private static readonly Style TextReaderEncodingLabelStyleDefault;
+    private static readonly StreamTextProvider Provider = new();
 
     static TextReader() {
         BackgroundProperty.OverrideMetadata(
             typeof(TextReader),
             new FrameworkPropertyMetadata(SystemColors.WindowBrush));
-    }
-
-    private static readonly Style TextReaderEncodingLabelStyleDefault = TextReaderEncodingLabelStyleDefaultFactory();
-
-    private static Style TextReaderEncodingLabelStyleDefaultFactory() {
-        var style = new Style(typeof(Label));
-        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
-        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
-        style.Setters.Add(new Setter(
-            Control.FontFamilyProperty,
-            new Binding(nameof(FontFamily)) {
-                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-            }));
-        style.Setters.Add(new Setter(
-            Control.FontSizeProperty,
-            new Binding(nameof(FontSize)) {
-                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-            }));
-        return style;
+        TextReaderEncodingLabelStyleDefault = new Func<Style>(() => {
+            var
+            style = new Style(typeof(Label));
+            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+            style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
+            style.Setters.Add(new Setter(
+                Control.FontFamilyProperty,
+                new Binding(nameof(FontFamily)) {
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+                }));
+            style.Setters.Add(new Setter(
+                Control.FontSizeProperty,
+                new Binding(nameof(FontSize)) {
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+                }));
+            return style;
+        })();
     }
 
     private TextReaderWorker Worker;
     private CancellationTokenSource Cancellation;
 
     private static IStreamText ConvertSource(object value) {
-        if (value is null) {
-            return null;
-        }
-        if (value is IStreamText streamText) {
-            return streamText;
-        }
-        if (value is FileInfo fileInfo) {
-            return new StreamTextSourceFile(fileInfo);
-        }
-        if (value is Uri uri) {
-            if (uri.IsFile) {
-                return CreateFileSource(uri.LocalPath, uri);
-            }
-            if (Log.Warn()) {
-                Log.Warn($"{nameof(TextReaderSource)}[{nameof(Uri)}] requires a file URI[{uri.Scheme}]");
-            }
-            return null;
-        }
-        if (value is string s) {
-            if (!string.IsNullOrWhiteSpace(s)) {
-                return CreateFileSource(s, s);
-            }
-            return null;
-        }
-        if (Log.Warn()) {
-            Log.Warn($"{nameof(TextReaderSource)}[unsupported type][{value.GetType().FullName}]");
-        }
-        return null;
-    }
-
-    private static IStreamText CreateFileSource(string path, object source) {
-        try {
-            var fullPath = Path.GetFullPath(path, AppContext.BaseDirectory);
-            return new StreamTextSourceFile(new FileInfo(fullPath));
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
-            if (Log.Warn()) {
-                Log.Warn($"{nameof(TextReaderSource)}[invalid file path][{source}]", ex);
-            }
-            return null;
-        }
+        return Provider.GetStreamingText(value);
     }
 
     private static readonly DependencyPropertyKey TextReaderSuccessPropertyKey = DependencyProperty.RegisterReadOnly(
