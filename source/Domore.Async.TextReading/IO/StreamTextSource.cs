@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Domore.IO;
 
 internal abstract class StreamTextSource : IStreamText {
-    public abstract long StreamLength { get; }
+    public abstract Task<long> StreamLength(CancellationToken cancellationToken);
 
     public virtual Task<IDisposable> StreamReady(CancellationToken cancellationToken) {
         return Task.FromResult(default(IDisposable));

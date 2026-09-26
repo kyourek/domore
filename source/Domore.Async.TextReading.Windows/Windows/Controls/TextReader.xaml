@@ -1,0 +1,47 @@
+﻿<Control x:Class="Domore.Windows.Controls.TextReader"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:local="clr-namespace:Domore.Windows.Controls">
+  <Control.Template>
+    <ControlTemplate TargetType="{x:Type local:TextReader}">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBox Grid.Row="0"
+             x:Name="PART_TextBox" 
+             Background="{TemplateBinding Background}"
+             BorderBrush="{TemplateBinding BorderBrush}"
+             BorderThickness="{TemplateBinding BorderThickness}"
+             FontFamily="{TemplateBinding FontFamily}"
+             FontSize="{TemplateBinding FontSize}"
+             FontWeight="{TemplateBinding FontWeight}"
+             Foreground="{TemplateBinding Foreground}"
+             HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+             IsTabStop="{TemplateBinding IsTabStop}"
+             IsReadOnly="True"
+             IsUndoEnabled="False"
+             Padding="{TemplateBinding Padding}"
+             SelectionTextBrush="{TemplateBinding SelectionTextBrush}"
+             TextWrapping="{TemplateBinding TextWrapping}"
+             VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
+        <Label Grid.Row="1"
+               x:Name="PART_Label"
+               Content="{TemplateBinding TextReaderEncoding}"
+               Style="{TemplateBinding TextReaderEncodingLabelStyle}">
+          <Label.ContentTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}"/>
+            </DataTemplate>
+          </Label.ContentTemplate>
+        </Label>
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="TextReaderEncoding" Value="{x:Null}">
+          <Setter TargetName="PART_Label" Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate>
+  </Control.Template>
+</Control>

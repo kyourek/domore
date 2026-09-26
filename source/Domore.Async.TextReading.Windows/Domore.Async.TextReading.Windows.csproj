@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UseWpf>True</UseWpf>
+    <TargetFrameworks>net6.0-windows;net8.0-windows;net10.0-windows</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domore.Async.TextReading\Domore.Async.TextReading.csproj" />
+    <ProjectReference Include="..\Domore.Logs\Domore.Logs.csproj" />
+  </ItemGroup>
+</Project>

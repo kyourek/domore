@@ -17,7 +17,7 @@ public class DecodeTextExtensionOptionsTest {
             Bytes = bytes;
         }
 
-        public long StreamLength => Bytes.Length;
+        public Task<long> StreamLength(CancellationToken cancellationToken) => Task.FromResult((long)Bytes.Length);
         public Stream StreamText() => new MemoryStream(Bytes);
         public Task<IDisposable> StreamReady(CancellationToken cancellationToken) =>
             Task.FromResult(default(IDisposable));

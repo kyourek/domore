@@ -17,6 +17,7 @@ All packages are MIT licensed and ship with SourceLink and symbol packages, so y
 | [Domore.Async.TaskCaching](#domoreasynctaskcaching) | Run an async operation once and cache the result, with thread-safe refresh. |
 | [Domore.Async.FileSystemWatching](#domoreasyncfilesystemwatching) | Async callbacks for file-system events, with no `FileSystemWatcher` bookkeeping. |
 | [Domore.Async.TextReading](#domoreasynctextreading) | Decode files and streams asynchronously with pooled buffers and encoding detection. |
+| [Domore.Async.TextReading.Windows](#domoreasynctextreadingwindows) | Display asynchronously decoded text in a WPF control. |
 | [Domore.Indexing](#domoreindexing) | Get-or-create collections keyed by forgiving, normalized strings. |
 | [Domore.Builds.SemanticVersioning](#domorebuildssemanticversioning) | Parse, compare, and bump semantic versions. |
 
@@ -216,6 +217,12 @@ using (options.Disposable()) {
 Stream lines as they're decoded with `TextLineBuilder`, consume them as an `IAsyncEnumerable` with `TextStreamBuilder`, or collect the whole text with `TextStringBuilder`. Targets .NET 6 and later.
 
 📖 [Full Domore.Async.TextReading documentation](source/Domore.Async.TextReading/README.md)
+
+## Domore.Async.TextReading.Windows
+
+A WPF companion to Domore.Async.TextReading. Its `TextReader` control displays text as it is decoded and exposes the detected encoding and loading status. It accepts an `IStreamText`, a file path, a `FileInfo`, or a local file `Uri`; relative string paths are resolved from the application directory. Call `Reload()` to read the current source again.
+
+📖 [WPF control documentation](source/Domore.Async.TextReading.Windows/README.md)
 
 ## Domore.Indexing
 

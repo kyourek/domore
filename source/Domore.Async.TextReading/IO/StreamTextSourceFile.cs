@@ -1,11 +1,21 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Domore.IO;
 
 internal sealed class StreamTextSourceFile : StreamTextSource {
-    public sealed override long StreamLength =>
-        FileInfo.Length;
+    public sealed override Task<long> StreamLength(CancellationToken cancellationToken) {
+        /*
+         * A new FileInfo reads current metadata without mutating the shared FileInfo, which is not
+         * thread-safe and may be queried by overlapping calls.
+         */
+        var path = FileInfo.FullName;
+        return Task.Run(
+            () => new FileInfo(path).Length,
+            cancellationToken);
+    }
 
     public FileInfo FileInfo { get; }
 
@@ -25,7 +35,7 @@ internal sealed class StreamTextSourceFile : StreamTextSource {
                               FileOptions.Asynchronous);
     }
 
-    public override string ToString() {
+    public sealed override string ToString() {
         return FileInfo.ToString();
     }
 }
