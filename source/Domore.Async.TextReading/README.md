@@ -88,6 +88,10 @@ Implement `IStreamText` to decode something other than a file:
 
 ```csharp
 using Domore.IO;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 public sealed class BlobText : IStreamText {
     private readonly byte[] Bytes;
@@ -96,7 +100,8 @@ public sealed class BlobText : IStreamText {
         Bytes = bytes;
     }
 
-    public long StreamLength => Bytes.Length;
+    public Task<long> StreamLength(CancellationToken cancellationToken) =>
+        Task.FromResult((long)Bytes.Length);
 
     public Stream StreamText() => new MemoryStream(Bytes);
 

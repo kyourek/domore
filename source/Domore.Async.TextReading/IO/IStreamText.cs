@@ -10,9 +10,11 @@ namespace Domore.IO;
 /// </summary>
 public interface IStreamText {
     /// <summary>
-    /// Gets the length of the stream in bytes.
+    /// Gets the length of the stream in bytes asynchronously.
     /// </summary>
-    long StreamLength { get; }
+    /// <param name="cancellationToken">A token to cancel the length query.</param>
+    /// <returns>The stream length in bytes.</returns>
+    Task<long> StreamLength(CancellationToken cancellationToken);
 
     /// <summary>
     /// Opens the stream to decode. The stream is disposed when decoding finishes.

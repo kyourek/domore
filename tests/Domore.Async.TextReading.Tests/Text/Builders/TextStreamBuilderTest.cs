@@ -30,7 +30,7 @@ public class TextStreamBuilderTest {
             Stream = stream;
         }
 
-        public long StreamLength => 0;
+        public Task<long> StreamLength(CancellationToken cancellationToken) => Task.FromResult(0L);
         public Stream StreamText() => Stream();
         public Task<IDisposable> StreamReady(CancellationToken cancellationToken) =>
             Task.FromResult(default(IDisposable));

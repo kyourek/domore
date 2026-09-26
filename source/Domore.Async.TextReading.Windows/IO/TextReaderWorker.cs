@@ -26,9 +26,12 @@ internal class TextReaderWorker {
         try {
             return await Task.Run(cancellationToken: cancellationToken, function: async () => {
                 if (sourceLengthMax.HasValue) {
-                    var length = source.StreamLength;
-                    if (length > sourceLengthMax.Value) {
-                        return null;
+                    var lengthTask = source.StreamLength(cancellationToken);
+                    if (lengthTask is not null) {
+                        var length = await lengthTask;
+                        if (length > sourceLengthMax.Value) {
+                            return null;
+                        }
                     }
                 }
                 return await source.DecodeText(builder, options, cancellationToken);

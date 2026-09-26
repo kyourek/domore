@@ -1,14 +1,18 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Domore.IO;
 
 internal sealed class StreamTextSourceFile : StreamTextSource {
-    public sealed override long StreamLength {
-        get {
-            FileInfo.Refresh();
-            return FileInfo.Length;
-        }
+    public sealed override Task<long> StreamLength(CancellationToken cancellationToken) {
+        return Task.Run(
+            () => {
+                FileInfo.Refresh();
+                return FileInfo.Length;
+            },
+            cancellationToken);
     }
 
     public FileInfo FileInfo { get; }

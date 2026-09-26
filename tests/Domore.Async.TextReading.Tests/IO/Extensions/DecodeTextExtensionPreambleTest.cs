@@ -74,7 +74,7 @@ public class DecodeTextExtensionPreambleTest {
             BytesPerRead = bytesPerRead;
         }
 
-        public long StreamLength => Bytes.Length;
+        public Task<long> StreamLength(CancellationToken cancellationToken) => Task.FromResult((long)Bytes.Length);
         public Stream StreamText() => new ThrottledStream(Bytes, BytesPerRead);
         public Task<IDisposable> StreamReady(CancellationToken cancellationToken) =>
             Task.FromResult(default(IDisposable));
