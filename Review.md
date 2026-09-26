@@ -65,8 +65,7 @@ a newer one.
 reader loads its current source; disabling it cancels the active load and clears the display; option and
 length-limit changes are applied to the current source.
 
-There is still no public way to reload the same source, for example after the file changes on disk; that
-would be a separate API enhancement.
+`Reload()` now provides a public way to load the same source again, including after a file changes on disk.
 
 ### 5. Unloading and loading again leaves partial text
 
@@ -131,13 +130,11 @@ to `null` now clears the custom style and returns the label to its normal style.
 
 ### 12. Limited source types and file I/O on the UI thread
 
-`ConvertSource`
-
-- Only `IStreamText` and `string` values are accepted. `FileInfo` and `Uri` values are ignored without any
-  message.
-- `fileInfo.Exists` accesses the file system on the UI thread, which can be slow for network paths.
-- A relative path is resolved against the process's current directory.
-- A file that does not exist when the source is set is not checked again, and no message is shown.
+**Fixed:** `TextReaderSource` now accepts `IStreamText`, `FileInfo`, file paths, and local file `Uri` values.
+Unsupported types and non-file URIs are logged. Relative string paths resolve against the application
+directory. File metadata and opening happen in the worker rather than checking `FileInfo.Exists` on the UI
+thread. File sources are retained when missing, and `Reload()` retries them later; file metadata is refreshed
+before each load.
 
 ### 13. Exceptions are ignored without logging
 

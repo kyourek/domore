@@ -1,8 +1,8 @@
 ﻿using Domore.IO;
+using Domore.Logs;
 using Domore.Text;
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,30 +15,78 @@ using System.Windows.Threading;
 namespace Domore.Windows.Controls;
 
 partial class TextReader {
+    private static readonly ILog Log = Logging.For(typeof(TextReader));
+
     static TextReader() {
         BackgroundProperty.OverrideMetadata(
             typeof(TextReader),
             new FrameworkPropertyMetadata(SystemColors.WindowBrush));
     }
 
+    private static readonly Style TextReaderEncodingLabelStyleDefault = TextReaderEncodingLabelStyleDefaultFactory();
+
+    private static Style TextReaderEncodingLabelStyleDefaultFactory() {
+        var style = new Style(typeof(Label));
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
+        style.Setters.Add(new Setter(
+            Control.FontFamilyProperty,
+            new Binding(nameof(FontFamily)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        style.Setters.Add(new Setter(
+            Control.FontSizeProperty,
+            new Binding(nameof(FontSize)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        return style;
+    }
+
     private TextReaderWorker Worker;
     private CancellationTokenSource Cancellation;
 
     private static IStreamText ConvertSource(object value) {
+        if (value is null) {
+            return null;
+        }
         if (value is IStreamText streamText) {
             return streamText;
         }
-        if (value is string s) {
-            if (!string.IsNullOrEmpty(s)) {
-                if (!Path.GetInvalidPathChars().Any(c => s.Contains(c))) {
-                    var fileInfo = new FileInfo(s);
-                    if (fileInfo.Exists) {
-                        return new StreamTextSourceFile(fileInfo);
-                    }
-                }
+        if (value is FileInfo fileInfo) {
+            return new StreamTextSourceFile(fileInfo);
+        }
+        if (value is Uri uri) {
+            if (uri.IsFile) {
+                return CreateFileSource(uri.LocalPath, uri);
             }
+            if (Log.Warn()) {
+                Log.Warn($"{nameof(TextReaderSource)}[{nameof(Uri)}] requires a file URI[{uri.Scheme}]");
+            }
+            return null;
+        }
+        if (value is string s) {
+            if (!string.IsNullOrWhiteSpace(s)) {
+                return CreateFileSource(s, s);
+            }
+            return null;
+        }
+        if (Log.Warn()) {
+            Log.Warn($"{nameof(TextReaderSource)}[unsupported type][{value.GetType().FullName}]");
         }
         return null;
+    }
+
+    private static IStreamText CreateFileSource(string path, object source) {
+        try {
+            var fullPath = Path.GetFullPath(path, AppContext.BaseDirectory);
+            return new StreamTextSourceFile(new FileInfo(fullPath));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
+            if (Log.Warn()) {
+                Log.Warn($"{nameof(TextReaderSource)}[invalid file path][{source}]", ex);
+            }
+            return null;
+        }
     }
 
     private static readonly DependencyPropertyKey TextReaderSuccessPropertyKey = DependencyProperty.RegisterReadOnly(
@@ -316,30 +364,11 @@ partial class TextReader {
                 }
             }));
 
-    private static readonly Style DefaultTextReaderEncodingLabelStyle = CreateDefaultTextReaderEncodingLabelStyle();
-
-    private static Style CreateDefaultTextReaderEncodingLabelStyle() {
-        var style = new Style(typeof(Label));
-        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
-        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
-        style.Setters.Add(new Setter(
-            Control.FontFamilyProperty,
-            new Binding(nameof(FontFamily)) {
-                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-            }));
-        style.Setters.Add(new Setter(
-            Control.FontSizeProperty,
-            new Binding(nameof(FontSize)) {
-                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
-            }));
-        return style;
-    }
-
     public static readonly DependencyProperty TextReaderEncodingLabelStyleProperty = DependencyProperty.Register(
         name: nameof(TextReaderEncodingLabelStyle),
         propertyType: typeof(Style),
         ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(defaultValue: DefaultTextReaderEncodingLabelStyle));
+        typeMetadata: new PropertyMetadata(defaultValue: TextReaderEncodingLabelStyleDefault));
 
     public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty =
         ScrollViewer.HorizontalScrollBarVisibilityProperty.AddOwner(
@@ -386,9 +415,22 @@ partial class TextReader {
         remove => RemoveHandler(TextReaderEncodingChangedEvent, value);
     }
 
+    /// <summary>
+    /// Gets or sets the source to decode: an <see cref="IStreamText"/>, a file path, a
+    /// <see cref="FileInfo"/>, or a local file <see cref="Uri"/>. Relative string paths are
+    /// resolved against the application directory.
+    /// </summary>
     public object TextReaderSource {
         get => GetValue(TextReaderSourceProperty);
         set => SetValue(TextReaderSourceProperty, value);
+    }
+
+    /// <summary>
+    /// Reloads the current source. A retained file source is checked again, including if it did not
+    /// exist during an earlier load.
+    /// </summary>
+    public void Reload() {
+        Refresh();
     }
 
     public bool TextReaderEnabled {

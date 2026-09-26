@@ -4,8 +4,12 @@ using System.IO;
 namespace Domore.IO;
 
 internal sealed class StreamTextSourceFile : StreamTextSource {
-    public sealed override long StreamLength =>
-        FileInfo.Length;
+    public sealed override long StreamLength {
+        get {
+            FileInfo.Refresh();
+            return FileInfo.Length;
+        }
+    }
 
     public FileInfo FileInfo { get; }
 
