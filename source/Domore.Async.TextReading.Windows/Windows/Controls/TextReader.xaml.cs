@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -218,16 +219,6 @@ partial class TextReader {
         }
     }
 
-    private void OnTextReaderEncodingLabelStyleChanged(DependencyPropertyChangedEventArgs e) {
-        var newValue = e.NewValue as Style;
-        if (newValue is null) {
-            var defaultValue = TryFindResource("TextReaderEncodingLabelStyleDefault") as Style;
-            if (defaultValue is not null) {
-                SetCurrentValue(TextReaderEncodingLabelStyleProperty, defaultValue);
-            }
-        }
-    }
-
     internal async Task AddText(ReadOnlyMemory<char> memory, CancellationToken cancellationToken) {
         var s = new string(memory.Span);
         await Dispatcher.InvokeAsync(
@@ -251,16 +242,6 @@ partial class TextReader {
                     textBox.Clear();
                 }
             });
-    }
-
-    public override void OnApplyTemplate() {
-        base.OnApplyTemplate();
-        if (TextReaderEncodingLabelStyle is null) {
-            var defaultValue = TryFindResource("TextReaderEncodingLabelStyleDefault") as Style;
-            if (defaultValue is not null) {
-                SetCurrentValue(TextReaderEncodingLabelStyleProperty, defaultValue);
-            }
-        }
     }
 
     public static readonly RoutedEvent TextReaderSourceChangedEvent = EventManager.RegisterRoutedEvent(
@@ -335,17 +316,30 @@ partial class TextReader {
                 }
             }));
 
+    private static readonly Style DefaultTextReaderEncodingLabelStyle = CreateDefaultTextReaderEncodingLabelStyle();
+
+    private static Style CreateDefaultTextReaderEncodingLabelStyle() {
+        var style = new Style(typeof(Label));
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
+        style.Setters.Add(new Setter(
+            Control.FontFamilyProperty,
+            new Binding(nameof(FontFamily)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        style.Setters.Add(new Setter(
+            Control.FontSizeProperty,
+            new Binding(nameof(FontSize)) {
+                RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(TextReader), 1)
+            }));
+        return style;
+    }
+
     public static readonly DependencyProperty TextReaderEncodingLabelStyleProperty = DependencyProperty.Register(
         name: nameof(TextReaderEncodingLabelStyle),
         propertyType: typeof(Style),
         ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(
-            defaultValue: null,
-            propertyChangedCallback: (s, e) => {
-                if (s is TextReader self) {
-                    self.OnTextReaderEncodingLabelStyleChanged(e);
-                }
-            }));
+        typeMetadata: new PropertyMetadata(defaultValue: DefaultTextReaderEncodingLabelStyle));
 
     public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty =
         ScrollViewer.HorizontalScrollBarVisibilityProperty.AddOwner(

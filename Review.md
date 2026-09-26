@@ -125,10 +125,9 @@ with a `TextBlock` so underscores in encoding names display literally.
 
 ### 11. Default label style is handled in two places
 
-`OnApplyTemplate` and `OnTextReaderEncodingLabelStyleChanged` both look up
-`TextReaderEncodingLabelStyleDefault` and apply it with `SetCurrentValue`. This works, but the same logic is
-repeated. A `CoerceValueCallback`, or a `FallbackValue` or `TargetNullValue` on the template binding, would be
-simpler. Setting the style back to `null` also cannot return the label to the plain `Label` style.
+**Fixed:** The default encoding-label style is now the dependency property's metadata default, so the
+template can bind to it directly without duplicated fallback logic. Setting `TextReaderEncodingLabelStyle`
+to `null` now clears the custom style and returns the label to its normal style.
 
 ### 12. Limited source types and file I/O on the UI thread
 
