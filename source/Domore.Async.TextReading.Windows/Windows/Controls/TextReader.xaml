@@ -20,6 +20,7 @@
         <TextBox Grid.Row="0"
              x:Name="PART_TextBox" 
              Background="{TemplateBinding Background}"
+             BorderBrush="{TemplateBinding BorderBrush}"
              BorderThickness="{TemplateBinding BorderThickness}"
              Focusable="{TemplateBinding Focusable}"
              FontFamily="{TemplateBinding FontFamily}"
@@ -27,8 +28,10 @@
              FontWeight="{TemplateBinding FontWeight}"
              Foreground="{TemplateBinding Foreground}"
              HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+             IsTabStop="{TemplateBinding IsTabStop}"
              IsReadOnly="True"
              IsUndoEnabled="False"
+             Padding="{TemplateBinding Padding}"
              SelectionTextBrush="{TemplateBinding SelectionTextBrush}"
              TextWrapping="{TemplateBinding TextWrapping}"
              VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>

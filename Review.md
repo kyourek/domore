@@ -109,8 +109,8 @@ defaults.
 
 ### 9. Some common properties are not passed to the template
 
-The template passes `BorderThickness` to `PART_TextBox`, but not `BorderBrush`, `Padding`, or `IsTabStop`.
-Setting `BorderBrush` on `TextReader` has no effect.
+**Fixed:** `PART_TextBox` now receives `BorderBrush`, `Padding`, and `IsTabStop` through `TemplateBinding`,
+along with the existing `BorderThickness` binding.
 
 ### 10. The encoding label takes space when it is empty
 
