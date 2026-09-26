@@ -121,3 +121,5 @@ var decoded = await new BlobText(bytes).DecodeText(new TextStringBuilder(), null
 ## Supported frameworks
 
 .NET 6, .NET 8, and .NET 10.
+
+For WPF applications, use the [Domore.Async.TextReading.Windows companion project](../Domore.Async.TextReading.Windows/README.md), which provides a control for displaying text while it is decoded.

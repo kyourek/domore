@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Domore.IO;
 
+/// <summary>
+/// Coordinates decoding work for a text-reading control.
+/// </summary>
 internal class TextReaderWorker {
     private static readonly ILog Log = Logging.For(typeof(TextReaderWorker));
 
@@ -46,11 +49,32 @@ internal class TextReaderWorker {
         }
     }
 
+    /// <summary>
+    /// Gets or sets whether decoding work is enabled.
+    /// </summary>
     public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum source length in bytes, or null for no limit.
+    /// </summary>
     public long? SourceLengthMax { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source to decode.
+    /// </summary>
     public IStreamText Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the decoding options.
+    /// </summary>
     public DecodedTextOptions Options { get; set; }
 
+    /// <summary>
+    /// Decodes the configured source and streams decoded text to a builder.
+    /// </summary>
+    /// <param name="builder">Receives incremental decoded text.</param>
+    /// <param name="cancellationToken">Cancels the decoding operation.</param>
+    /// <returns>The decoded result, or null if decoding is disabled, unavailable, or unsuccessful.</returns>
     public Task<DecodedText> Refresh(DecodedTextBuilder builder, CancellationToken cancellationToken) {
         return Work(builder, cancellationToken);
     }

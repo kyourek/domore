@@ -14,6 +14,9 @@ using System.Windows.Threading;
 
 namespace Domore.Windows.Controls;
 
+/// <summary>
+/// A WPF control that asynchronously decodes and displays text from a stream or file.
+/// </summary>
 partial class TextReader {
     private static readonly ILog Log = Logging.For(typeof(TextReader));
 
@@ -297,30 +300,45 @@ partial class TextReader {
             });
     }
 
+    /// <summary>
+    /// Identifies the bubbling event raised when <see cref="TextReaderSource"/> changes.
+    /// </summary>
     public static readonly RoutedEvent TextReaderSourceChangedEvent = EventManager.RegisterRoutedEvent(
         name: nameof(TextReaderSourceChanged),
         routingStrategy: RoutingStrategy.Bubble,
         handlerType: typeof(RoutedEventHandler),
         ownerType: typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the bubbling event raised when <see cref="TextReaderSuccess"/> changes.
+    /// </summary>
     public static readonly RoutedEvent TextReaderSuccessChangedEvent = EventManager.RegisterRoutedEvent(
         name: nameof(TextReaderSuccessChanged),
         routingStrategy: RoutingStrategy.Bubble,
         handlerType: typeof(RoutedEventHandler),
         ownerType: typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the bubbling event raised when <see cref="TextReaderLoading"/> changes.
+    /// </summary>
     public static readonly RoutedEvent TextReaderLoadingChangedEvent = EventManager.RegisterRoutedEvent(
         name: nameof(TextReaderLoadingChanged),
         routingStrategy: RoutingStrategy.Bubble,
         handlerType: typeof(RoutedEventHandler),
         ownerType: typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the bubbling event raised when <see cref="TextReaderEncoding"/> changes.
+    /// </summary>
     public static readonly RoutedEvent TextReaderEncodingChangedEvent = EventManager.RegisterRoutedEvent(
         name: nameof(TextReaderEncodingChanged),
         routingStrategy: RoutingStrategy.Bubble,
         handlerType: typeof(RoutedEventHandler),
         ownerType: typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the <see cref="TextReaderSource"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderSourceProperty = DependencyProperty.Register(
         name: nameof(TextReaderSource),
         propertyType: typeof(object),
@@ -333,6 +351,9 @@ partial class TextReader {
                 }
             }));
 
+    /// <summary>
+    /// Identifies the <see cref="TextReaderEnabled"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderEnabledProperty = DependencyProperty.Register(
         name: nameof(TextReaderEnabled),
         propertyType: typeof(bool),
@@ -345,6 +366,9 @@ partial class TextReader {
                 }
             }));
 
+    /// <summary>
+    /// Identifies the <see cref="TextReaderSourceLengthMax"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderSourceLengthMaxProperty = DependencyProperty.Register(
         name: nameof(TextReaderSourceLengthMax),
         propertyType: typeof(long?),
@@ -357,6 +381,9 @@ partial class TextReader {
                 }
             }));
 
+    /// <summary>
+    /// Identifies the <see cref="TextReaderOptions"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderOptionsProperty = DependencyProperty.Register(
         name: nameof(TextReaderOptions),
         propertyType: typeof(DecodedTextOptions),
@@ -369,61 +396,97 @@ partial class TextReader {
                 }
             }));
 
+    /// <summary>
+    /// Identifies the <see cref="TextReaderEncodingLabelStyle"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderEncodingLabelStyleProperty = DependencyProperty.Register(
         name: nameof(TextReaderEncodingLabelStyle),
         propertyType: typeof(Style),
         ownerType: typeof(TextReader),
         typeMetadata: new PropertyMetadata(defaultValue: TextReaderEncodingLabelStyleDefault));
 
+    /// <summary>
+    /// Identifies the <see cref="HorizontalScrollBarVisibility"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty =
         ScrollViewer.HorizontalScrollBarVisibilityProperty.AddOwner(
             typeof(TextReader),
             new FrameworkPropertyMetadata(ScrollBarVisibility.Auto));
 
+    /// <summary>
+    /// Identifies the <see cref="VerticalScrollBarVisibility"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty VerticalScrollBarVisibilityProperty =
         ScrollViewer.VerticalScrollBarVisibilityProperty.AddOwner(
             typeof(TextReader),
             new FrameworkPropertyMetadata(ScrollBarVisibility.Auto));
 
+    /// <summary>
+    /// Identifies the <see cref="TextWrapping"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextWrappingProperty =
         TextBox.TextWrappingProperty.AddOwner(typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the <see cref="SelectionTextBrush"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty SelectionTextBrushProperty =
         TextBoxBase.SelectionTextBrushProperty.AddOwner(typeof(TextReader));
 
+    /// <summary>
+    /// Identifies the read-only <see cref="TextReaderSuccess"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderSuccessProperty =
         TextReaderSuccessPropertyKey.DependencyProperty;
 
+    /// <summary>
+    /// Identifies the read-only <see cref="TextReaderLoading"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderLoadingProperty =
         TextReaderLoadingPropertyKey.DependencyProperty;
 
+    /// <summary>
+    /// Identifies the read-only <see cref="TextReaderEncoding"/> dependency property.
+    /// </summary>
     public static readonly DependencyProperty TextReaderEncodingProperty =
         TextReaderEncodingPropertyKey.DependencyProperty;
 
+    /// <summary>
+    /// Occurs when the source value changes.
+    /// </summary>
     public event RoutedEventHandler TextReaderSourceChanged {
         add => AddHandler(TextReaderSourceChangedEvent, value);
         remove => RemoveHandler(TextReaderSourceChangedEvent, value);
     }
 
+    /// <summary>
+    /// Occurs when the success status changes.
+    /// </summary>
     public event RoutedEventHandler TextReaderSuccessChanged {
         add => AddHandler(TextReaderSuccessChangedEvent, value);
         remove => RemoveHandler(TextReaderSuccessChangedEvent, value);
     }
 
+    /// <summary>
+    /// Occurs when the loading status changes.
+    /// </summary>
     public event RoutedEventHandler TextReaderLoadingChanged {
         add => AddHandler(TextReaderLoadingChangedEvent, value);
         remove => RemoveHandler(TextReaderLoadingChangedEvent, value);
     }
 
+    /// <summary>
+    /// Occurs when the detected text encoding changes.
+    /// </summary>
     public event RoutedEventHandler TextReaderEncodingChanged {
         add => AddHandler(TextReaderEncodingChangedEvent, value);
         remove => RemoveHandler(TextReaderEncodingChangedEvent, value);
     }
 
     /// <summary>
-    /// Gets or sets the source to decode: an <see cref="IStreamText"/>, a file path, a
-    /// <see cref="FileInfo"/>, or a local file <see cref="Uri"/>. Relative string paths are
-    /// resolved against the application directory.
+    /// Gets or sets the source to decode. Accepted values are an <see cref="IStreamText"/>, a file
+    /// path, a <see cref="FileInfo"/>, or a local file <see cref="Uri"/>. Relative string paths are
+    /// resolved against the application directory. Unsupported values and non-file URIs are logged.
     /// </summary>
     public object TextReaderSource {
         get => GetValue(TextReaderSourceProperty);
@@ -438,61 +501,98 @@ partial class TextReader {
         Refresh();
     }
 
+    /// <summary>
+    /// Gets or sets whether the current source is decoded.
+    /// </summary>
     public bool TextReaderEnabled {
         get => GetValue(TextReaderEnabledProperty) as bool? ?? true;
         set => SetValue(TextReaderEnabledProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the maximum source length in bytes. A null value imposes no length limit.
+    /// </summary>
     public long? TextReaderSourceLengthMax {
         get => GetValue(TextReaderSourceLengthMaxProperty) as long?;
         set => SetValue(TextReaderSourceLengthMaxProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the options used to decode the current source. Null selects the default options.
+    /// </summary>
     public DecodedTextOptions TextReaderOptions {
         get => GetValue(TextReaderOptionsProperty) as DecodedTextOptions;
         set => SetValue(TextReaderOptionsProperty, value);
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the current source was decoded successfully.
+    /// </summary>
     public bool TextReaderSuccess {
         get => GetValue(TextReaderSuccessProperty) as bool? ?? false;
         private set => SetValue(TextReaderSuccessPropertyKey, value);
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the current source is being decoded.
+    /// </summary>
     public bool TextReaderLoading {
         get => GetValue(TextReaderLoadingProperty) as bool? ?? false;
         private set => SetValue(TextReaderLoadingPropertyKey, value);
     }
 
+    /// <summary>
+    /// Gets the encoding detected for the current source, or null if no encoding is available.
+    /// </summary>
     public string TextReaderEncoding {
         get => GetValue(TextReaderEncodingProperty) as string;
         private set => SetValue(TextReaderEncodingPropertyKey, value);
     }
 
+    /// <summary>
+    /// Gets or sets the style applied to the detected-encoding label. Setting this to null uses
+    /// the normal <see cref="Label"/> style.
+    /// </summary>
     public Style TextReaderEncodingLabelStyle {
         get => GetValue(TextReaderEncodingLabelStyleProperty) as Style;
         set => SetValue(TextReaderEncodingLabelStyleProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the horizontal scroll bar visibility of the text display.
+    /// </summary>
     public ScrollBarVisibility HorizontalScrollBarVisibility {
         get => (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty);
         set => SetValue(HorizontalScrollBarVisibilityProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the vertical scroll bar visibility of the text display.
+    /// </summary>
     public ScrollBarVisibility VerticalScrollBarVisibility {
         get => (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty);
         set => SetValue(VerticalScrollBarVisibilityProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets how text is wrapped in the text display.
+    /// </summary>
     public TextWrapping TextWrapping {
         get => (TextWrapping)GetValue(TextWrappingProperty);
         set => SetValue(TextWrappingProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the brush used to draw selected text.
+    /// </summary>
     public Brush SelectionTextBrush {
         get => GetValue(SelectionTextBrushProperty) as Brush;
         set => SetValue(SelectionTextBrushProperty, value);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextReader"/> control.
+    /// </summary>
     public TextReader() {
         Loaded += This_Loaded;
         Unloaded += This_Unloaded;
