@@ -127,14 +127,7 @@ partial class TextReader {
 
     private void This_Unloaded(object sender, RoutedEventArgs e) {
         Worker = null;
-        var cancellation = Cancellation;
-        if (cancellation != null) {
-            try {
-                cancellation.Cancel();
-            }
-            catch {
-            }
-        }
+        Cancel(Cancellation);
     }
 
     private void This_Loaded(object sender, RoutedEventArgs e) {
@@ -153,6 +146,25 @@ partial class TextReader {
                !cancellation.IsCancellationRequested;
     }
 
+    private static void Cancel(CancellationTokenSource cancellation) {
+        if (cancellation is null) {
+            return;
+        }
+        try {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException ex) {
+            if (Log.Debug()) {
+                Log.Debug($"{nameof(cancellation)}[{nameof(ObjectDisposedException)}]", ex);
+            }
+        }
+        catch (AggregateException ex) {
+            if (Log.Warn()) {
+                Log.Warn($"{nameof(cancellation)}[callback]", ex);
+            }
+        }
+    }
+
     private async Task ClearTextForRefresh(CancellationToken cancellationToken) {
         try {
             await ClearText(cancellationToken);
@@ -162,14 +174,7 @@ partial class TextReader {
     }
 
     private async void Refresh() {
-        var cancellation = Cancellation;
-        if (cancellation != null) {
-            try {
-                cancellation.Cancel();
-            }
-            catch {
-            }
-        }
+        Cancel(Cancellation);
         var worker = Worker;
         if (worker is null) {
             return;

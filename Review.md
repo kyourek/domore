@@ -138,9 +138,8 @@ before each load.
 
 ### 13. Exceptions are ignored without logging
 
-The empty `catch { }` blocks around `cancellation.Cancel()` hide the `ObjectDisposedException` caused by #2.
-They also hide exceptions thrown by user callbacks registered on the token. At least log them, as
-`TextReaderWorker` does.
+**Fixed:** Cancellation now ignores only null sources; disposed sources are logged at debug level, and
+exceptions from token callbacks are logged at warning level.
 
 ### 14. Project and assembly metadata
 
