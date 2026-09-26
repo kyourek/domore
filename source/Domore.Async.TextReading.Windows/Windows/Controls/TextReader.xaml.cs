@@ -19,7 +19,6 @@ namespace Domore.Windows.Controls;
 /// </summary>
 partial class TextReader {
     private static readonly ILog Log = Logging.For(typeof(TextReader));
-    // Initialized by a field initializer so it is set before TextReaderEncodingLabelStyleProperty registers it as the default.
     private static readonly Style TextReaderEncodingLabelStyleDefault = CreateTextReaderEncodingLabelStyleDefault();
     private static readonly StreamTextProvider Provider = new();
 

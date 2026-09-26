@@ -16,6 +16,7 @@
     <Project Path="tests/Domore.Async.FileSystemWatching.Tests/Domore.Async.FileSystemWatching.Tests.csproj" />
     <Project Path="tests/Domore.Async.TaskCaching.Tests/Domore.Async.TaskCaching.Tests.csproj" />
     <Project Path="tests/Domore.Async.TextReading.Tests/Domore.Async.TextReading.Tests.csproj" />
+    <Project Path="tests/Domore.Async.TextReading.Windows.Tests/Domore.Async.TextReading.Windows.Tests.csproj" />
   </Folder>
   <Folder Name="/builds/">
     <Project Path="source/Domore.Builds.SemanticVersioning/Domore.Builds.SemanticVersioning.csproj" />
