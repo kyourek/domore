@@ -90,13 +90,11 @@ retaining an undo history for appended content.
 
 `TextReader.AddText` and `ClearText`
 
-Each chunk is sent to the UI thread with `DispatcherPriority.Render`, which is higher than `Input`. On a
-large file, chunks can be appended one after another fast enough that keyboard and mouse input is delayed
-until the load finishes. Each `AppendText` also relays out a `TextBox` that keeps growing.
+**Fixed:** Both methods now dispatch at `DispatcherPriority.Background`, allowing pending input and render
+work to run first instead of queuing text updates ahead of input.
 
-**Fix:** Use `DispatcherPriority.Background` or `ContextIdle`, or combine chunks before appending them.
-Consider `TextReaderSourceLengthMax` or a default limit, because a WPF `TextBox` handles very large text
-poorly.
+Very large files can still consume memory and require repeated `TextBox` layout; a source-size limit may
+be useful for those cases.
 
 ---
 
@@ -104,19 +102,10 @@ poorly.
 
 ### 8. `TemplateBinding` of `Background` and `SelectionTextBrush` overrides the `TextBox` defaults
 
-`TextReader.xaml`
-
-- `Control.Background` defaults to `null`. Binding it to the template's `TextBox` replaces the
-  `TextBox` default (`SystemColors.WindowBrush`) with no background. A `null` background is not hit-testable,
-  so empty areas of the text box may not respond to mouse input when no background is set.
-- `TextReader.SelectionTextBrush` defaults to `null`. It replaces the `TextBox` default,
-  `SystemColors.HighlightTextBrush`. It has no visible effect with the default adorner selection rendering,
-  but it does when non-adorner selection rendering is enabled.
-
-**Fix:** Set useful defaults, or reuse the existing dependency properties with `AddOwner` so their metadata
-is kept. For example, use `TextBoxBase.SelectionTextBrushProperty.AddOwner(typeof(TextReader))`, and do the
-same for `ScrollViewer.HorizontalScrollBarVisibilityProperty`,
-`ScrollViewer.VerticalScrollBarVisibilityProperty`, and `TextBox.TextWrappingProperty`.
+**Fixed:** `TextReader.Background` now defaults to `SystemColors.WindowBrush`, matching the text box's
+background. `SelectionTextBrush`, both scrollbar-visibility properties, and `TextWrapping` now use the
+framework dependency properties via `AddOwner`. The scroll-bar properties retain their prior `Auto`
+defaults.
 
 ### 9. Some common properties are not passed to the template
 

@@ -7,12 +7,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Domore.Windows.Controls;
 
 partial class TextReader {
+    static TextReader() {
+        BackgroundProperty.OverrideMetadata(
+            typeof(TextReader),
+            new FrameworkPropertyMetadata(SystemColors.WindowBrush));
+    }
+
     private TextReaderWorker Worker;
     private CancellationTokenSource Cancellation;
 
@@ -225,7 +232,7 @@ partial class TextReader {
         var s = new string(memory.Span);
         await Dispatcher.InvokeAsync(
             cancellationToken: cancellationToken,
-            priority: DispatcherPriority.Render,
+            priority: DispatcherPriority.Background,
             callback: () => {
                 var textBox = GetTemplateChild("PART_TextBox") as TextBox;
                 if (textBox is not null) {
@@ -237,7 +244,7 @@ partial class TextReader {
     internal async Task ClearText(CancellationToken cancellationToken) {
         await Dispatcher.InvokeAsync(
             cancellationToken: cancellationToken,
-            priority: DispatcherPriority.Render,
+            priority: DispatcherPriority.Background,
             callback: () => {
                 var textBox = GetTemplateChild("PART_TextBox") as TextBox;
                 if (textBox is not null) {
@@ -340,33 +347,21 @@ partial class TextReader {
                 }
             }));
 
-    public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty = DependencyProperty.Register(
-        name: nameof(HorizontalScrollBarVisibility),
-        propertyType: typeof(ScrollBarVisibility),
-        ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(
-            defaultValue: ScrollBarVisibility.Auto));
+    public static readonly DependencyProperty HorizontalScrollBarVisibilityProperty =
+        ScrollViewer.HorizontalScrollBarVisibilityProperty.AddOwner(
+            typeof(TextReader),
+            new FrameworkPropertyMetadata(ScrollBarVisibility.Auto));
 
-    public static readonly DependencyProperty VerticalScrollBarVisibilityProperty = DependencyProperty.Register(
-        name: nameof(VerticalScrollBarVisibility),
-        propertyType: typeof(ScrollBarVisibility),
-        ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(
-            defaultValue: ScrollBarVisibility.Auto));
+    public static readonly DependencyProperty VerticalScrollBarVisibilityProperty =
+        ScrollViewer.VerticalScrollBarVisibilityProperty.AddOwner(
+            typeof(TextReader),
+            new FrameworkPropertyMetadata(ScrollBarVisibility.Auto));
 
-    public static readonly DependencyProperty TextWrappingProperty = DependencyProperty.Register(
-        name: nameof(TextWrapping),
-        propertyType: typeof(TextWrapping),
-        ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(
-            defaultValue: TextWrapping.NoWrap));
+    public static readonly DependencyProperty TextWrappingProperty =
+        TextBox.TextWrappingProperty.AddOwner(typeof(TextReader));
 
-    public static readonly DependencyProperty SelectionTextBrushProperty = DependencyProperty.Register(
-        name: nameof(SelectionTextBrush),
-        propertyType: typeof(Brush),
-        ownerType: typeof(TextReader),
-        typeMetadata: new PropertyMetadata(
-            defaultValue: null));
+    public static readonly DependencyProperty SelectionTextBrushProperty =
+        TextBoxBase.SelectionTextBrushProperty.AddOwner(typeof(TextReader));
 
     public static readonly DependencyProperty TextReaderSuccessProperty =
         TextReaderSuccessPropertyKey.DependencyProperty;
