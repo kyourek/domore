@@ -23,9 +23,9 @@ namespace:
 ```
 
 `TextReaderSource` accepts an `IStreamText`, a file path, a `FileInfo`, or a local file `Uri`. Relative
-string paths are resolved against the application directory. Unsupported values and non-file URIs are
-logged. File metadata is read off the UI thread; missing file paths are retained so `Reload()` can retry
-them later.
+string paths are resolved against the application directory. For unsupported values, non-file URIs, and
+invalid paths, null is returned as the source, so nothing is decoded. File metadata is read off the UI
+thread; missing file paths are retained so `Reload()` can retry them later.
 
 `TextReaderSourceLengthMax` limits the source size in bytes; `null` means no limit. Set
 `TextReaderOptions` to customize encoding detection, or leave it `null` to use the decoder's defaults.

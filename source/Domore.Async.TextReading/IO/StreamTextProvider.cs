@@ -39,6 +39,11 @@ internal sealed class StreamTextProvider {
         }
     }
 
+    /// <summary>
+    /// Converts a value to an <see cref="IStreamText"/>.
+    /// </summary>
+    /// <param name="value">An <see cref="IStreamText"/>, a file path, a <see cref="FileInfo"/>, or a local file <see cref="Uri"/>.</param>
+    /// <returns>The converted source, or null if the value is null, unsupported, a non-file URI, or an invalid path.</returns>
     public IStreamText GetStreamingText(object value) {
         var result = ConvertValue(value);
         return result;

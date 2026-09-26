@@ -446,7 +446,8 @@ partial class TextReader {
     /// <summary>
     /// Gets or sets the source to decode. Accepted values are an <see cref="IStreamText"/>, a file
     /// path, a <see cref="FileInfo"/>, or a local file <see cref="Uri"/>. Relative string paths are
-    /// resolved against the application directory. Unsupported values and non-file URIs are logged.
+    /// resolved against the application directory. For unsupported values, non-file URIs, and invalid
+    /// paths, null is returned as the source, so nothing is decoded.
     /// </summary>
     public object TextReaderSource {
         get => GetValue(TextReaderSourceProperty);
