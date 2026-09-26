@@ -45,6 +45,10 @@ partial class TextReader {
         BackgroundProperty.OverrideMetadata(
             typeof(TextReader),
             new FrameworkPropertyMetadata(SystemColors.WindowBrush));
+        // The inner text box takes focus, so the control itself is not a separate tab stop.
+        FocusableProperty.OverrideMetadata(
+            typeof(TextReader),
+            new FrameworkPropertyMetadata(false));
     }
 
     private TextReaderWorker Worker;

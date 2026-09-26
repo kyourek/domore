@@ -14,7 +14,6 @@
              Background="{TemplateBinding Background}"
              BorderBrush="{TemplateBinding BorderBrush}"
              BorderThickness="{TemplateBinding BorderThickness}"
-             Focusable="{TemplateBinding Focusable}"
              FontFamily="{TemplateBinding FontFamily}"
              FontSize="{TemplateBinding FontSize}"
              FontWeight="{TemplateBinding FontWeight}"
