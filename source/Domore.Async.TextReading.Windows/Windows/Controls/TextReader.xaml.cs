@@ -175,14 +175,12 @@ partial class TextReader {
                     return;
                 }
                 TextReaderEncoding = decoded?.EncodingName;
-                if (!IsCurrentRefresh(worker, c)) {
-                    return;
-                }
-                TextReaderLoading = false;
             }
             finally {
+                // Reset loading unless a newer refresh took over, including after cancellation by Unloaded.
                 if (ReferenceEquals(Cancellation, c)) {
                     Cancellation = null;
+                    TextReaderLoading = false;
                 }
             }
         }
