@@ -36,9 +36,21 @@
              TextWrapping="{TemplateBinding TextWrapping}"
              VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
         <Label Grid.Row="1"
+               x:Name="PART_EncodingLabel"
                Content="{TemplateBinding TextReaderEncoding}"
-               Style="{TemplateBinding TextReaderEncodingLabelStyle}"/>
+               Style="{TemplateBinding TextReaderEncodingLabelStyle}">
+          <Label.ContentTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}"/>
+            </DataTemplate>
+          </Label.ContentTemplate>
+        </Label>
       </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="TextReaderEncoding" Value="{x:Null}">
+          <Setter TargetName="PART_EncodingLabel" Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </ControlTemplate.Triggers>
     </ControlTemplate>
   </Control.Template>
 </Control>

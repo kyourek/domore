@@ -114,14 +114,14 @@ along with the existing `BorderThickness` binding.
 
 ### 10. The encoding label takes space when it is empty
 
-The `Label` in row 1 is always shown. When `TextReaderEncoding` is `null`, the default `Label` padding still
-reserves an empty row of about 10 px.
+Before the fix, the `Label` in row 1 stayed visible when `TextReaderEncoding` was `null`, and its padding
+reserved an empty row of about 10 px.
 
-A `Label` also treats `_` in its content as an access-key marker, so an encoding name that contains an
-underscore would be shown incorrectly.
+The `Label` also treated `_` in its content as an access-key marker, so encoding names containing an
+underscore displayed incorrectly.
 
-**Fix:** Collapse the label when the encoding is `null`, and use a `TextBlock` or
-`RecognizesAccessKey="False"` to avoid access-key handling.
+**Fixed:** The encoding label is collapsed while `TextReaderEncoding` is `null`, and its content is rendered
+with a `TextBlock` so underscores in encoding names display literally.
 
 ### 11. Default label style is handled in two places
 
