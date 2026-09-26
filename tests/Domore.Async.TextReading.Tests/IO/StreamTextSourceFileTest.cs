@@ -39,4 +39,24 @@ public class StreamTextSourceFileTest {
             }
         }
     }
+
+    [Test]
+    public async Task StreamLength_DoesNotMutateFileInfo() {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.txt");
+        try {
+            File.WriteAllBytes(path, new byte[] { 1, 2, 3 });
+            var fileInfo = new FileInfo(path);
+            Assert.That(fileInfo.Length, Is.EqualTo(3));
+            var subject = new StreamTextSourceFile(fileInfo);
+
+            File.WriteAllBytes(path, new byte[] { 1, 2, 3, 4, 5 });
+            Assert.That(await subject.StreamLength(CancellationToken.None), Is.EqualTo(5));
+            Assert.That(fileInfo.Length, Is.EqualTo(3));
+        }
+        finally {
+            if (File.Exists(path)) {
+                File.Delete(path);
+            }
+        }
+    }
 }

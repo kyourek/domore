@@ -7,11 +7,13 @@ namespace Domore.IO;
 
 internal sealed class StreamTextSourceFile : StreamTextSource {
     public sealed override Task<long> StreamLength(CancellationToken cancellationToken) {
+        /*
+         * A new FileInfo reads current metadata without mutating the shared FileInfo, which is not
+         * thread-safe and may be queried by overlapping calls.
+         */
+        var path = FileInfo.FullName;
         return Task.Run(
-            () => {
-                FileInfo.Refresh();
-                return FileInfo.Length;
-            },
+            () => new FileInfo(path).Length,
             cancellationToken);
     }
 
