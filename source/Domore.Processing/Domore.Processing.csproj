@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net40'">
+    <PackageReference Include="Microsoft.Bcl.Async" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domore.Notification\Domore.Notification.csproj" />
+  </ItemGroup>
+</Project>
