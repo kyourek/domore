@@ -212,6 +212,9 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                             cancellationToken.ThrowIfCancellationRequested();
                         }
                         var @fixed = await fixer.Fix(process.StartInfo, ex, cancellationToken);
+                        if (cancellationToken.IsCancellationRequested) {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
                         if (@fixed != true) {
                             throw;
                         }
