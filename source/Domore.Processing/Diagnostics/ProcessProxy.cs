@@ -137,6 +137,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
 
     public async Task Start(Action<Exception> errorHandler = null,
                             SynchronizationContext synchronizationContext = null,
+                            int streamBufferSize = default,
                             CancellationToken cancellationToken = default) {
         lock (StartLocker) {
             if (Starting) {
@@ -230,7 +231,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                                           nameof(Starting),
                                           nameof(StartTime),
                                           nameof(Running));
-                    using (var processStream = new ProcessStream(process, synchronizationContext)) {
+                    using (var processStream = new ProcessStream(process, synchronizationContext, streamBufferSize)) {
                         Stream = processStream;
                         try {
                             await WaitForExitAsync(process, cancellationToken);

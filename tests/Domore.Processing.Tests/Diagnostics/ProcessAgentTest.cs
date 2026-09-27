@@ -112,6 +112,66 @@ internal sealed class ProcessAgentTest {
         }
     }
 
+    [TestCase(0, 4096)]
+    [TestCase(1, 1)]
+    public async Task Start_UsesConfiguredStreamBufferSize(int streamBufferSize, int expectedBufferSize) {
+        var workingDirectory = CreateWorkingDirectory();
+        var scriptPath = WriteScript(
+            workingDirectory,
+            windows: [
+                "@echo standard-output",
+                "1>&2 echo standard-error"
+            ],
+            unix: [
+                "printf 'standard-output\\n'",
+                "printf 'standard-error\\n' >&2"
+            ]);
+        try {
+            var agent = CreateAgent(scriptPath, workingDirectory);
+            agent.StreamBufferSize = streamBufferSize;
+            agent.SynchronizeWithCurrentContext = false;
+
+            IProcessProxy proxy = null;
+            var start = agent.Start(created => proxy = created, CancellationToken.None);
+            await CompleteWithin(start, TimeSpan.FromSeconds(10));
+
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(((ProcessProxy)proxy).Stream.BufferSize, Is.EqualTo(expectedBufferSize));
+                Assert.That(Lines(proxy, ProcessOutputKind.StandardOutput), Is.EqualTo(new[] {
+                    "standard-output"
+                }));
+                Assert.That(Lines(proxy, ProcessOutputKind.StandardError), Is.EqualTo(new[] {
+                    "standard-error"
+                }));
+            }
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
+    [Test]
+    public void Start_RejectsNegativeStreamBufferSizeBeforeStartingProcess() {
+        var workingDirectory = CreateWorkingDirectory();
+        var scriptPath = WriteScript(
+            workingDirectory,
+            windows: ["@echo should-not-start"],
+            unix: ["printf 'should-not-start\\n'"]);
+        try {
+            var agent = CreateAgent(scriptPath, workingDirectory);
+            agent.StreamBufferSize = -1;
+
+            IProcessProxy proxy = null;
+            Assert.Throws<InvalidOperationException>(
+                () => agent.Start(created => proxy = created, CancellationToken.None));
+
+            Assert.That(proxy, Is.Null);
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
     [TestCase(true, true)]
     [TestCase(false, false)]
     public void Start_MarshalsCollectionChangesAccordingToSynchronizeSetting(bool synchronize,

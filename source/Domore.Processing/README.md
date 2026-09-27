@@ -50,6 +50,7 @@ Set `ProcessAgent` properties before calling `Start`:
 | `UserName`, `Domain`, `Password`, `PasswordInClearText`, `LoadUserProfile` | Optional credentials and profile settings, where supported by the platform. |
 | `Verb` | Process-start verb, where supported. |
 | `SynchronizeWithCurrentContext` | Whether output collection changes are posted to the `SynchronizationContext` current when `Start` is called. Defaults to `true`. |
+| `StreamBufferSize` | Size, in characters, of each buffer used to read standard output and standard error. Zero (the default) uses 4096 characters; negative values cause `Start` to throw `InvalidOperationException` synchronously before the process starts. |
 
 When a synchronization context is available, the default `SynchronizeWithCurrentContext` setting lets UI-bound observers receive collection changes on that context. Without a current context, changes are dispatched on the thread pool. Set `SynchronizeWithCurrentContext` to `false` to dispatch collection changes on the thread pool even when a context is available. Only `LineItems` changes are marshalled; `CurrentItem` and `Line` property-change notifications are raised on the output-reading thread. Prefer awaiting `Start` rather than synchronously blocking on it.
 

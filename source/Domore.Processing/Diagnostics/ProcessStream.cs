@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Domore.Diagnostics;
 
 internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
-    private const int BufferSize = 4096;
+    private const int BufferSizeDefault = 4096;
 
     private readonly Task ReadTask;
     private readonly CancellationTokenSource Cts;
@@ -267,9 +267,18 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
 
     public Process Process { get; }
     public SynchronizationContext SynchronizationContext { get; }
+    public int BufferSize { get; }
 
-    public ProcessStream(Process process, SynchronizationContext synchronizationContext) {
-        Process = process;
+    public ProcessStream(Process process,
+                         SynchronizationContext synchronizationContext = null,
+                         int bufferSize = default) {
+        Process = process ?? throw new ArgumentNullException(nameof(process));
+        BufferSize =
+            bufferSize == default ? BufferSizeDefault :
+            bufferSize > 0 ? bufferSize : throw new ArgumentOutOfRangeException(
+                paramName: nameof(bufferSize),
+                actualValue: bufferSize,
+                message: "Buffer size must be positive.");
         SynchronizationContext = synchronizationContext;
         Cts = new();
         CollectionChanges = new();
