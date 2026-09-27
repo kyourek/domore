@@ -50,14 +50,20 @@
     <Project Path="source/Domore.Logs.Conf/Domore.Logs.Conf.csproj" />
     <Project Path="source/Domore.Logs/Domore.Logs.csproj" />
   </Folder>
-  <Folder Name="/logs/test/">
+  <Folder Name="/logs/tests/">
     <Project Path="tests/Domore.Logs.Tests/Domore.Logs.Tests.csproj" />
   </Folder>
   <Folder Name="/notification/">
     <Project Path="source/Domore.Notification/Domore.Notification.csproj" />
   </Folder>
-  <Folder Name="/notification/test/">
+  <Folder Name="/notification/tests/">
     <Project Path="tests/Domore.Notification.Tests/Domore.Notification.Tests.csproj" />
+  </Folder>
+  <Folder Name="/processing/">
+    <Project Path="source/Domore.Processing/Domore.Processing.csproj" />
+  </Folder>
+  <Folder Name="/processing/tests/">
+    <Project Path="tests/Domore.Processing.Tests/Domore.Processing.Tests.csproj" />
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Domore.Sharing/Domore.Sharing.shproj" />
