@@ -11,7 +11,7 @@ namespace Domore.Threading.Tasks;
 /// <typeparam name="TResult">The type of the result of the task.</typeparam>
 public class TaskCache<TResult> {
     private static readonly TASK CompletedTask =
-#if NET40
+#if !NET46_OR_GREATER
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         new Func<TASK>(static async () => { })()
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously

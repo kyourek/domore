@@ -137,6 +137,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
 
     public async Task Start(Action<Exception> errorHandler = null,
                             SynchronizationContext synchronizationContext = null,
+                            int streamBufferSize = default,
                             CancellationToken cancellationToken = default) {
         lock (StartLocker) {
             if (Starting) {
@@ -168,7 +169,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             psi.Domain = Domain ?? psi.Domain;
             psi.LoadUserProfile = LoadUserProfile ?? psi.LoadUserProfile;
             psi.Password = Password ?? psi.Password;
-#if NET45_OR_GREATER
+#if NET461_OR_GREATER
             psi.PasswordInClearText = PasswordInClearText ?? psi.PasswordInClearText;
 #endif
 #endif
@@ -230,7 +231,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                                           nameof(Starting),
                                           nameof(StartTime),
                                           nameof(Running));
-                    using (var processStream = new ProcessStream(process, synchronizationContext)) {
+                    using (var processStream = new ProcessStream(process, synchronizationContext, streamBufferSize)) {
                         Stream = processStream;
                         try {
                             await WaitForExitAsync(process, cancellationToken);

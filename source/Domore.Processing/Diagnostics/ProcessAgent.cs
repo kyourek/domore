@@ -68,7 +68,18 @@ public sealed class ProcessAgent {
     /// <see cref="Start(Action{IProcessProxy}, CancellationToken)"/> is called.
     /// Defaults to <see langword="true"/>.
     /// </summary>
-    public bool Synchronize { get; set; } = true;
+    public bool SynchronizeWithCurrentContext { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the size, in characters, of the buffer used to read process output.
+    /// </summary>
+    /// <remarks>
+    /// The default value of zero uses the default buffer size of 4096 characters.
+    /// A negative value causes <see cref="Start(Action{IProcessProxy}, CancellationToken)"/>
+    /// to throw an <see cref="InvalidOperationException"/> synchronously before
+    /// invoking its proxy callback or starting the process.
+    /// </remarks>
+    public int StreamBufferSize { get; set; }
 
     /// <summary>
     /// Starts the configured process without a custom handler for caught
@@ -127,12 +138,18 @@ public sealed class ProcessAgent {
     /// process is not started. If <paramref name="onErrorCaught"/> is
     /// supplied, an exception it receives is considered handled if the
     /// callback returns normally. Exceptions from process startup and output
-    /// reading are not passed to this callback.
+    /// reading are not passed to this callback. A negative
+    /// <see cref="StreamBufferSize"/> causes a synchronous
+    /// <see cref="InvalidOperationException"/> before this callback is invoked.
     /// </remarks>
     public Task Start(Action<IProcessProxy> onProxyCreated,
                       Action<Exception> onErrorCaught,
                       CancellationToken cancellationToken) {
-        var synchronizationContext = Synchronize
+        var streamBufferSize = StreamBufferSize;
+        if (streamBufferSize < 0) {
+            throw new InvalidOperationException("The stream buffer size cannot be less than zero (0).");
+        }
+        var synchronizationContext = SynchronizeWithCurrentContext
             ? SynchronizationContext.Current
             : null;
         var pp = new ProcessProxy(
@@ -149,6 +166,10 @@ public sealed class ProcessAgent {
         if (onProxyCreated is not null) {
             onProxyCreated(pp);
         }
-        return pp.Start(onErrorCaught, synchronizationContext, cancellationToken);
+        return pp.Start(
+            errorHandler: onErrorCaught,
+            synchronizationContext: synchronizationContext,
+            streamBufferSize: streamBufferSize,
+            cancellationToken: cancellationToken);
     }
 }

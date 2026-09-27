@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Domore.Diagnostics;
 
 internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
-    private const int BufferSize = 4096;
+    private const int BufferSizeDefault = 4096;
 
     private readonly Task ReadTask;
     private readonly CancellationTokenSource Cts;
@@ -111,6 +111,12 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
         var start = 0;
         for (var i = 0; i < count; i++) {
             var c = buffer[i];
+            if (c == '\b') {
+                Append(buffer, start, i - start, kind, ref item);
+                item?.Backspace();
+                start = i + 1;
+                continue;
+            }
             if (c != '\r' && c != '\n') {
                 continue;
             }
@@ -202,7 +208,7 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
     }
 
     private static TaskCompletionSource<bool> NewCollectionCompletion() {
-#if NET40
+#if NET40 || NET45
         return new TaskCompletionSource<bool>();
 #else
         return new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -261,9 +267,18 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
 
     public Process Process { get; }
     public SynchronizationContext SynchronizationContext { get; }
+    public int BufferSize { get; }
 
-    public ProcessStream(Process process, SynchronizationContext synchronizationContext) {
-        Process = process;
+    public ProcessStream(Process process,
+                         SynchronizationContext synchronizationContext = null,
+                         int bufferSize = default) {
+        Process = process ?? throw new ArgumentNullException(nameof(process));
+        BufferSize =
+            bufferSize == default ? BufferSizeDefault :
+            bufferSize > 0 ? bufferSize : throw new ArgumentOutOfRangeException(
+                paramName: nameof(bufferSize),
+                actualValue: bufferSize,
+                message: "Buffer size must be positive.");
         SynchronizationContext = synchronizationContext;
         Cts = new();
         CollectionChanges = new();

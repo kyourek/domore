@@ -52,4 +52,15 @@ internal sealed class ProcessStreamOutput : Notifier, IProcessStreamOutput {
         }
         NotifyPropertyChanged(LineEvent);
     }
+
+    public void Backspace() {
+        lock (LineLocker) {
+            if (LineBuilder.Length == 0) {
+                return;
+            }
+            LineBuilder.Length--;
+            LineSnapshotIsDirty = true;
+        }
+        NotifyPropertyChanged(LineEvent);
+    }
 }
