@@ -208,7 +208,7 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
     }
 
     private static TaskCompletionSource<bool> NewCollectionCompletion() {
-#if !NET46_OR_GREATER
+#if NET40 || NET45
         return new TaskCompletionSource<bool>();
 #else
         return new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
