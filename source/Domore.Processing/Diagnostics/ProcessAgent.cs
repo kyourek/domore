@@ -65,7 +65,7 @@ public sealed class ProcessAgent {
     /// <summary>
     /// Gets or sets whether output collection updates use the
     /// <see cref="SynchronizationContext"/> current when
-    /// <see cref="Start(Action{IProcessProxy}, CancellationToken)"/> is called.
+    /// <see cref="Start(CancellationToken)"/> is called.
     /// Defaults to <see langword="true"/>.
     /// </summary>
     public bool SynchronizeWithCurrentContext { get; set; } = true;
@@ -75,76 +75,75 @@ public sealed class ProcessAgent {
     /// </summary>
     /// <remarks>
     /// The default value of zero uses the default buffer size of 4096 characters.
-    /// A negative value causes <see cref="Start(Action{IProcessProxy}, CancellationToken)"/>
+    /// A negative value causes <see cref="Start(CancellationToken)"/>
     /// to throw an <see cref="InvalidOperationException"/> synchronously before
-    /// invoking its proxy callback or starting the process.
+    /// invoking <see cref="OnProxyCreated"/> or starting the process.
     /// </remarks>
     public int StreamBufferSize { get; set; }
 
     /// <summary>
-    /// Starts the configured process without a custom handler for caught
-    /// exceptions.
+    /// Gets or sets a callback invoked synchronously with the process proxy
+    /// before the process starts.
     /// </summary>
-    /// <param name="onProxyCreated">
-    /// A callback invoked synchronously with the proxy before process startup
-    /// begins. Pass <see langword="null"/> to omit it.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A token that can cancel process execution.
-    /// </param>
-    /// <returns>
-    /// A task that completes after the process exits and its redirected output
-    /// has been read. The task is canceled when cancellation is requested and
-    /// faults if process startup or output reading fails, or if an exception
-    /// occurs while closing standard input or retrieving exit metadata.
-    /// </returns>
     /// <remarks>
-    /// If <paramref name="onProxyCreated"/> throws, the exception is propagated
-    /// synchronously and the process is not started. This overload propagates
-    /// exceptions encountered while closing standard input or retrieving the
-    /// process exit code and exit time.
+    /// The proxy's output stream is not initialized when this callback runs.
+    /// Set this property to <see langword="null"/> to omit the callback.
     /// </remarks>
-    public Task Start(Action<IProcessProxy> onProxyCreated,
-                      CancellationToken cancellationToken) {
-        return Start(onProxyCreated, onErrorCaught: null, cancellationToken);
-    }
+    public Action<IProcessProxy> OnProxyCreated { get; set; }
+
+    /// <summary>
+    /// Gets or sets a callback for exceptions encountered while closing
+    /// standard input or retrieving the process exit code and exit time.
+    /// </summary>
+    /// <remarks>
+    /// This callback can be invoked once for each such exception. An exception
+    /// is handled if this callback returns normally. If this property is
+    /// <see langword="null"/>, the exception faults the task returned by
+    /// <see cref="Start(CancellationToken)"/>. Exceptions from process startup
+    /// and output reading are not passed to this callback.
+    /// </remarks>
+    public Action<Exception> OnErrorCaught { get; set; }
+
+    /// <summary>
+    /// Gets or sets a fixer that can update process-start information after a
+    /// process-start attempt fails.
+    /// </summary>
+    /// <remarks>
+    /// When the fixer returns <see langword="true"/>, process startup is
+    /// retried with the possibly updated start information. If it returns
+    /// <see langword="false"/>, the start exception is propagated. Exceptions
+    /// and cancellation from the fixer are propagated by
+    /// <see cref="Start(CancellationToken)"/>.
+    /// </remarks>
+    public IProcessStartInfoFixer StartInfoFixer { get; set; }
 
     /// <summary>
     /// Starts the configured process.
     /// </summary>
-    /// <param name="onProxyCreated">
-    /// A callback invoked synchronously with the proxy before process startup
-    /// begins. Pass <see langword="null"/> to omit it.
-    /// </param>
-    /// <param name="onErrorCaught">
-    /// A callback for exceptions encountered while closing standard input or
-    /// retrieving the process exit code and exit time. It can be invoked once
-    /// for each such exception. Pass <see langword="null"/> to let those
-    /// exceptions fault the returned task.
-    /// </param>
     /// <param name="cancellationToken">
     /// A token that can cancel process execution.
     /// </param>
     /// <returns>
     /// A task that completes after the process exits and its redirected output
     /// has been read. The task is canceled when cancellation is requested and
-    /// faults if process startup or output reading fails, if a handled-operation
-    /// exception occurs and <paramref name="onErrorCaught"/> is
-    /// <see langword="null"/>, or if <paramref name="onErrorCaught"/> throws.
+    /// faults if process startup or output reading fails, if
+    /// an exception encountered while closing standard input or retrieving
+    /// exit metadata occurs and
+    /// <see cref="OnErrorCaught"/> is <see langword="null"/>, or if
+    /// <see cref="OnErrorCaught"/> throws.
+    /// Failures and cancellation from <see cref="StartInfoFixer"/> are propagated
+    /// through the returned task.
     /// </returns>
     /// <remarks>
-    /// The callback runs before the proxy's output stream is initialized. If
-    /// the callback throws, the exception is propagated synchronously and the
-    /// process is not started. If <paramref name="onErrorCaught"/> is
+    /// <see cref="OnProxyCreated"/> runs before the proxy's output stream is
+    /// initialized. If it throws, the exception is propagated synchronously
+    /// and the process is not started. If <see cref="OnErrorCaught"/> is
     /// supplied, an exception it receives is considered handled if the
-    /// callback returns normally. Exceptions from process startup and output
-    /// reading are not passed to this callback. A negative
-    /// <see cref="StreamBufferSize"/> causes a synchronous
-    /// <see cref="InvalidOperationException"/> before this callback is invoked.
+    /// callback returns normally. A negative <see cref="StreamBufferSize"/>
+    /// causes a synchronous <see cref="InvalidOperationException"/> before
+    /// <see cref="OnProxyCreated"/> is invoked.
     /// </remarks>
-    public Task Start(Action<IProcessProxy> onProxyCreated,
-                      Action<Exception> onErrorCaught,
-                      CancellationToken cancellationToken) {
+    public Task Start(CancellationToken cancellationToken) {
         var streamBufferSize = StreamBufferSize;
         if (streamBufferSize < 0) {
             throw new InvalidOperationException("The stream buffer size cannot be less than zero (0).");
@@ -162,14 +161,16 @@ public sealed class ProcessAgent {
             passwordInClearText: PasswordInClearText,
             userName: UserName,
             verb: Verb,
-            workingDirectory: WorkingDirectory);
+            workingDirectory: WorkingDirectory) {
+            ErrorHandler = OnErrorCaught,
+            StartInfoFixer = StartInfoFixer,
+            StreamBufferSize = streamBufferSize,
+            SynchronizationContext = synchronizationContext,
+        };
+        var onProxyCreated = OnProxyCreated;
         if (onProxyCreated is not null) {
             onProxyCreated(pp);
         }
-        return pp.Start(
-            errorHandler: onErrorCaught,
-            synchronizationContext: synchronizationContext,
-            streamBufferSize: streamBufferSize,
-            cancellationToken: cancellationToken);
+        return pp.Start(cancellationToken: cancellationToken);
     }
 }

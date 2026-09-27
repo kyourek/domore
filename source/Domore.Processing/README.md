@@ -18,13 +18,11 @@ static async Task RunAsync(CancellationToken cancellationToken) {
     IProcessProxy proxy = null;
     var agent = new ProcessAgent {
         FileName = "dotnet",
-        Arguments = "--info"
+        Arguments = "--info",
+        OnProxyCreated = created => proxy = created
     };
 
-    await agent.Start(
-        onProxyCreated: created => proxy = created,
-        onErrorCaught: null,
-        cancellationToken: cancellationToken);
+    await agent.Start(cancellationToken);
 
     foreach (var item in proxy.Stream.LineItems) {
         var writer = item.Kind == ProcessOutputKind.StandardError
@@ -49,6 +47,9 @@ Set `ProcessAgent` properties before calling `Start`:
 | `Environment` | Environment variables to add or override. |
 | `UserName`, `Domain`, `Password`, `PasswordInClearText`, `LoadUserProfile` | Optional credentials and profile settings, where supported by the platform. |
 | `Verb` | Process-start verb, where supported. |
+| `OnProxyCreated` | Callback invoked synchronously with the proxy before process startup; `null` omits it. |
+| `OnErrorCaught` | Handler for exceptions encountered while closing standard input or retrieving exit metadata. Exceptions from startup and output reading are not sent to it. |
+| `StartInfoFixer` | Optional `IProcessStartInfoFixer` that can modify start information and retry after a process-start failure. |
 | `SynchronizeWithCurrentContext` | Whether output collection changes are posted to the `SynchronizationContext` current when `Start` is called. Defaults to `true`. |
 | `StreamBufferSize` | Size, in characters, of each buffer used to read standard output and standard error. Zero (the default) uses 4096 characters; negative values cause `Start` to throw `InvalidOperationException` synchronously before the process starts. |
 
@@ -56,9 +57,9 @@ When a synchronization context is available, the default `SynchronizeWithCurrent
 
 The process's standard input is closed immediately after it starts, so processes that read input receive end-of-file.
 
-`Start` accepts an `onErrorCaught` callback for exceptions encountered while closing standard input or reading the process exit code and exit time. If the callback is `null`, those exceptions fault the returned task; callers that do not need a handler can use the two-argument overload, `Start(onProxyCreated, cancellationToken)`. If supplied, an exception is considered handled when the callback returns normally; exceptions from process startup and output reading are not sent to it.
+Set `OnErrorCaught` to handle exceptions encountered while closing standard input or retrieving the process exit code and exit time. If it is `null`, those exceptions fault the returned task. An exception is considered handled when the callback returns normally; exceptions from process startup and output reading are not sent to it.
 
-The `onProxyCreated` callback runs synchronously before process startup; pass `null` to omit it. The proxy's `Stream` is initialized after the process starts. Cancel the supplied token to request termination of the process and cancel the returned task.
+The `OnProxyCreated` callback runs synchronously before process startup; set it to `null` to omit it. The proxy's `Stream` is initialized after the process starts. Cancel the supplied token to request termination of the process and cancel the returned task.
 
 ## Supported frameworks
 

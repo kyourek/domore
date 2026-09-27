@@ -49,6 +49,11 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
         await WaitForExitAsync(process, CancellationToken.None);
     }
 
+    internal int StreamBufferSize { get; set; }
+    internal IProcessStartInfoFixer StartInfoFixer { get; set; }
+    internal SynchronizationContext SynchronizationContext { get; set; }
+    internal Action<Exception> ErrorHandler { get; set; }
+
     public ProcessStream Stream {
         get;
         private set => Change(ref field, value, nameof(Stream));
@@ -135,10 +140,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
         }
     }
 
-    public async Task Start(Action<Exception> errorHandler = null,
-                            SynchronizationContext synchronizationContext = null,
-                            int streamBufferSize = default,
-                            CancellationToken cancellationToken = default) {
+    public async Task Start(CancellationToken cancellationToken = default) {
         lock (StartLocker) {
             if (Starting) {
                 throw new InvalidOperationException(message: $"Already starting!");
@@ -148,6 +150,9 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             }
             Starting = true;
         }
+        var errorHandler = ErrorHandler;
+        var streamBufferSize = StreamBufferSize;
+        var synchronizationContext = SynchronizationContext;
         try {
             if (cancellationToken.IsCancellationRequested) {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -189,10 +194,33 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             psi.WorkingDirectory = WorkingDirectory ?? psi.WorkingDirectory;
 
             using (var process = new Process { StartInfo = psi }) {
-                if (cancellationToken.IsCancellationRequested) {
-                    cancellationToken.ThrowIfCancellationRequested();
+                var processStarted = false;
+                for (; ; ) {
+                    if (cancellationToken.IsCancellationRequested) {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                    try {
+                        processStarted = process.Start();
+                        break;
+                    }
+                    catch (Exception ex) {
+                        var fixer = StartInfoFixer;
+                        if (fixer is null) {
+                            throw;
+                        }
+                        if (cancellationToken.IsCancellationRequested) {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        var @fixed = await fixer.Fix(process.StartInfo, ex, cancellationToken);
+                        if (cancellationToken.IsCancellationRequested) {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        if (@fixed != true) {
+                            throw;
+                        }
+                    }
                 }
-                if (process.Start() == false) {
+                if (processStarted != true) {
                     throw new InvalidOperationException("The process did not start.");
                 }
                 try {
