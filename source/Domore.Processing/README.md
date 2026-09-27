@@ -49,9 +49,9 @@ Set `ProcessAgent` properties before calling `Start`:
 | `Environment` | Environment variables to add or override. |
 | `UserName`, `Domain`, `Password`, `PasswordInClearText`, `LoadUserProfile` | Optional credentials and profile settings, where supported by the platform. |
 | `Verb` | Process-start verb, where supported. |
-| `Synchronize` | Whether output collection changes are posted to the `SynchronizationContext` current when `Start` is called. Defaults to `true`. |
+| `SynchronizeWithCurrentContext` | Whether output collection changes are posted to the `SynchronizationContext` current when `Start` is called. Defaults to `true`. |
 
-When a synchronization context is available, the default `Synchronize` setting lets UI-bound observers receive collection changes on that context. Without a current context, changes are dispatched on the thread pool. Set `Synchronize` to `false` to dispatch collection changes on the thread pool even when a context is available. Only `LineItems` changes are marshalled; `CurrentItem` and `Line` property-change notifications are raised on the output-reading thread. Prefer awaiting `Start` rather than synchronously blocking on it.
+When a synchronization context is available, the default `SynchronizeWithCurrentContext` setting lets UI-bound observers receive collection changes on that context. Without a current context, changes are dispatched on the thread pool. Set `SynchronizeWithCurrentContext` to `false` to dispatch collection changes on the thread pool even when a context is available. Only `LineItems` changes are marshalled; `CurrentItem` and `Line` property-change notifications are raised on the output-reading thread. Prefer awaiting `Start` rather than synchronously blocking on it.
 
 The process's standard input is closed immediately after it starts, so processes that read input receive end-of-file.
 

@@ -111,6 +111,12 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
         var start = 0;
         for (var i = 0; i < count; i++) {
             var c = buffer[i];
+            if (c == '\b') {
+                Append(buffer, start, i - start, kind, ref item);
+                item?.Backspace();
+                start = i + 1;
+                continue;
+            }
             if (c != '\r' && c != '\n') {
                 continue;
             }
@@ -202,7 +208,7 @@ internal sealed class ProcessStream : Notifier, IProcessStream, IDisposable {
     }
 
     private static TaskCompletionSource<bool> NewCollectionCompletion() {
-#if NET40
+#if !NET46_OR_GREATER
         return new TaskCompletionSource<bool>();
 #else
         return new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -68,7 +68,7 @@ public sealed class ProcessAgent {
     /// <see cref="Start(Action{IProcessProxy}, CancellationToken)"/> is called.
     /// Defaults to <see langword="true"/>.
     /// </summary>
-    public bool Synchronize { get; set; } = true;
+    public bool SynchronizeWithCurrentContext { get; set; } = true;
 
     /// <summary>
     /// Starts the configured process without a custom handler for caught
@@ -132,7 +132,7 @@ public sealed class ProcessAgent {
     public Task Start(Action<IProcessProxy> onProxyCreated,
                       Action<Exception> onErrorCaught,
                       CancellationToken cancellationToken) {
-        var synchronizationContext = Synchronize
+        var synchronizationContext = SynchronizeWithCurrentContext
             ? SynchronizationContext.Current
             : null;
         var pp = new ProcessProxy(

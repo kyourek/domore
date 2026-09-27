@@ -42,7 +42,7 @@ internal sealed class ProcessAgentTest {
             agent.Environment = new Dictionary<string, string> {
                 ["DOMORE_PROCESS_AGENT_VALUE"] = "environment-line"
             };
-            agent.Synchronize = false;
+            agent.SynchronizeWithCurrentContext = false;
 
             var callbackCount = 0;
             IProcessProxy proxy = null;
@@ -75,6 +75,43 @@ internal sealed class ProcessAgentTest {
         }
     }
 
+    [Test]
+    public async Task Start_BackspaceRemovesLastCharacterFromCurrentOutputItem() {
+        var workingDirectory = CreateWorkingDirectory();
+        var scriptPath = WriteScript(
+            workingDirectory,
+            windows: [
+                "@echo standard-out\b!",
+                "1>&2 echo standard-error\b!"
+            ],
+            unix: [
+                "printf 'standard-out\\b!\\n'",
+                "printf 'standard-error\\b!\\n' >&2"
+            ]);
+        try {
+            var agent = CreateAgent(scriptPath, workingDirectory);
+            agent.SynchronizeWithCurrentContext = false;
+
+            IProcessProxy proxy = null;
+            var start = agent.Start(created => proxy = created, CancellationToken.None);
+            await CompleteWithin(start, TimeSpan.FromSeconds(10));
+
+            var standardOutput = Lines(proxy, ProcessOutputKind.StandardOutput);
+            var standardError = Lines(proxy, ProcessOutputKind.StandardError);
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(standardOutput, Is.EqualTo(new[] {
+                    "standard-ou!"
+                }));
+                Assert.That(standardError, Is.EqualTo(new[] {
+                    "standard-erro!"
+                }));
+            }
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
     [TestCase(true, true)]
     [TestCase(false, false)]
     public void Start_MarshalsCollectionChangesAccordingToSynchronizeSetting(bool synchronize,
@@ -88,7 +125,7 @@ internal sealed class ProcessAgentTest {
         try {
             var agent = CreateAgent(scriptPath, workingDirectory);
             if (synchronize == false) {
-                agent.Synchronize = false;
+                agent.SynchronizeWithCurrentContext = false;
             }
 
             var previousContext = SynchronizationContext.Current;
@@ -150,7 +187,7 @@ internal sealed class ProcessAgentTest {
         Task start = null;
         try {
             var agent = CreateAgent(scriptPath, workingDirectory);
-            agent.Synchronize = false;
+            agent.SynchronizeWithCurrentContext = false;
             start = agent.Start(created => proxy = created, onErrorCaught: null, cancellation.Token);
 
             Assert.That(proxy, Is.Not.Null);
@@ -182,7 +219,7 @@ internal sealed class ProcessAgentTest {
         var missingFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var agent = new ProcessAgent {
             FileName = missingFile,
-            Synchronize = false
+            SynchronizeWithCurrentContext = false
         };
         IProcessProxy proxy = null;
         var errors = new List<Exception>();

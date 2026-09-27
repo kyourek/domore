@@ -18,7 +18,7 @@ internal static class Process_WaitForExitAsync {
             if (process.HasExited) {
                 return;
             }
-#if NET40
+#if !NET46_OR_GREATER
             var completion = new TaskCompletionSource<bool>();
 #else
             var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

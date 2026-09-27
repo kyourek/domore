@@ -168,7 +168,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             psi.Domain = Domain ?? psi.Domain;
             psi.LoadUserProfile = LoadUserProfile ?? psi.LoadUserProfile;
             psi.Password = Password ?? psi.Password;
-#if NET45_OR_GREATER
+#if NET461_OR_GREATER
             psi.PasswordInClearText = PasswordInClearText ?? psi.PasswordInClearText;
 #endif
 #endif
