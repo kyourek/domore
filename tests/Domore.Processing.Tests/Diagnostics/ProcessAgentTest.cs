@@ -46,10 +46,11 @@ internal sealed class ProcessAgentTest {
 
             var callbackCount = 0;
             IProcessProxy proxy = null;
-            var start = agent.Start(created => {
+            agent.OnProxyCreated = created => {
                 callbackCount++;
                 proxy = created;
-            }, CancellationToken.None);
+            };
+            var start = agent.Start(CancellationToken.None);
 
             Assert.That(proxy, Is.Not.Null);
             Assert.That(proxy.Stream, Is.Not.Null);
@@ -93,7 +94,8 @@ internal sealed class ProcessAgentTest {
             agent.SynchronizeWithCurrentContext = false;
 
             IProcessProxy proxy = null;
-            var start = agent.Start(created => proxy = created, CancellationToken.None);
+            agent.OnProxyCreated = created => proxy = created;
+            var start = agent.Start(CancellationToken.None);
             await CompleteWithin(start, TimeSpan.FromSeconds(10));
 
             var standardOutput = Lines(proxy, ProcessOutputKind.StandardOutput);
@@ -132,7 +134,8 @@ internal sealed class ProcessAgentTest {
             agent.SynchronizeWithCurrentContext = false;
 
             IProcessProxy proxy = null;
-            var start = agent.Start(created => proxy = created, CancellationToken.None);
+            agent.OnProxyCreated = created => proxy = created;
+            var start = agent.Start(CancellationToken.None);
             await CompleteWithin(start, TimeSpan.FromSeconds(10));
 
             using (Assert.EnterMultipleScope()) {
@@ -162,8 +165,9 @@ internal sealed class ProcessAgentTest {
             agent.StreamBufferSize = -1;
 
             IProcessProxy proxy = null;
+            agent.OnProxyCreated = created => proxy = created;
             Assert.Throws<InvalidOperationException>(
-                () => agent.Start(created => proxy = created, CancellationToken.None));
+                () => agent.Start(CancellationToken.None));
 
             Assert.That(proxy, Is.Null);
         }
@@ -190,10 +194,11 @@ internal sealed class ProcessAgentTest {
 
             var previousContext = SynchronizationContext.Current;
             IProcessProxy proxy = null;
+            agent.OnProxyCreated = created => proxy = created;
             Task start;
             try {
                 SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-                start = agent.Start(created => proxy = created, onErrorCaught: null, CancellationToken.None);
+                start = agent.Start(CancellationToken.None);
             }
             finally {
                 SynchronizationContext.SetSynchronizationContext(previousContext);
@@ -248,7 +253,8 @@ internal sealed class ProcessAgentTest {
         try {
             var agent = CreateAgent(scriptPath, workingDirectory);
             agent.SynchronizeWithCurrentContext = false;
-            start = agent.Start(created => proxy = created, onErrorCaught: null, cancellation.Token);
+            agent.OnProxyCreated = created => proxy = created;
+            start = agent.Start(cancellation.Token);
 
             Assert.That(proxy, Is.Not.Null);
             Assert.That(proxy.Stream, Is.Not.Null);
@@ -283,12 +289,140 @@ internal sealed class ProcessAgentTest {
         };
         IProcessProxy proxy = null;
         var errors = new List<Exception>();
-        var start = agent.Start(created => proxy = created, errors.Add, CancellationToken.None);
+        agent.OnProxyCreated = created => proxy = created;
+        agent.OnErrorCaught = errors.Add;
+        var start = agent.Start(CancellationToken.None);
 
         Assert.That(proxy, Is.Not.Null);
         Assert.That(proxy.Stream, Is.Null);
         Assert.ThrowsAsync<Win32Exception>(async () => await start);
         Assert.That(errors, Is.Empty);
+    }
+
+    [Test]
+    public async Task Start_UsesFixerToRepairStartInfoAndRetries() {
+        var workingDirectory = CreateWorkingDirectory();
+        var scriptPath = WriteScript(
+            workingDirectory,
+            windows: ["@echo fixed-output"],
+            unix: ["printf 'fixed-output\\n'"]);
+        using var cancellation = new CancellationTokenSource();
+        try {
+            var agent = CreateAgent(scriptPath, workingDirectory);
+            var fixedFileName = agent.FileName;
+            var fixedArguments = agent.Arguments;
+            var missingFile = Path.Combine(workingDirectory, "missing-executable");
+            agent.FileName = missingFile;
+            agent.SynchronizeWithCurrentContext = false;
+
+            var attemptedFileName = default(string);
+            var fixer = new DelegateProcessStartInfoFixer((startInfo, _, _) => {
+                attemptedFileName = startInfo.FileName;
+                startInfo.FileName = fixedFileName;
+                startInfo.Arguments = fixedArguments;
+                return Task.FromResult(true);
+            });
+            agent.StartInfoFixer = fixer;
+
+            IProcessProxy proxy = null;
+            agent.OnProxyCreated = created => proxy = created;
+            await CompleteWithin(agent.Start(cancellation.Token), TimeSpan.FromSeconds(10));
+
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(fixer.CallCount, Is.EqualTo(1));
+                Assert.That(attemptedFileName, Is.EqualTo(missingFile));
+                Assert.That(fixer.StartInfo.FileName, Is.EqualTo(fixedFileName));
+                Assert.That(fixer.StartInfo.Arguments, Is.EqualTo(fixedArguments));
+                Assert.That(fixer.Error, Is.InstanceOf<Win32Exception>());
+                Assert.That(fixer.Token, Is.EqualTo(cancellation.Token));
+                Assert.That(Lines(proxy, ProcessOutputKind.StandardOutput), Is.EqualTo(new[] {
+                    "fixed-output"
+                }));
+            }
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
+    [Test]
+    public void Start_PropagatesLaunchFailureWhenFixerDeclines() {
+        var workingDirectory = CreateWorkingDirectory();
+        var missingFile = Path.Combine(workingDirectory, "missing-executable");
+        var agent = new ProcessAgent {
+            FileName = missingFile,
+            WorkingDirectory = workingDirectory,
+            SynchronizeWithCurrentContext = false
+        };
+        var fixer = new DelegateProcessStartInfoFixer((_, _, _) => Task.FromResult(false));
+        agent.StartInfoFixer = fixer;
+        try {
+            var start = agent.Start(CancellationToken.None);
+
+            Assert.ThrowsAsync<Win32Exception>(async () => await start);
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(fixer.CallCount, Is.EqualTo(1));
+                Assert.That(fixer.StartInfo.FileName, Is.EqualTo(missingFile));
+                Assert.That(fixer.Error, Is.Not.Null);
+            }
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
+    [Test]
+    public async Task Start_DoesNotRetryWhenCanceledDuringFix() {
+        var workingDirectory = CreateWorkingDirectory();
+        var markerPath = Path.Combine(workingDirectory, "started");
+        var scriptPath = WriteScript(
+            workingDirectory,
+            windows: [$"@echo started > \"{markerPath}\""],
+            unix: [$"printf 'started\\n' > '{markerPath}'"]);
+        using var cancellation = new CancellationTokenSource();
+        try {
+            var agent = CreateAgent(scriptPath, workingDirectory);
+            var fixedFileName = agent.FileName;
+            var fixedArguments = agent.Arguments;
+            agent.FileName = Path.Combine(workingDirectory, "missing-executable");
+            agent.SynchronizeWithCurrentContext = false;
+            agent.StartInfoFixer = new DelegateProcessStartInfoFixer((startInfo, _, _) => {
+                cancellation.Cancel();
+                startInfo.FileName = fixedFileName;
+                startInfo.Arguments = fixedArguments;
+                return Task.FromResult(true);
+            });
+
+            var start = agent.Start(cancellation.Token);
+            Assert.CatchAsync<OperationCanceledException>(async () => await start);
+
+            Assert.That(File.Exists(markerPath), Is.False);
+        }
+        finally {
+            DeleteDirectory(workingDirectory);
+        }
+    }
+
+    private sealed class DelegateProcessStartInfoFixer : IProcessStartInfoFixer {
+        private readonly Func<ProcessStartInfo, Exception, CancellationToken, Task<bool>> FixFunction;
+
+        public int CallCount { get; private set; }
+        public ProcessStartInfo StartInfo { get; private set; }
+        public Exception Error { get; private set; }
+        public CancellationToken Token { get; private set; }
+
+        public DelegateProcessStartInfoFixer(
+            Func<ProcessStartInfo, Exception, CancellationToken, Task<bool>> fixFunction) {
+            FixFunction = fixFunction;
+        }
+
+        public Task<bool> Fix(ProcessStartInfo startInfo, Exception error, CancellationToken token) {
+            CallCount++;
+            StartInfo = startInfo;
+            Error = error;
+            Token = token;
+            return FixFunction(startInfo, error, token);
+        }
     }
 
     private static ProcessAgent CreateAgent(string scriptPath, string workingDirectory) {
