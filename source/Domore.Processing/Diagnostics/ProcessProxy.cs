@@ -140,7 +140,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
         }
     }
 
-    public async Task Start(CancellationToken cancellationToken = default) {
+    public async Task<IProcessProxy> Start(CancellationToken cancellationToken = default) {
         lock (StartLocker) {
             if (Starting) {
                 throw new InvalidOperationException(message: $"Already starting!");
@@ -304,6 +304,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                         NotifyState = true;
                     }
                     NotifyPropertyChanged(nameof(ExitCode), nameof(ExitTime));
+                    return this;
                 }
                 finally {
                     await Kill(process);

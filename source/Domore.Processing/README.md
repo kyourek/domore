@@ -6,7 +6,7 @@ Install the package with `dotnet add package Domore.Processing`.
 
 ## Run a process
 
-`ProcessAgent` configures the executable and starts it. The returned task completes after the process exits and its redirected output has been read. Capture the `IProcessProxy` in the callback to access the output:
+`ProcessAgent` configures the executable and starts it. `Start` returns a `Task<IProcessProxy>` that completes after the process exits and its redirected output has been read; awaiting it gives you the proxy. Use `OnProxyCreated` if you need to observe the proxy while the process is running:
 
 ```csharp
 using Domore.Diagnostics;
@@ -15,14 +15,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 static async Task RunAsync(CancellationToken cancellationToken) {
-    IProcessProxy proxy = null;
     var agent = new ProcessAgent {
         FileName = "dotnet",
-        Arguments = "--info",
-        OnProxyCreated = created => proxy = created
+        Arguments = "--info"
     };
 
-    await agent.Start(cancellationToken);
+    var proxy = await agent.Start(cancellationToken);
 
     foreach (var item in proxy.Stream.LineItems) {
         var writer = item.Kind == ProcessOutputKind.StandardError
@@ -33,7 +31,7 @@ static async Task RunAsync(CancellationToken cancellationToken) {
 }
 ```
 
-`LineItems` contains completed lines from both output streams. Each item identifies its source with `ProcessOutputKind`. The collection is read-only and observable; read it after `Start` completes or observe its collection-change notifications while the process is running.
+`LineItems` contains completed lines from both output streams. Each item identifies its source with `ProcessOutputKind`. The collection is read-only and observable; read it from the returned proxy after `Start` completes, or observe the proxy supplied through `OnProxyCreated` and its collection-change notifications while the process is running.
 
 ## Configuration
 
@@ -47,11 +45,11 @@ Set `ProcessAgent` properties before calling `Start`:
 | `Environment` | Environment variables to add or override. |
 | `UserName`, `Domain`, `Password`, `PasswordInClearText`, `LoadUserProfile` | Optional credentials and profile settings, where supported by the platform. |
 | `Verb` | Process-start verb, where supported. |
-| `OnProxyCreated` | Callback invoked synchronously with the proxy before process startup; `null` omits it. |
+| `OnProxyCreated` | Callback invoked synchronously with the proxy before process startup, unless cancellation is requested before it runs; `null` omits it. |
 | `OnErrorCaught` | Handler for exceptions encountered while closing standard input or retrieving exit metadata. Exceptions from startup and output reading are not sent to it. |
 | `StartInfoFixer` | Optional `IProcessStartInfoFixer` that can modify start information and retry after a process-start failure. |
 | `SynchronizeWithCurrentContext` | Whether output collection changes are posted to the `SynchronizationContext` current when `Start` is called. Defaults to `true`. |
-| `StreamBufferSize` | Size, in characters, of each buffer used to read standard output and standard error. Zero (the default) uses 4096 characters; negative values cause `Start` to throw `InvalidOperationException` synchronously before the process starts. |
+| `StreamBufferSize` | Size, in characters, of each buffer used to read standard output and standard error. Zero (the default) uses 4096 characters; negative values cause `Start` to throw `InvalidOperationException` synchronously before the process starts, unless the token is already canceled. |
 
 When a synchronization context is available, the default `SynchronizeWithCurrentContext` setting lets UI-bound observers receive collection changes on that context. Without a current context, changes are dispatched on the thread pool. Set `SynchronizeWithCurrentContext` to `false` to dispatch collection changes on the thread pool even when a context is available. Only `LineItems` changes are marshalled; `CurrentItem` and `Line` property-change notifications are raised on the output-reading thread. Prefer awaiting `Start` rather than synchronously blocking on it.
 
@@ -59,7 +57,7 @@ The process's standard input is closed immediately after it starts, so processes
 
 Set `OnErrorCaught` to handle exceptions encountered while closing standard input or retrieving the process exit code and exit time. If it is `null`, those exceptions fault the returned task. An exception is considered handled when the callback returns normally; exceptions from process startup and output reading are not sent to it.
 
-The `OnProxyCreated` callback runs synchronously before process startup; set it to `null` to omit it. The proxy's `Stream` is initialized after the process starts. Cancel the supplied token to request termination of the process and cancel the returned task.
+The `OnProxyCreated` callback runs synchronously before process startup, but is skipped if cancellation is requested before the callback is invoked; set it to `null` to omit it. The proxy's `Stream` is initialized after the process starts. Cancel the supplied token to request termination of the process and cancel the returned task.
 
 ## Supported frameworks
 

@@ -77,7 +77,9 @@ public sealed class ProcessAgent {
     /// The default value of zero uses the default buffer size of 4096 characters.
     /// A negative value causes <see cref="Start(CancellationToken)"/>
     /// to throw an <see cref="InvalidOperationException"/> synchronously before
-    /// invoking <see cref="OnProxyCreated"/> or starting the process.
+    /// invoking <see cref="OnProxyCreated"/> or starting the process, unless
+    /// cancellation is already requested when <see cref="Start(CancellationToken)"/>
+    /// is called.
     /// </remarks>
     public int StreamBufferSize { get; set; }
 
@@ -88,6 +90,7 @@ public sealed class ProcessAgent {
     /// <remarks>
     /// The proxy's output stream is not initialized when this callback runs.
     /// Set this property to <see langword="null"/> to omit the callback.
+    /// The callback is skipped if cancellation is requested before it is invoked.
     /// </remarks>
     public Action<IProcessProxy> OnProxyCreated { get; set; }
 
@@ -124,9 +127,10 @@ public sealed class ProcessAgent {
     /// A token that can cancel process execution.
     /// </param>
     /// <returns>
-    /// A task that completes after the process exits and its redirected output
-    /// has been read. The task is canceled when cancellation is requested and
-    /// faults if process startup or output reading fails, if
+    /// A task whose result is the <see cref="IProcessProxy"/> used to start
+    /// the process. It completes after the process exits and its redirected
+    /// output has been read. The task is canceled when cancellation is requested
+    /// and faults if process startup or output reading fails, if
     /// an exception encountered while closing standard input or retrieving
     /// exit metadata occurs and
     /// <see cref="OnErrorCaught"/> is <see langword="null"/>, or if
@@ -136,14 +140,26 @@ public sealed class ProcessAgent {
     /// </returns>
     /// <remarks>
     /// <see cref="OnProxyCreated"/> runs before the proxy's output stream is
-    /// initialized. If it throws, the exception is propagated synchronously
-    /// and the process is not started. If <see cref="OnErrorCaught"/> is
+    /// initialized, but is skipped if cancellation is requested before it is
+    /// invoked. If it throws, the exception is propagated synchronously and
+    /// the process is not started. If <see cref="OnErrorCaught"/> is
     /// supplied, an exception it receives is considered handled if the
     /// callback returns normally. A negative <see cref="StreamBufferSize"/>
     /// causes a synchronous <see cref="InvalidOperationException"/> before
-    /// <see cref="OnProxyCreated"/> is invoked.
+    /// <see cref="OnProxyCreated"/> is invoked, unless cancellation is already
+    /// requested when this method is called.
     /// </remarks>
-    public Task Start(CancellationToken cancellationToken) {
+    public Task<IProcessProxy> Start(CancellationToken cancellationToken) {
+        if (cancellationToken.IsCancellationRequested) {
+#if NET40 || NET45
+            var
+            completion = new TaskCompletionSource<IProcessProxy>();
+            completion.SetCanceled();
+            return completion.Task;
+#else
+            return Task.FromCanceled<IProcessProxy>(cancellationToken);
+#endif
+        }
         var streamBufferSize = StreamBufferSize;
         if (streamBufferSize < 0) {
             throw new InvalidOperationException("The stream buffer size cannot be less than zero (0).");
@@ -168,7 +184,7 @@ public sealed class ProcessAgent {
             SynchronizationContext = synchronizationContext,
         };
         var onProxyCreated = OnProxyCreated;
-        if (onProxyCreated is not null) {
+        if (onProxyCreated is not null && !cancellationToken.IsCancellationRequested) {
             onProxyCreated(pp);
         }
         return pp.Start(cancellationToken: cancellationToken);

@@ -176,6 +176,19 @@ internal sealed class ProcessAgentTest {
         }
     }
 
+    [Test]
+    public void Start_PreCanceledTokenDoesNotInvokeProxyCreated() {
+        var callbackInvoked = false;
+        var agent = new ProcessAgent {
+            FileName = "unused",
+            OnProxyCreated = _ => callbackInvoked = true
+        };
+        var start = agent.Start(new CancellationToken(true));
+
+        Assert.CatchAsync<OperationCanceledException>(async () => await start);
+        Assert.That(callbackInvoked, Is.False);
+    }
+
     [TestCase(true, true)]
     [TestCase(false, false)]
     public void Start_MarshalsCollectionChangesAccordingToSynchronizeSetting(bool synchronize,
