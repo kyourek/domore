@@ -143,7 +143,19 @@ public sealed class ProcessAgent {
     /// causes a synchronous <see cref="InvalidOperationException"/> before
     /// <see cref="OnProxyCreated"/> is invoked.
     /// </remarks>
-    public Task Start(CancellationToken cancellationToken) {
+    public Task<IProcessProxy> Start(CancellationToken cancellationToken) {
+        if (cancellationToken.IsCancellationRequested) {
+#if NET40 || NET45
+            static async Task<IProcessProxy> cancel(CancellationToken cancellationToken) {
+                await Task.Factory.StartNew(() => { }, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                return default;
+            }
+            return cancel(cancellationToken);
+#else
+            return Task.FromCanceled<IProcessProxy>(cancellationToken);
+#endif
+        }
         var streamBufferSize = StreamBufferSize;
         if (streamBufferSize < 0) {
             throw new InvalidOperationException("The stream buffer size cannot be less than zero (0).");
