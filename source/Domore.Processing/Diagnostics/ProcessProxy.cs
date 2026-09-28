@@ -33,7 +33,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
 #endif
     }
 
-    private static async Task Kill(Process process) {
+    private static void Kill(Process process) {
         if (process is null) {
             throw new ArgumentNullException(nameof(process));
         }
@@ -46,7 +46,11 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             catch (Win32Exception) when (process.HasExited) {
             }
         }
-        await WaitForExitAsync(process, CancellationToken.None);
+    }
+
+    private static Task KillAsync(Process process) {
+        Kill(process);
+        return WaitForExitAsync(process, CancellationToken.None);
     }
 
     internal int StreamBufferSize { get; set; }
@@ -129,11 +133,11 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
             : new ReadOnlyDictionary<string, string>(environment);
     }
 
-    public async Task Kill() {
+    public async Task KillAsync() {
         var process = Process;
         if (process is not null) {
             try {
-                await Kill(process);
+                await KillAsync(process);
             }
             catch (InvalidOperationException) when (!ReferenceEquals(Process, process)) {
             }
@@ -268,7 +272,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                             await WaitForExitAsync(process, cancellationToken);
                         }
                         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-                            await Kill(process);
+                            await KillAsync(process);
                             await processStream.Cancel();
                             throw;
                         }
@@ -307,7 +311,7 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
                     return this;
                 }
                 finally {
-                    await Kill(process);
+                    await KillAsync(process);
                 }
             }
         }
@@ -329,4 +333,15 @@ internal sealed class ProcessProxy : Notifier, IProcessProxy {
     }
 
     IProcessStream IProcessProxy.Stream => Stream;
+
+    void IProcessProxy.Kill() {
+        var process = Process;
+        if (process is not null) {
+            try {
+                Kill(process);
+            }
+            catch (InvalidOperationException) when (!ReferenceEquals(Process, process)) {
+            }
+        }
+    }
 }

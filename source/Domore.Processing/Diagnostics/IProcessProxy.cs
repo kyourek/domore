@@ -105,4 +105,9 @@ public interface IProcessProxy {
     /// initialized during process startup.
     /// </summary>
     IProcessStream Stream { get; }
+
+    /// <summary>
+    /// Terminates the process if it is running without waiting for it to exit.
+    /// </summary>
+    void Kill();
 }
