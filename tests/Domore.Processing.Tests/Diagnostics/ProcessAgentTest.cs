@@ -284,7 +284,7 @@ internal sealed class ProcessAgentTest {
         }
         finally {
             if (proxy is ProcessProxy processProxy) {
-                await processProxy.Kill();
+                await processProxy.KillAsync();
             }
             if (start is not null) {
                 await Task.WhenAny(start, Task.Delay(TimeSpan.FromSeconds(5)));

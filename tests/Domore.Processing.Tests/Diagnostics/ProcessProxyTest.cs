@@ -115,6 +115,50 @@ internal sealed class ProcessProxyTest {
     }
 
     [Test]
+    public async Task Kill_TerminatesRunningProcess() {
+        var scriptPath = WriteScript(
+            windows: [
+                ":loop",
+                "@goto loop"
+            ],
+            unix: [
+                "while :; do :; done"
+            ]);
+        var processProxy = CreateProxy(scriptPath);
+        IProcessProxy proxy = processProxy;
+        Task start = null;
+        var processId = default(int?);
+        try {
+            start = processProxy.Start();
+            processId = proxy.ProcessID;
+
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(proxy.Running, Is.True);
+                Assert.That(processId, Is.Not.Null);
+            }
+
+            proxy.Kill();
+
+            var completed = await Task.WhenAny(start, Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.That(completed, Is.SameAs(start));
+            await start;
+            using (Assert.EnterMultipleScope()) {
+                Assert.That(proxy.Running, Is.False);
+                Assert.That(HasExited(processId.Value), Is.True);
+            }
+        }
+        finally {
+            if (processId is int id) {
+                KillProcess(id);
+            }
+            if (start is not null) {
+                await Task.WhenAny(start, Task.Delay(TimeSpan.FromSeconds(5)));
+            }
+            File.Delete(scriptPath);
+        }
+    }
+
+    [Test]
     public async Task Start_ProvidesEndOfInputToProcess() {
         var scriptPath = WriteScript(
             windows: [
@@ -136,7 +180,7 @@ internal sealed class ProcessProxyTest {
             }));
         }
         finally {
-            await proxy.Kill();
+            await proxy.KillAsync();
             await Task.WhenAny(start, Task.Delay(TimeSpan.FromSeconds(5)));
             File.Delete(scriptPath);
         }
