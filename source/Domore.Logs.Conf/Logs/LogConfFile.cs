@@ -1,8 +1,20 @@
 ﻿using Domore.Conf;
 using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogConfFile : IDisposable {
+    private sealed class Target {
+        public object Log {
+            get {
+                var config = Logging.Config;
+                var property = config.GetType().GetProperty(nameof(Log));
+                return property?.GetValue(config, null) ??
+                    throw new InvalidOperationException("The logging configuration has no Log target.");
+            }
+        }
+    }
+
     private readonly ConfFile Agent;
 
     private void Dispose(bool disposing) {
@@ -12,7 +24,7 @@ internal sealed class LogConfFile : IDisposable {
     }
 
     public LogConfFile(string path) {
-        Agent = new ConfFile(path, key: "", target: Logging.Config);
+        Agent = new ConfFile(path, key: "", target: new Target());
     }
 
     public void Configure(bool? watch = null) {

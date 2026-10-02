@@ -270,8 +270,10 @@ The service queue uses an unbounded `BlockingCollection<Action>`, and the file w
 
 ### 23. Medium — The configuration watcher keeps targeting a retired manager
 
-**Location:** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs), lines 14–19; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 21–28, 157–158, and 181–207; [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 5–20.
+**Status: Fixed.** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs) now gives `ConfFile` a target proxy whose `Log` property resolves through `Logging.Config` each time the file is applied. Reloads therefore configure the current manager after logging restarts.
+
+**Location:** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs), lines 5–26; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 21–28, 157–158, and 181–207; [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 5–20.
 
 The watched `ConfFile` captures one `Logging.Config` object at construction, including its specific manager. `Logging.Complete()` disposes and retires that manager, but the static watcher remains configured. If logging is subsequently restarted, configuration-file changes still update the old manager, while the new manager remains unconfigured; calling `Log.Conf.Configure()` again returns false. An integration reproduction verified that a changed file enabled Debug on the captured old manager while Debug remained disabled on the current one.
 
-**Fix plan:** Define watcher lifecycle alongside logging lifecycle. Either dispose/reset it on completion and support explicit reconfiguration, or make each reload acquire the current manager and apply initial configuration to a new session. Test configuration, completion, restart, and a subsequent watched-file change.
+**Fix:** Keep the watcher active and resolve the root `Log` object from the current `Logging.Config` whenever `ConfFile` applies its contents. The watcher can then update the active manager after `Logging.Complete()` creates a new session.
