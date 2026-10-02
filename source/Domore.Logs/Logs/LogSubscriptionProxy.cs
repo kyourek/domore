@@ -5,7 +5,6 @@ using System.Threading;
 namespace Domore.Logs;
 
 internal sealed class LogSubscriptionProxy {
-    private readonly ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
     private readonly
 #if NET9_0_OR_GREATER
         Lock
@@ -15,6 +14,7 @@ internal sealed class LogSubscriptionProxy {
         CompleteLocker = new();
 
     private bool Completed;
+    private ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
 
     public ILogSubscription Agent { get; }
 
@@ -24,7 +24,7 @@ internal sealed class LogSubscriptionProxy {
     }
 
     private void Agent_ThresholdChanged(object sender, EventArgs e) {
-        ThresholdCache.Clear();
+        Interlocked.Exchange(ref ThresholdCache, new());
         ThresholdChanged?.Invoke(this, e);
     }
 
@@ -34,7 +34,8 @@ internal sealed class LogSubscriptionProxy {
         if (type == null) {
             return LogSeverity.None;
         }
-        return ThresholdCache.GetOrAdd(type, type => {
+        var cache = Interlocked.CompareExchange(ref ThresholdCache, null, null);
+        return cache.GetOrAdd(type, type => {
             try {
                 return Agent.Threshold(type);
             }

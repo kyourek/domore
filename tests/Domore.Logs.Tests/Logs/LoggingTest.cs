@@ -127,6 +127,72 @@ public sealed partial class LoggingTest {
         }
     }
 
+    private sealed class GatedThresholdSubscription : ILogSubscription {
+        private EventHandler ThresholdChangedHandlers;
+        private int CurrentThreshold;
+        private int ThresholdCalls;
+
+        public readonly ManualResetEventSlim ThresholdStarted = new(false);
+        public readonly ManualResetEventSlim ContinueThreshold = new(false);
+
+        public GatedThresholdSubscription(LogSeverity threshold) {
+            CurrentThreshold = (int)threshold;
+        }
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add => ThresholdChangedHandlers += value;
+            remove => ThresholdChangedHandlers -= value;
+        }
+
+        public LogSeverity Threshold(Type type) {
+            var threshold = (LogSeverity)Volatile.Read(ref CurrentThreshold);
+            if (Interlocked.Increment(ref ThresholdCalls) == 1) {
+                ThresholdStarted.Set();
+                if (ContinueThreshold.Wait(TimeSpan.FromSeconds(5)) == false) {
+                    throw new TimeoutException("The test did not release the gated threshold query.");
+                }
+            }
+            return threshold;
+        }
+
+        public void ChangeThreshold(LogSeverity threshold) {
+            Volatile.Write(ref CurrentThreshold, (int)threshold);
+            ThresholdChangedHandlers?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void Receive(ILogEntry entry) {
+        }
+    }
+
+    [Test]
+    public void ThresholdChangeCannotBeOverwrittenByInFlightCacheFill() {
+        var subscription = new GatedThresholdSubscription(LogSeverity.Warn);
+        var proxy = new LogSubscriptionProxy(subscription);
+        var type = typeof(LoggingTest);
+        var pendingThreshold = Task.Run(() => proxy.Threshold(type));
+
+        try {
+            Assert.That(subscription.ThresholdStarted.Wait(TimeSpan.FromSeconds(5)), Is.True,
+                "The initial threshold query should reach the gated callback.");
+            subscription.ChangeThreshold(LogSeverity.Debug);
+        }
+        finally {
+            subscription.ContinueThreshold.Set();
+        }
+
+        try {
+            Assert.That(pendingThreshold.Wait(TimeSpan.FromSeconds(5)), Is.True,
+                "The initial threshold query should finish after it is released.");
+            Assert.That(pendingThreshold.Result, Is.EqualTo(LogSeverity.Warn));
+            Assert.That(proxy.Threshold(type), Is.EqualTo(LogSeverity.Debug));
+        }
+        finally {
+            proxy.Complete();
+            subscription.ThresholdStarted.Dispose();
+            subscription.ContinueThreshold.Dispose();
+        }
+    }
+
     [Test]
     public void UnsubscribeDetachesThresholdHandlerFromAgent() {
         var collection = new LogSubscriptionCollection();
