@@ -2,7 +2,7 @@
 
 Reviewed on 2026-10-02 at commit `830f962c92523328345a6424a4fb4f3fc0477875`.
 
-Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–3 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs).
+Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–5 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs).
 
 Severity: **High** means a hang, application failure, lost messages, or destructive behavior under the stated trigger; **Medium** means a reliability or correctness problem; **Low** means a narrower formatting problem. Numbers are stable reference IDs, not a severity ranking.
 
@@ -12,10 +12,12 @@ Severity: **High** means a hang, application failure, lost messages, or destruct
 - All 112 existing logging tests passed on each of `net462`, `net8.0`, and `net10.0` (336 passing executions; none skipped).
 - The two issue 1 regression tests failed against the old threshold calculation, then both passed against the fix on `net10.0`.
 - The issue 2 callback-completion regression test failed against the old implementation, then passed against the fix on `net10.0`.
-- The issue 3 completion-failure regression test failed against the old implementation because a later service was skipped, the next session lost messages, and retry failed. It passes with the fix on `net10.0`; the full logging suite passes all 116 tests, and the library builds without warnings or errors for all nine declared targets.
+- The issue 3 completion-failure regression test failed against the old implementation because a later service was skipped, the next session lost messages, and retry failed. It passes with the fix on `net10.0`.
+- The issue 4 shutdown-window regression test failed against the old implementation because a subscription accepted during completion was cleared before the next session. It passes with the fix on `net10.0`.
+- Both issue 5 regression tests failed against the old delivery loop: one used a throwing `Log()` callback and one a service type resolution failure. Both pass with per-service exception handling. The complete logging suite passes all 119 tests on `net462`, `net8.0`, and `net10.0`; the library builds without warnings or errors for all nine declared targets.
 - A temporary .NET 10 harness compiled the unchanged logging and shared sources and confirmed 22 targeted checks. Two further checks used the built configuration assemblies. These covered the report's reproduced failures, including controlled cache/shutdown interleavings and a worker shutdown hang isolated in a child process.
 - Issue 21 is established by inspection of the queue implementations; an out-of-memory stress test was not performed. The other findings have executable reproductions. Some reproductions used internal types or reflection to isolate the failing path rather than relying on a scheduling race.
-- Runtime reproductions were on Windows. Other declared targets were compiled; Unix runtime behavior and older .NET Framework installations were not independently exercised. Passing baseline tests do not cover the edge cases below.
+- Runtime reproductions were on Windows. The library was built for all declared targets and the tests ran on `net462`, `net8.0`, and `net10.0`; Unix runtime behavior and test execution on `net40`, `net45`, and `net48` were not independently exercised. Passing baseline tests do not cover the edge cases below.
 
 ## Findings
 
@@ -33,9 +35,9 @@ Before the fix, the aggregate type threshold considered only explicit type overr
 
 **Status: Fixed.** When completion is requested on the service worker thread, [Logging.cs](source/Domore.Logs/Logs/Logging.cs) queues the regular completion operation to the thread pool and returns, allowing the callback to finish before the worker is joined. Worker-thread detection is exposed through [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs) and the logging manager.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 116 tests.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 119 tests.
 
-**Location:** [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 8–16 and 46–56; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 110–127; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 14–16; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 19–21.
+**Location:** [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 8–16 and 46–56; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 66–79 and 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 14–16; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 19–21.
 
 Before the fix, `ILogService.Log` ran on the background worker and a call to `Logging.Complete()` from that callback called `Thread.Join()` on the executing worker itself. The worker could not return from its callback to exit. A child-process reproduction entered completion and never reached the return marker; the parent terminated it after a timeout.
 
@@ -47,7 +49,7 @@ Before the fix, `ILogService.Log` ran on the background worker and a call to `Lo
 
 **Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that a failing service does not prevent a healthy service from completing and that a subsequent logging session delivers messages. The test failed against the old implementation, then passed with the fix on `net10.0`.
 
-**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 110–132; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 108–124; [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 37–54; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 76–99.
+**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 113–129; [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 37–54; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 76–99.
 
 Before the fix, if one custom service's `Complete()` threw, later services were not completed and subscription cleanup was skipped. Although the manager's queue was disposed, the assignment clearing `Instance.Manager` was never executed. Subsequent enabled log calls were silently discarded by the disposed queue, and retrying completion threw `ObjectDisposedException`. The skipped completion, dropped later message, and failed retry were reproduced.
 
@@ -55,19 +57,27 @@ Before the fix, if one custom service's `Complete()` threw, later services were 
 
 ### 4. High — Shutdown accepts new work into the manager it is retiring
 
-**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 15–30, 70–71, and 122–127; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 70–85.
+**Status: Fixed.** [Logging.cs](source/Domore.Logs/Logs/Logging.cs) now leases the active manager for each logging and subscription operation. Completion atomically detaches the active manager, waits for previously accepted operations to finish, then drains and retires it. New operations create or use the next manager. Calls from a retiring service worker remain recognized so the issue 2 deadlock protection is preserved.
 
-Completion is serialized only against other completion calls. The old manager remains globally accessible while its queue has stopped accepting work and its services are completing. In a controlled reproduction, a service paused in `Complete()`, `Logging.Subscribe()` concurrently returned true, and completion then cleared that newly accepted subscription. The next manager had no subscriber. Log calls in the same window can also reach a queue that silently rejects additions. The manager getter and reset do not share a synchronized handoff.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) pauses service completion, subscribes and logs during the shutdown window, then verifies that the subscription is still registered and receives messages in the next session. The test failed against the old implementation and passed with the fix on `net10.0`. The existing callback-completion regression also passes. The full .NET 10 suite passes all 119 tests.
 
-**Fix plan:** Define an atomic transition between active and retiring managers, with a clear rule for calls arriving during shutdown. Coordinate manager acquisition and admission of logs/subscriptions so accepted work belongs to a live session or is explicitly rejected. Test with a gated service completion and concurrent producers/subscribers.
+**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 12–101 and 106–207; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 26–32; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 70–85.
+
+Before the fix, completion was serialized only against other completion calls. The old manager remained globally accessible while its queue had stopped accepting work and its services were completing. A service paused in `Complete()`, `Logging.Subscribe()` concurrently returned true, and completion then cleared that newly accepted subscription. The next manager had no subscriber. Log calls in the same window could also reach a queue that silently rejected additions.
+
+**Fix:** Lease manager access and use one synchronized handoff to detach the old manager before its queue is completed. Work accepted before the handoff finishes against the old manager; calls after it use the next manager.
 
 ### 5. High — One failing service prevents delivery to the remaining services
 
-**Location:** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 97–104; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 34–41.
+**Status: Fixed.** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs) now catches and reports failures around each service's complete log path, then continues with the remaining services.
 
-Exception handling surrounds the entire queued action rather than each service invocation. When the first service throws from `Log()`, iteration stops and healthy services later in the collection miss that entry. The worker continues with future actions, so repeated failures can continually starve those services. A throwing service followed by a recording service reproduced zero deliveries to the healthy service.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies delivery continues after a service's `Log()` throws and after service type resolution throws during initialization. Both tests failed against the old delivery loop and passed with the fix on `net10.0`.
 
-**Fix plan:** Isolate each service's formatting, initialization, and `Log()` call with exception handling, report the failure, and continue delivery to the others. Test both a throwing callback and a service initialization failure.
+**Location:** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–112; [LogServiceProxy.cs](source/Domore.Logs/Logs/LogServiceProxy.cs), lines 15–24 and 64–82; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 34–41.
+
+Before the fix, exception handling surrounded the entire queued action rather than each service invocation. If the first service threw from `Log()` or while its type was being resolved, iteration stopped and healthy services later in the collection missed that entry. The worker continued with later actions, so repeated failures could continually starve those services. Both cases were reproduced.
+
+**Fix:** Catch failures around each proxy's `Log()` call, which includes formatting and lazy service initialization. Report the exception and continue iterating so one service cannot block delivery to the others.
 
 ### 6. Medium — A throwing log-event handler interrupts all later delivery
 
@@ -87,7 +97,7 @@ Removing a subscription detaches the collection from the proxy but never calls t
 
 ### 8. High — Subscription callbacks can invalidate live collection enumeration
 
-**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 23–29 and 111–120; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 97–114.
+**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 23–29 and 111–120; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–129.
 
 Subscription delivery enumerates the live dictionary while calling user code under its lock. Locks are reentrant: a `Receive()` callback can call `Logging.Subscribe()` and add another entry during that enumeration. The next enumerator step throws `InvalidOperationException` outside the proxy's callback catch, interrupting the logging call and later delivery. This was reproduced. Service delivery/finalization similarly invokes external callbacks while enumerating the live service dictionary; reentrant configuration that adds a service has the same structural risk.
 
@@ -207,7 +217,7 @@ The service queue uses an unbounded `BlockingCollection<Action>`, and the file w
 
 ### 23. Medium — The configuration watcher keeps targeting a retired manager
 
-**Location:** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs), lines 14–19; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 86–87 and 122–127; [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 5–20.
+**Location:** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs), lines 14–19; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 21–28, 157–158, and 181–207; [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 5–20.
 
 The watched `ConfFile` captures one `Logging.Config` object at construction, including its specific manager. `Logging.Complete()` disposes and retires that manager, but the static watcher remains configured. If logging is subsequently restarted, configuration-file changes still update the old manager, while the new manager remains unconfigured; calling `Log.Conf.Configure()` again returns false. An integration reproduction verified that a changed file enabled Debug on the captured old manager while Debug remained disabled on the current one.
 

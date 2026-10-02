@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs;
@@ -301,6 +302,135 @@ public sealed partial class LoggingTest {
             Assert.That(retryFailed, Is.False);
             Assert.That(ThrowingCompleteLogService.Entries.ToArray(), Is.EqualTo(["before completion", "after completion"]));
             Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["before completion", "after completion"]));
+        });
+    }
+
+    private sealed class GatedCompleteLogService : ILogService {
+        public static ManualResetEventSlim CompleteEntered { get; } = new();
+        public static ManualResetEventSlim AllowComplete { get; } = new();
+
+        public static void Reset() {
+            CompleteEntered.Reset();
+            AllowComplete.Reset();
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+        }
+
+        public void Complete() {
+            CompleteEntered.Set();
+            AllowComplete.Wait(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    private sealed class CompletionWindowSubscription : ILogSubscription {
+        public ConcurrentQueue<string> Entries { get; } = new();
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add { }
+            remove { }
+        }
+
+        public LogSeverity Threshold(Type type) => LogSeverity.Info;
+
+        public void Receive(ILogEntry entry) {
+            foreach (var item in entry.LogList) {
+                Entries.Enqueue(item);
+            }
+        }
+    }
+
+    [Test]
+    public void WorkAcceptedDuringCompletionBelongsToNextLoggingSession() {
+        GatedCompleteLogService.Reset();
+        Config = $@"
+                log[gated].type = {typeof(GatedCompleteLogService).AssemblyQualifiedName}
+                log[gated].config.default.severity = info
+            ";
+
+        var subscription = new CompletionWindowSubscription();
+        var completion = Task.Run(Logging.Complete);
+        var completionEntered = false;
+        var subscribedDuringCompletion = false;
+        var duplicateWasRejected = false;
+        var completionFinished = false;
+        try {
+            completionEntered = GatedCompleteLogService.CompleteEntered.Wait(TimeSpan.FromSeconds(2));
+            if (completionEntered) {
+                subscribedDuringCompletion = Logging.Subscribe(subscription);
+                Log.Info("during completion");
+            }
+            GatedCompleteLogService.AllowComplete.Set();
+            completionFinished = completion.Wait(TimeSpan.FromSeconds(5));
+            if (completionFinished) {
+                duplicateWasRejected = Logging.Subscribe(subscription) == false;
+                Log.Info("after completion");
+                Logging.Complete();
+            }
+        }
+        finally {
+            GatedCompleteLogService.AllowComplete.Set();
+            if (completion.IsCompleted == false) {
+                completion.Wait(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(completionEntered, Is.True);
+            Assert.That(completionFinished, Is.True);
+            Assert.That(subscribedDuringCompletion, Is.True);
+            Assert.That(duplicateWasRejected, Is.True);
+            Assert.That(subscription.Entries.ToArray(), Is.EqualTo(["during completion", "after completion"]));
+        });
+    }
+
+    private sealed class ThrowingLogCallbackService : ILogService {
+        public void Log(string name, string data, LogSeverity severity) {
+            throw new InvalidOperationException("Expected test service log failure.");
+        }
+
+        public void Complete() {
+        }
+    }
+
+    [Test]
+    public void LogFailureDoesNotPreventDeliveryToLaterServices() {
+        HealthyCompleteLogService.Reset();
+        Config = $@"
+                log[a_throw].type = {typeof(ThrowingLogCallbackService).AssemblyQualifiedName}
+                log[a_throw].config.default.severity = info
+                log[z_healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[z_healthy].config.default.severity = info
+            ";
+
+        Log.Info("survives throwing service");
+        Logging.Complete();
+
+        Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["survives throwing service"]));
+    }
+
+    [Test]
+    public void ServiceInitializationFailureDoesNotPreventDeliveryToLaterServices() {
+        HealthyCompleteLogService.Reset();
+        Config = @"
+                log[a_invalid].type = System.Int32, NoSuch, Version=abc
+                log[a_invalid].config.default.severity = info
+                log[z_healthy].type = " + typeof(HealthyCompleteLogService).AssemblyQualifiedName + @"
+                log[z_healthy].config.default.severity = info
+            ";
+
+        Log.Info("survives initialization failure");
+        var completionReportedInitializationFailure = false;
+        try {
+            Logging.Complete();
+        }
+        catch (AggregateException) {
+            completionReportedInitializationFailure = true;
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(completionReportedInitializationFailure, Is.True);
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["survives initialization failure"]));
         });
     }
 
