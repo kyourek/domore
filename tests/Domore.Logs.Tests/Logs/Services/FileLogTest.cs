@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Domore.Logs.Service;
 using CONF = Domore.Conf.Conf;
@@ -117,6 +118,73 @@ internal sealed class FileLogTest {
         service.Complete();
 
         Assert.That(File.ReadAllText(Path.Combine(TempDir, "test.log")).Trim(), Is.EqualTo("queued"));
+    }
+
+    [TestCase(-2d)]
+    [TestCase(-1d)]
+    [TestCase(0d)]
+    [TestCase(0.5d)]
+    [TestCase(1.5d)]
+    [TestCase(2147483648d)]
+    public void FlushIntervalRejectsUnusableTimerDelays(double milliseconds) {
+        var fileLog = new FileLog();
+        var original = fileLog.FlushInterval;
+        var interval = TimeSpan.FromTicks((long)(milliseconds * TimeSpan.TicksPerMillisecond));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.FlushInterval = interval);
+        Assert.That(fileLog.FlushInterval, Is.EqualTo(original));
+    }
+
+    [TestCase(1d)]
+    [TestCase(2147483647d)]
+    public void FlushIntervalAcceptsTimerRepresentableBounds(double milliseconds) {
+        var fileLog = new FileLog();
+        var expected = TimeSpan.FromMilliseconds(milliseconds);
+
+        fileLog.FlushInterval = expected;
+
+        Assert.That(fileLog.FlushInterval, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CorrectedFlushIntervalAllowsWriterToStartAndPreservesFirstEntry() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "flush-interval.log"
+        };
+        var service = (ILogService)fileLog;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.FlushInterval = TimeSpan.FromMilliseconds(-2));
+        Assert.That(fileLog.Started, Is.False);
+        fileLog.FlushInterval = TimeSpan.FromSeconds(1);
+        service.Log("test", "first entry", LogSeverity.Info);
+
+        Assert.That(fileLog.Started, Is.True);
+        service.Complete();
+
+        Assert.That(File.ReadAllText(Path.Combine(TempDir, "flush-interval.log")).Trim(), Is.EqualTo("first entry"));
+    }
+
+    [Test]
+    public void FailedTimerStartupCanRetryWithoutDroppingQueuedEntries() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "retry-flush-interval.log"
+        };
+        var intervalField = typeof(FileLog).GetField("_FlushInterval", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? typeof(FileLog).GetField("<FlushInterval>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(intervalField, Is.Not.Null);
+        intervalField.SetValue(fileLog, TimeSpan.FromMilliseconds(-2));
+        var service = (ILogService)fileLog;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.Log("test", "first entry", LogSeverity.Info));
+        Assert.That(fileLog.Started, Is.False);
+        fileLog.FlushInterval = TimeSpan.FromSeconds(1);
+        service.Log("test", "retry entry", LogSeverity.Info);
+        service.Complete();
+
+        var actual = File.ReadAllLines(Path.Combine(TempDir, "retry-flush-interval.log"));
+        Assert.That(actual, Is.EqualTo(["first entry", "retry entry"]));
     }
 
     [Test]

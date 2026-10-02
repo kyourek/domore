@@ -208,11 +208,45 @@ internal sealed class FileLog : ILogService {
                     }
                 }
             }
-            Start();
         }
         catch (Exception ex) {
             Logging.Notify(ex);
         }
+        finally {
+            try {
+                lock (Locker) {
+                    if (Complete == false) {
+                        try {
+                            Start();
+                        }
+                        catch (Exception ex) {
+                            Started = false;
+                            Logging.Notify(ex);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
+            }
+        }
+    }
+
+    private static int ValidateFlushIntervalInMilliseconds(TimeSpan interval, string paramName = null) {
+        var maxTicks = (long)int.MaxValue * TimeSpan.TicksPerMillisecond;
+        var invalid = interval.Ticks < TimeSpan.TicksPerMillisecond ||
+                      interval.Ticks % TimeSpan.TicksPerMillisecond != 0 ||
+                      interval.Ticks > maxTicks;
+        if (invalid) {
+            if (paramName is not null) {
+                throw new ArgumentOutOfRangeException(paramName, interval,
+                    $"The flush interval must be a whole number of milliseconds between 1 and {int.MaxValue}.");
+            }
+            else {
+                throw new InvalidOperationException("The value is invalid.");
+            }
+        }
+        return (int)interval.TotalMilliseconds;
     }
 
     private void Start() {
@@ -221,7 +255,7 @@ internal sealed class FileLog : ILogService {
         }
         Timer = new(TimerCallback,
                     state: null,
-                    dueTime: (int)FlushInterval.TotalMilliseconds,
+                    dueTime: ValidateFlushIntervalInMilliseconds(FlushInterval),
                     period: Timeout.Infinite);
     }
 
@@ -230,7 +264,21 @@ internal sealed class FileLog : ILogService {
     public long FileSizeLimit { get; set; } = 100000;
     public long TotalSizeLimit { get; set; } = 100000000;
     public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
-    public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(2.5);
+
+    public TimeSpan FlushInterval {
+        get {
+            lock (Locker) {
+                return _FlushInterval;
+            }
+        }
+        set {
+            ValidateFlushIntervalInMilliseconds(value, nameof(FlushInterval));
+            lock (Locker) {
+                _FlushInterval = value;
+            }
+        }
+    }
+    private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
 
     public int LogCountLimit {
         get {
@@ -314,14 +362,15 @@ internal sealed class FileLog : ILogService {
     }
 
     void ILogService.Log(string name, string data, LogSeverity severity) {
-        if (Started == false) {
-            lock (Locker) {
-                if (Started == false) {
-                    Started = true;
-                    Start();
-                }
+        lock (Locker) {
+            if (Complete) {
+                return;
+            }
+            Queue.Enqueue(data);
+            if (Started == false) {
+                Start();
+                Started = true;
             }
         }
-        Queue.Enqueue(data);
     }
 }
