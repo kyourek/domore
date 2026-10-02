@@ -99,7 +99,12 @@ internal sealed class LogServiceCollection : IDisposable {
         Queue.Add(() => {
             lock (Locker) {
                 foreach (var item in Set) {
-                    item.Value.Log(entry);
+                    try {
+                        item.Value.Log(entry);
+                    }
+                    catch (Exception ex) {
+                        Logging.Notify(ex);
+                    }
                 }
             }
         });
