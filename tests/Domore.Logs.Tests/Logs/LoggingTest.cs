@@ -77,6 +77,37 @@ public sealed partial class LoggingTest {
     }
 
     [Test]
+    public void ThrowingLogEventHandlerDoesNotInterruptOtherDelivery() {
+        HealthyCompleteLogService.Reset();
+        Config = $@"
+                log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[healthy].config.default.severity = info
+            ";
+        Logging.EventThreshold = LogSeverity.Info;
+        var laterEventHandlerCalled = false;
+        Logging.Event += (_, __) => throw new InvalidOperationException("Expected test event handler failure.");
+        Logging.Event += (_, __) => laterEventHandlerCalled = true;
+        var subscription = new CompletionWindowSubscription();
+        Logging.Subscribe(subscription);
+
+        var loggingCallFailed = false;
+        try {
+            Log.Info("survives event handler");
+        }
+        catch (Exception) {
+            loggingCallFailed = true;
+        }
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(loggingCallFailed, Is.False);
+            Assert.That(laterEventHandlerCalled, Is.True);
+            Assert.That(subscription.Entries.ToArray(), Is.EqualTo(["survives event handler"]));
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["survives event handler"]));
+        });
+    }
+
+    [Test]
     public void DefaultLogEventThresholdIsNone() {
         Assert.That(Logging.EventThreshold, Is.EqualTo(LogSeverity.None));
     }

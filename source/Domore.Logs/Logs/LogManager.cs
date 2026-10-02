@@ -55,21 +55,37 @@ internal sealed class LogManager : IDisposable {
     }
 
     public void Log(LogSeverity severity, Type type, object[] data) {
-        if (data != null) {
-            var entry = new LogEntry(
-                logType: type,
-                entryDate: DateTime.UtcNow,
-                entrySeverity: severity,
-                entryList: Formatter.Format(data));
-            if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
-                LogEvent?.Invoke(this, new LogEventArgs(entry));
+        if (data is null) {
+            return;
+        }
+        var entry = new LogEntry(
+            logType: type,
+            entryDate: DateTime.UtcNow,
+            entrySeverity: severity,
+            entryList: Formatter.Format(data));
+        var handlers = LogEvent;
+        if (handlers is not null) {
+            var thresholdMet = LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity;
+            if (thresholdMet) {
+                var list = handlers.GetInvocationList();
+                var args = list.Length > 0 ? new LogEventArgs(entry) : default;
+                foreach (var item in list) {
+                    if (item is LogEventHandler handler) {
+                        try {
+                            handler(this, args);
+                        }
+                        catch (Exception ex) {
+                            Logging.Notify(ex);
+                        }
+                    }
+                }
             }
-            if (Subscriptions.Count > 0) {
-                Subscriptions.Send(entry);
-            }
-            if (Services.Count > 0) {
-                Services.Send(entry);
-            }
+        }
+        if (Subscriptions.Count > 0) {
+            Subscriptions.Send(entry);
+        }
+        if (Services.Count > 0) {
+            Services.Send(entry);
         }
     }
 
