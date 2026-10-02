@@ -18,9 +18,7 @@ internal sealed class LogServiceProxy {
     private bool PendingTypeChange;
     private string PendingType;
 
-    private ILogService _Service;
-
-    private ILogService GetService() {
+    private ILogService GetServiceUnsafe() {
         if (_Service is null) {
             _Service = Factory.Create(Type) ?? new None();
             ServiceCompleted = false;
@@ -55,6 +53,15 @@ internal sealed class LogServiceProxy {
         PendingTypeChange = false;
         ReplaceType(type);
     }
+
+    public ILogService Service {
+        get {
+            lock (Locker) {
+                return GetServiceUnsafe();
+            }
+        }
+    }
+    private ILogService _Service;
 
     public LogServiceConfig Config {
         get {
@@ -115,7 +122,7 @@ internal sealed class LogServiceProxy {
             if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
                 var frmt = Config[name].Format ?? Config.Default.Format;
                 var data = entry.LogData(frmt);
-                var service = GetService();
+                var service = GetServiceUnsafe();
                 ServiceCallDepth++;
                 try {
                     service.Log(name, data, sev);
@@ -130,7 +137,7 @@ internal sealed class LogServiceProxy {
 
     public void Complete() {
         lock (Locker) {
-            var service = GetService();
+            var service = GetServiceUnsafe();
             if (ServiceCompleted) {
                 return;
             }

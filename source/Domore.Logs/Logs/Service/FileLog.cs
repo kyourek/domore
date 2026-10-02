@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -22,17 +23,20 @@ internal sealed class FileLog : ILogService {
 
     private Timer Timer;
 
-    public string FileName => _FileName ??= FileInfo.Name;
+    public string FileName => _FileName ??=
+        FileInfo.Name;
     private string _FileName;
 
-    public string FileNameWithoutExtension => _FileNameWithoutExtension ??= Path.GetFileNameWithoutExtension(FileName);
+    public string FileNameWithoutExtension => _FileNameWithoutExtension ??=
+        Path.GetFileNameWithoutExtension(FileName);
     private string _FileNameWithoutExtension;
 
-    public string FileExtension => _FileExtension ??= Path.GetExtension(FileName);
+    public string FileExtension => _FileExtension ??=
+        Path.GetExtension(FileName);
     private string _FileExtension;
 
-    private FileInfo FileInfo => _FileInfo ??= new(
-        Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
+    private FileInfo FileInfo => _FileInfo ??=
+        new(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
     private FileInfo _FileInfo;
 
     private DirectoryInfo DirectoryInfo => _DirectoryInfo ??= new(
@@ -42,8 +46,12 @@ internal sealed class FileLog : ILogService {
     private DirectoryInfo _DirectoryInfo;
 
     private string FileDateName() {
-        var dt = DateTime.Now;
-        return $"{FileNameWithoutExtension}_{dt.Year}{dt.Month:00}{dt.Day:00}-{dt.Hour:00}{dt.Minute:00}{dt.Second:00}-{dt.Millisecond:000}{FileExtension}";
+        var now = DateTimeOffset.Now;
+        var offsetMinutes = (int)now.Offset.TotalMinutes;
+        var absoluteOffsetMinutes = Math.Abs(offsetMinutes);
+        var offset = $"{(offsetMinutes < 0 ? "-" : "+")}{absoluteOffsetMinutes / 60:00}{absoluteOffsetMinutes % 60:00}";
+        var date = now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
+        return $"{FileNameWithoutExtension}_{date}{offset}{FileExtension}";
     }
 
     private DateTime? FileDate(string name) {
@@ -55,7 +63,8 @@ internal sealed class FileLog : ILogService {
             return null;
         }
         var date = name.Substring(prefix.Length).Substring(0, name.Length - prefix.Length - FileExtension.Length);
-        if (date.Length != 19) {
+        var hasOffset = date.Length == 24 && (date[19] == '+' || date[19] == '-');
+        if (date.Length != 19 && hasOffset == false) {
             return null;
         }
         if (date[8] != '-') {
@@ -85,7 +94,22 @@ internal sealed class FileLog : ILogService {
         if (!int.TryParse(date.Substring(16, 3), out var millisecond)) {
             return null;
         }
-        return new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Utc);
+        if (hasOffset == false) {
+            return new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Local);
+        }
+        if (!int.TryParse(date.Substring(20, 2), out var offsetHour) ||
+            !int.TryParse(date.Substring(22, 2), out var offsetMinute) ||
+            offsetHour > 14 || offsetMinute > 59 || (offsetHour == 14 && offsetMinute != 0)) {
+            return null;
+        }
+        var offsetSign = date[19] == '-' ? -1 : 1;
+        var offsetValue = TimeSpan.FromMinutes(offsetSign * (offsetHour * 60 + offsetMinute));
+        try {
+            return new DateTimeOffset(year, month, day, hour, minute, second, millisecond, offsetValue).UtcDateTime;
+        }
+        catch (ArgumentException) {
+            return null;
+        }
     }
 
     private void Rotate() {
@@ -120,7 +144,7 @@ internal sealed class FileLog : ILogService {
         var items = files
             .Select(file => new { File = file, Date = FileDate(file.Name) })
             .Where(item => item.Date.HasValue)
-            .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value })
+            .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value.ToUniversalTime() })
             .OrderByDescending(item => item.Age)
             .ToList();
         var itemsToDelete = items
@@ -183,7 +207,8 @@ internal sealed class FileLog : ILogService {
                         }
                         var limit = LogCountLimit;
                         if (limit <= 0) {
-                            throw new InvalidOperationException($"{nameof(LogCountLimit)} must be greater than zero.");
+                            throw new InvalidOperationException(
+                                $"{nameof(LogCountLimit)} must be greater than zero.");
                         }
                         var lines = new List<string>(capacity: limit);
                         for (; ; ) {

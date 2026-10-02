@@ -1,7 +1,8 @@
-﻿using Domore.Logs.Mocks;
+using Domore.Logs.Mocks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -285,7 +286,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(3));
     }
 
@@ -305,7 +306,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*.{extension}", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(3));
     }
 
@@ -326,7 +327,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(1));
     }
 
@@ -347,7 +348,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*.{extension}", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(1));
     }
 
@@ -389,6 +390,38 @@ internal sealed class FileLogTest {
         Logging.Complete();
         var files = Directory.GetFiles(fileDir);
         Assert.That(files.Length, Is.Zero);
+    }
+
+    [Test]
+    public void ArchiveTimestampsUseLocalTimeAndPreserveOffsets() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "archive.log"
+        };
+        var fileDateNameMethod = typeof(FileLog).GetMethod("FileDateName", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fileDateMethod = typeof(FileLog).GetMethod("FileDate", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(fileDateNameMethod, Is.Not.Null);
+        Assert.That(fileDateMethod, Is.Not.Null);
+
+        var before = DateTime.UtcNow;
+        var generatedName = (string)fileDateNameMethod.Invoke(fileLog, null);
+        var generatedDate = (DateTime?)fileDateMethod.Invoke(fileLog, [generatedName]);
+        var legacyDate = (DateTime?)fileDateMethod.Invoke(fileLog, ["archive_20260115-120000-000.log"]);
+        var expectedLocalText = generatedDate.Value.ToLocalTime().ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
+        var offset = TimeZoneInfo.Local.GetUtcOffset(generatedDate.Value);
+        var offsetMinutes = (int)offset.TotalMinutes;
+        var absoluteOffsetMinutes = Math.Abs(offsetMinutes);
+        var expectedOffsetText = $"{(offsetMinutes < 0 ? "-" : "+")}{absoluteOffsetMinutes / 60:00}{absoluteOffsetMinutes % 60:00}.log";
+
+        Assert.Multiple(() => {
+            Assert.That(generatedName.Substring("archive_".Length, 19), Is.EqualTo(expectedLocalText));
+            Assert.That(generatedName, Does.EndWith(expectedOffsetText));
+            Assert.That(generatedDate.HasValue, Is.True);
+            Assert.That(generatedDate.Value.Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(generatedDate.Value, Is.InRange(before.AddSeconds(-1), DateTime.UtcNow.AddSeconds(1)));
+            Assert.That(legacyDate.HasValue, Is.True);
+            Assert.That(legacyDate.Value.Kind, Is.EqualTo(DateTimeKind.Local));
+        });
     }
 
     [Test]
