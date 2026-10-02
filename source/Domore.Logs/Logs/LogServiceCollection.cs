@@ -21,16 +21,28 @@ internal sealed class LogServiceCollection : IDisposable {
         lock (Locker) {
             var names = Set.SelectMany(item => item.Value.Config.Names).Distinct();
             foreach (var name in names) {
-                var severity = TypeThreshold[name] = Set
+                var thresholds = Set
                     .Select(item => item.Value)
-                    .Select(log => log.Config[name].Threshold)
+                    .Select(log => {
+                        var type = log.Config[name].Threshold;
+                        return new {
+                            Type = type,
+                            Effective = type ?? log.Config.Default.Threshold
+                        };
+                    })
+                    .ToList();
+                var severity = thresholds
+                    .Select(item => item.Effective)
                     .Where(sev => sev.HasValue)
                     .Select(sev => sev.Value)
                     .Where(sev => sev != LogSeverity.None)
                     .OrderBy(sev => sev)
                     .FirstOrDefault();
-                if (severity == LogSeverity.None) {
+                if (severity == LogSeverity.None && thresholds.All(item => item.Type.HasValue == false)) {
                     TypeThreshold.Remove(name);
+                }
+                else {
+                    TypeThreshold[name] = severity;
                 }
             }
             DefaultThreshold = Set

@@ -1,12 +1,14 @@
 ﻿using Domore.Conf.Logs;
 using NUnit.Framework;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CONF = Domore.Conf.Conf;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 [TestFixture]
 public sealed partial class LoggingTest {
     private ILog Log {
@@ -163,6 +165,61 @@ public sealed partial class LoggingTest {
                 log[t].config.default.format = {{log}} [{{sev}}]
                 {config}
             ";
+    }
+
+    private sealed class ThresholdProbeLogService : ILogService {
+        public static ConcurrentQueue<string> Entries { get; } = new();
+
+        public static void Clear() {
+            while (Entries.TryDequeue(out _)) {
+            }
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+            Entries.Enqueue(data);
+        }
+
+        public void Complete() {
+        }
+    }
+
+    [Test]
+    public void EnabledIncludesOtherServiceDefaultWhenTypeOverrideExists() {
+        ThresholdProbeLogService.Clear();
+        Config = $@"
+                log[strict].type = {typeof(ThresholdProbeLogService).AssemblyQualifiedName}
+                log[strict].config[LoggingTest].severity = warn
+                log[fallback].type = {typeof(ThresholdProbeLogService).AssemblyQualifiedName}
+                log[fallback].config.default.severity = debug
+            ";
+
+        var enabled = Log.Info();
+        Log.Info("message");
+        Logging.Complete();
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(enabled, Is.True);
+            Assert.That(ThresholdProbeLogService.Entries.ToArray(), Is.EqualTo(["message"]));
+        }
+    }
+
+    [Test]
+    public void EnabledRespectsExplicitNoneTypeOverride() {
+        ThresholdProbeLogService.Clear();
+        Config = $@"
+                log[probe].type = {typeof(ThresholdProbeLogService).AssemblyQualifiedName}
+                log[probe].config.default.severity = debug
+                log[probe].config[LoggingTest].severity = none
+            ";
+
+        var enabled = Log.Info();
+        Log.Info("suppressed");
+        Logging.Complete();
+
+        using (Assert.EnterMultipleScope()) {
+            Assert.That(enabled, Is.False);
+            Assert.That(ThresholdProbeLogService.Entries, Is.Empty);
+        }
     }
 
     [Test]
