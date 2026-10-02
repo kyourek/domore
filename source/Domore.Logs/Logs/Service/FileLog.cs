@@ -177,6 +177,11 @@ internal sealed class FileLog : ILogService {
         }
     }
 
+    private void Flush(IEnumerable<string> lines) {
+        Log(lines);
+        Rotate();
+    }
+
     private void TimerCallback(object _) {
         try {
             using (Timer) {
@@ -206,8 +211,7 @@ internal sealed class FileLog : ILogService {
                         }
                         if (lines.Count > 0) {
                             try {
-                                Log(lines);
-                                Rotate();
+                                Flush(lines);
                             }
                             catch (Exception ex) {
                                 Logging.Notify(ex);
@@ -360,7 +364,7 @@ internal sealed class FileLog : ILogService {
             }
             if (lines.Count > 0) {
                 try {
-                    Log(lines);
+                    Flush(lines);
                 }
                 catch (Exception ex) {
                     Logging.Notify(ex);

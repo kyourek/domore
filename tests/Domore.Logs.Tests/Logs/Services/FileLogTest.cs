@@ -189,6 +189,36 @@ internal sealed class FileLogTest {
     }
 
     [Test]
+    public void CompletionRotatesFinalFlushAndAppliesRetention() {
+        Directory.CreateDirectory(TempDir);
+        var name = "final-flush.log";
+        var activePath = Path.Combine(TempDir, name);
+        var expiredArchive = Path.Combine(TempDir, "final-flush_20200101-000000-000+0000.log");
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = name,
+            FileSizeLimit = 1,
+            TotalSizeLimit = 1024,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)fileLog;
+        File.WriteAllText(expiredArchive, "expired");
+        service.Log("test", "pending final entry", LogSeverity.Info);
+
+        service.Complete();
+
+        var archives = Directory.GetFiles(TempDir, "final-flush_*.log", SearchOption.TopDirectoryOnly);
+        Assert.Multiple(() => {
+            Assert.That(fileLog.Complete, Is.True);
+            Assert.That(File.Exists(activePath), Is.False);
+            Assert.That(File.Exists(expiredArchive), Is.False);
+            Assert.That(archives, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(archives.Single()).Trim(), Is.EqualTo("pending final entry"));
+        });
+    }
+
+    [Test]
     public void LogsData() {
         ConfigFile();
         Log.Info("here's some data");

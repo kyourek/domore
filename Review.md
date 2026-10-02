@@ -2,14 +2,14 @@
 
 Reviewed on 2026-10-02 at commit `830f962c92523328345a6424a4fb4f3fc0477875`.
 
-Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–14 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) and [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs).
+Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–15 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) and [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs).
 
 Severity: **High** means a hang, application failure, lost messages, or destructive behavior under the stated trigger; **Medium** means a reliability or correctness problem; **Low** means a narrower formatting problem. Numbers are stable reference IDs, not a severity ranking.
 
 ## Validation
 
 - Domore.Logs built successfully, with no warnings or errors, for all nine declared targets: `net40`, `net45`, `net462`, `net48`, `netstandard2.0`, `netcoreapp3.1`, `net6.0`, `net8.0`, and `net10.0`.
-- All logging tests passed on each of `net462`, `net8.0`, and `net10.0` (429 passing executions; none skipped).
+- All logging tests passed on each of `net462`, `net8.0`, and `net10.0` (432 passing executions; none skipped).
 - The two issue 1 regression tests failed against the old threshold calculation, then both passed against the fix on `net10.0`.
 - The issue 2 callback-completion regression test failed against the old implementation, then passed against the fix on `net10.0`.
 - The issue 3 completion-failure regression test failed against the old implementation because a later service was skipped, the next session lost messages, and retry failed. It passes with the fix on `net10.0`.
@@ -17,7 +17,7 @@ Severity: **High** means a hang, application failure, lost messages, or destruct
 - Both issue 5 regression tests failed against the old delivery loop: one used a throwing `Log()` callback and one a service type resolution failure. Both pass with per-service exception handling.
 - The issue 6 event-handler regression test failed against the old implementation because the throwing handler propagated and blocked later handlers and delivery. It passes with per-handler exception isolation.
 - Both issue 7 subscription-cleanup regression tests failed against the old implementation: unsubscribe left handlers attached, and clear did not detach them. They pass with idempotent cleanup.
-- All four issue 8 reentrant-callback regression tests failed against the live-dictionary implementation and pass with snapshot iteration. The issue 9 in-flight cache-fill regression test failed against the old invalidation and passes with the cache replacement fix. Issues 10 and 11's invalid limit and interval regression cases failed against the unvalidated properties; all pass with validation and retryable startup. Issue 12's in-flight service replacement regression test failed against the old proxy because the old service was never completed; it passes with serialized replacement and exactly-once completion. Issue 13's timestamp regression test failed because filenames used local clock fields that were parsed as UTC; it passes with local clock fields plus an explicit numeric offset and correct UTC age calculations. The complete logging suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`; the library builds without warnings or errors for all nine declared targets.
+- All four issue 8 reentrant-callback regression tests failed against the live-dictionary implementation and pass with snapshot iteration. The issue 9 in-flight cache-fill regression test failed against the old invalidation and passes with the cache replacement fix. Issues 10 and 11's invalid limit and interval regression cases failed against the unvalidated properties; all pass with validation and retryable startup. Issue 12's in-flight service replacement regression test failed against the old proxy because the old service was never completed; it passes with serialized replacement and exactly-once completion. Issue 13's timestamp regression test failed because filenames used local clock fields that were parsed as UTC; it passes with local clock fields plus an explicit numeric offset and correct UTC age calculations. The complete logging suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`; the library builds without warnings or errors for all nine declared targets.
 - Issue 14's retention regression test failed against the old parser on an invalid legacy date, which threw and prevented deletion of a valid expired archive. It passes with exact invariant parsing and explicit prefix/extension validation; the malformed archives remain untouched while the expired archive is removed.
 - A temporary .NET 10 harness compiled the unchanged logging and shared sources and confirmed 22 targeted checks. Two further checks used the built configuration assemblies. These covered the report's reproduced failures, including controlled cache/shutdown interleavings and a worker shutdown hang isolated in a child process.
 - Issue 21 is established by inspection of the queue implementations; an out-of-memory stress test was not performed. The other findings have executable reproductions. Some reproductions used internal types or reflection to isolate the failing path rather than relying on a scheduling race.
@@ -39,7 +39,7 @@ Before the fix, the aggregate type threshold considered only explicit type overr
 
 **Status: Fixed.** When completion is requested on the service worker thread, [Logging.cs](source/Domore.Logs/Logs/Logging.cs) queues the regular completion operation to the thread pool and returns, allowing the callback to finish before the worker is joined. Worker-thread detection is exposed through [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs) and the logging manager.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 143 tests.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 144 tests.
 
 **Location:** [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 8–16 and 46–56; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 66–79 and 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 14–16; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 19–21.
 
@@ -63,7 +63,7 @@ Before the fix, if one custom service's `Complete()` threw, later services were 
 
 **Status: Fixed.** [Logging.cs](source/Domore.Logs/Logs/Logging.cs) now leases the active manager for each logging and subscription operation. Completion atomically detaches the active manager, waits for previously accepted operations to finish, then drains and retires it. New operations create or use the next manager. Calls from a retiring service worker remain recognized so the issue 2 deadlock protection is preserved.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) pauses service completion, subscribes and logs during the shutdown window, then verifies that the subscription is still registered and receives messages in the next session. The test failed against the old implementation and passed with the fix on `net10.0`. The existing callback-completion regression also passes. The full .NET 10 suite passes all 143 tests.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) pauses service completion, subscribes and logs during the shutdown window, then verifies that the subscription is still registered and receives messages in the next session. The test failed against the old implementation and passed with the fix on `net10.0`. The existing callback-completion regression also passes. The full .NET 10 suite passes all 144 tests.
 
 **Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 12–101 and 106–207; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 26–32; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 70–85.
 
@@ -75,7 +75,7 @@ Before the fix, completion was serialized only against other completion calls. T
 
 **Status: Fixed.** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs) now catches and reports failures around each service's complete log path, then continues with the remaining services.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies delivery continues after a service's `Log()` throws and after service type resolution throws during initialization. Both tests failed against the old delivery loop and passed with the fix on `net10.0`. The full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies delivery continues after a service's `Log()` throws and after service type resolution throws during initialization. Both tests failed against the old delivery loop and passed with the fix on `net10.0`. The full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–112; [LogServiceProxy.cs](source/Domore.Logs/Logs/LogServiceProxy.cs), lines 15–24 and 64–82; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 34–41.
 
@@ -87,7 +87,7 @@ Before the fix, exception handling surrounded the entire queued action rather th
 
 **Status: Fixed.** [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs) now snapshots the event handler delegate and invokes each subscribed handler independently. Exceptions are reported through `Logging.Notify`, while subsequent handlers, subscriptions, and services still receive the log.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies the logging call returns, a later event handler runs, and a subscription and service both receive the entry. The test failed against the old code and passed with the fix on `net10.0`. The full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies the logging call returns, a later event handler runs, and a subscription and service both receive the entry. The test failed against the old code and passed with the fix on `net10.0`. The full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 57–82.
 
@@ -111,7 +111,7 @@ Before the fix, removing a subscription detached the collection from the proxy b
 
 **Status: Fixed.** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs) snapshots proxies for threshold queries, delivery, and completion, then invokes callbacks outside the collection lock. [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs) does the same for queued delivery and service completion. The subscription threshold cache uses a generation check before storing a snapshot result.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) covers subscriptions added from threshold and receive callbacks, plus services added from log and completion callbacks. All four tests failed against the old iteration and passed with the fix on `net10.0`. The full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) covers subscriptions added from threshold and receive callbacks, plus services added from log and completion callbacks. All four tests failed against the old iteration and passed with the fix on `net10.0`. The full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 19–46 and 50–153; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–132.
 
@@ -123,7 +123,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs) now atomically replaces the threshold cache when the subscription reports a change. A query captures the current cache instance atomically, so a query already filling the retired instance cannot overwrite the new cache.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) gates a query that captured `Warn`, changes the subscription to `Debug`, and releases the old query. The test failed before the fix because subsequent queries still returned `Warn`; it passes after the fix on `net10.0`. The full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) gates a query that captured `Warn`, changes the subscription to `Debug`, and releases the old query. The test failed before the fix because subsequent queries still returned `Warn`; it passes after the fix on `net10.0`. The full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs), lines 26–47.
 
@@ -135,7 +135,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) rejects nonpositive `LogCountLimit` values before changing the current limit, synchronizes valid updates with the worker, and checks the limit defensively before allocating or dequeuing a batch. Its timer callback now catches failures across the complete callback.
 
-**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) tests zero and negative limits and verifies an invalid change leaves a running file service's valid setting and queued log intact. All three assertions failed against the original property and pass with validation on `net10.0`. The full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) tests zero and negative limits and verifies an invalid change leaves a running file service's valid setting and queued log intact. All three assertions failed against the original property and pass with validation on `net10.0`. The full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 173–233, 277–294, and 358–369; [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), lines 92–120.
 
@@ -147,7 +147,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) validates `FlushInterval` as whole milliseconds from 1 through `Int32.MaxValue` before changing the configured value. Startup rechecks the value, queues the entry before creating the timer, and marks the service started only after timer creation succeeds. Each callback schedules another timer unless completion has begun; if restart fails, it clears `Started` so a later log call can retry, while completion still flushes queued data.
 
-**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) covers rejected negative, disabled, zero, sub-millisecond, fractional, and overflow delays; accepted timer bounds; correction after a failed timer start; and preservation of queued entries. The invalid-value and corrected-startup cases failed against the old implementation. All ten regression tests pass, and the full suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) covers rejected negative, disabled, zero, sub-millisecond, fractional, and overflow delays; accepted timer bounds; correction after a failed timer start; and preservation of queued entries. The invalid-value and corrected-startup cases failed against the old implementation. All ten regression tests pass, and the full suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 173–255, 262–275, and 358–369; [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), lines 123–188.
 
@@ -159,7 +159,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [LogServiceProxy.cs](source/Domore.Logs/Logs/LogServiceProxy.cs) now serializes type replacement with log delivery and service retrieval, drains any in-flight callback before retiring the old instance, completes each instance at most once, and exposes the locked service getter used by configuration to apply service settings. Type changes requested reentrantly from a service callback are applied after that callback returns.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) blocks an old service's `Log()` callback while requesting a type change, then verifies the old service completes once after delivery ends, the new service receives the next message, and shutdown completes the new service once. It failed against the old proxy because the old service was never completed, then passed with the fix. All 143 tests pass on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) blocks an old service's `Log()` callback while requesting a type change, then verifies the old service completes once after delivery ends, the new service receives the next message, and shutdown completes the new service once. It failed against the old proxy because the old service was never completed, then passed with the fix. All 144 tests pass on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogServiceProxy.cs](source/Domore.Logs/Logs/LogServiceProxy.cs), lines 7–15, 23–108, and 122–154; regression test: [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs), line 385.
 
@@ -171,7 +171,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now writes the archive timestamp in local wall time and appends its numeric UTC offset. The parser uses that offset to recover the exact UTC instant for age calculations. It reads older names without an offset as local timestamps.
 
-**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) verifies the visible filename clock fields match local time, the appended offset round-trips to a recent UTC instant, and unmarked legacy timestamps parse as local. The test failed against the old implementation and passed with the fix. The complete suite passes all 143 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) verifies the visible filename clock fields match local time, the appended offset round-trips to a recent UTC instant, and unmarked legacy timestamps parse as local. The test failed against the old implementation and passed with the fix. The complete suite passes all 144 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 48–96 and 124–132; regression test: [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), line 396.
 
@@ -183,7 +183,7 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now checks the archive prefix and extension, parses the timestamp with an exact invariant format, and returns null for invalid calendar dates or times. Offset components are parsed invariantly and validated before conversion.
 
-**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) creates invalid month, day, leap-date, and time archives beside a valid expired archive, and also checks that wrong prefixes and extensions are rejected. The test failed against the old parser because rotation threw; it now passes, confirming retention deletes the expired archive and ignores the malformed files. All 143 tests pass on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) creates invalid month, day, leap-date, and time archives beside a valid expired archive, and also checks that wrong prefixes and extensions are rejected. The test failed against the old parser because rotation threw; it now passes, confirming retention deletes the expired archive and ignores the malformed files. All 144 tests pass on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 57–96 and 124–132; regression test: [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), line 428.
 
@@ -193,11 +193,15 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 ### 15. Medium — The final flush bypasses rotation and retention
 
-**Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 199–206 versus 347–352.
+**Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now sends timer batches and the completion batch through the same `Flush()` method, which writes the entries and then rotates the file so age and total-size retention both run.
 
-Timer flushes call `Log(lines)` and `Rotate()`, but `Complete()` only calls `Log(lines)`. A short-lived process that completes before the first timer callback never applies the rotation/retention path to its pending batch. A reproduction with both size limits set to one byte left a 21-byte active file and no rotation. Existing expired archives are likewise not cleaned by that final flush.
+**Regression coverage:** [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) queues an entry with a one-hour timer, completes before the timer fires, and verifies the entry is archived and a pre-existing expired archive is removed. It failed against the old completion path, which left the active file and expired archive in place; it passes with the shared flush path. All 144 tests pass on `net462`, `net8.0`, and `net10.0`.
 
-**Fix plan:** Share the flush-and-rotation path between timer and completion, preserving its locking and error handling. Test completion before the first timer tick with a tiny size limit and pre-existing expired archives.
+**Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 180–181, 214–215, and 352–367; regression test: [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), line 192.
+
+**Before the fix:** Timer batches called `Log(lines)` and `Rotate()`, but `Complete()` only called `Log(lines)`. A process that completed before its first timer callback left an oversized active log and skipped cleanup of existing expired archives. The regression test reproduced both failures with a pending entry and an expired archive.
+
+**Fix:** Route both timer and completion batches through `Flush(lines)`, which performs the write and rotation under their existing locks and exception handlers. Completion now applies the same age and total-size retention as a timer flush.
 
 ### 16. High — Path formatting strips UNC and rooted-path prefixes
 
