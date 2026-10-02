@@ -31,18 +31,13 @@ internal sealed class PathFormatter {
         if (string.IsNullOrWhiteSpace(path)) {
             return "";
         }
-        var parts = path
+        var root = Path.GetPathRoot(path) ?? "";
+        var parts = path.Substring(root.Length)
             .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Where(part => part != "")
             .ToArray();
         if (parts.Length == 0) {
-            return "";
-        }
-        if (parts[0][parts[0].Length - 1] == Path.VolumeSeparatorChar) {
-            if (path.StartsWith($"{parts[0]}{Path.DirectorySeparatorChar}") ||
-                path.StartsWith($"{parts[0]}{Path.AltDirectorySeparatorChar}")) {
-                parts[0] = parts[0] + Path.DirectorySeparatorChar;
-            }
+            return root;
         }
         args = args ?? new Dictionary<string, Func<object>> {
             { "AppDomain.FriendlyName", () => AppDomain.CurrentDomain?.FriendlyName },
@@ -67,7 +62,17 @@ internal sealed class PathFormatter {
                 parts[i] = parts[i].Insert(idx, val);
             }
         }
-        return Path.Combine(parts);
+        var formatted = Path.Combine(parts);
+        if (root.Length == 0) {
+            return formatted;
+        }
+        var lastRootChar = root[root.Length - 1];
+        if (lastRootChar == Path.DirectorySeparatorChar ||
+            lastRootChar == Path.AltDirectorySeparatorChar ||
+            lastRootChar == Path.VolumeSeparatorChar) {
+            return root + formatted;
+        }
+        return root + Path.DirectorySeparatorChar + formatted;
     }
 
     public string Format(string path) {

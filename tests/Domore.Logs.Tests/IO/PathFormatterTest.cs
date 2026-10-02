@@ -229,6 +229,41 @@ public sealed class PathFormatterTest {
     }
 
     [Test]
+    public void CurrentDriveRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("A current-drive-rooted path is a Windows path.");
+        }
+
+        var actual = Subject.Format(@"\logs\app.log");
+
+        Assert.That(actual, Is.EqualTo(@"\logs\app.log"));
+    }
+
+    [TestCase(@"\\server\share\logs\app.log")]
+    [TestCase(@"\\?\UNC\server\share\logs\app.log")]
+    [TestCase(@"\\?\C:\logs\app.log")]
+    public void UncAndExtendedWindowsRootsArePreserved(string path) {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format(path);
+
+        Assert.That(actual, Is.EqualTo(path));
+    }
+
+    [Test]
+    public void UnixAbsoluteRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '/') {
+            Assert.Ignore("A Unix absolute path requires a Unix runtime.");
+        }
+
+        var actual = Subject.Format("/var/log/app.log");
+
+        Assert.That(actual, Is.EqualTo("/var/log/app.log"));
+    }
+
+    [Test]
     public void NullReturnsEmptyString() {
         Assert.That(Subject.Format(null), Is.EqualTo(""));
     }
