@@ -244,11 +244,13 @@ The replacement loop calls `IndexOf` once per token per path component. For `{Th
 
 ### 20. High — A missing-file check can lead to truncating another writer's data
 
-**Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 139–144.
+**Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now appends directly to the active path after ensuring its parent directory exists. The append operation creates a missing file without truncating a file another writer created.
+
+**Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 148–156.
 
 The file writer calls `FileInfo.Create()` if the cached `Exists` value is false, then appends. `Create()` truncates a file if another writer creates it between the existence check and creation, or if that cached result has become stale. A controlled reproduction cached a missing-file result, wrote existing content through another writer, and then flushed the logger: the existing content disappeared and only the new log line remained.
 
-**Fix plan:** Remove the separate check/create sequence and append using a create-if-missing append operation, such as the existing `File.AppendAllLines` call. Keep retries appropriate for sharing failures. Test a second writer creating the file after the logger's initial missing-file observation.
+**Fix:** Remove the separate existence check and `Create()` call. `File.AppendAllLines` now handles both creating a missing file and appending to an existing one, while the existing I/O retry behavior remains in place.
 
 ### 21. Medium — Both logging queues can grow without a bound
 

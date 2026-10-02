@@ -153,11 +153,6 @@ internal sealed class FileLog : ILogService {
                 DIRECTORY.CreateDirectory(directoryInfo.FullName);
                 directoryInfo.Refresh();
             }
-            if (fileInfo.Exists == false) {
-                using (fileInfo.Create()) {
-                }
-                fileInfo.Refresh();
-            }
             File.AppendAllLines(fileInfo.FullName, lines);
         }
         for (var retry = 1; ; retry++) {
