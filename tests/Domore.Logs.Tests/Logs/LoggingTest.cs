@@ -107,6 +107,72 @@ public sealed partial class LoggingTest {
         });
     }
 
+    private sealed class TrackingThresholdSubscription : ILogSubscription {
+        private EventHandler ThresholdChangedHandlers;
+
+        public int HandlerCount => ThresholdChangedHandlers?.GetInvocationList().Length ?? 0;
+        public int RemoveCount { get; private set; }
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add => ThresholdChangedHandlers += value;
+            remove {
+                ThresholdChangedHandlers -= value;
+                RemoveCount++;
+            }
+        }
+
+        public LogSeverity Threshold(Type type) => LogSeverity.Info;
+
+        public void Receive(ILogEntry entry) {
+        }
+    }
+
+    [Test]
+    public void UnsubscribeDetachesThresholdHandlerFromAgent() {
+        var collection = new LogSubscriptionCollection();
+        var subscription = new TrackingThresholdSubscription();
+        collection.Add(subscription);
+        var afterAdd = subscription.HandlerCount;
+
+        collection.Remove(subscription);
+        var afterRemove = subscription.HandlerCount;
+        collection.Add(subscription);
+        var afterReAdd = subscription.HandlerCount;
+        collection.Remove(subscription);
+
+        Assert.Multiple(() => {
+            Assert.That(afterAdd, Is.EqualTo(1));
+            Assert.That(afterRemove, Is.EqualTo(0));
+            Assert.That(afterReAdd, Is.EqualTo(1));
+            Assert.That(subscription.HandlerCount, Is.EqualTo(0));
+            Assert.That(subscription.RemoveCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void ClearDetachesThresholdHandlersAndCompletionIsIdempotent() {
+        var collection = new LogSubscriptionCollection();
+        var subscription = new TrackingThresholdSubscription();
+        collection.Add(subscription);
+        collection.Complete();
+        var afterComplete = subscription.HandlerCount;
+        collection.Clear();
+        collection.Clear();
+        var afterRepeatedClear = subscription.HandlerCount;
+        var removeCountAfterFirstLifecycle = subscription.RemoveCount;
+
+        collection.Add(subscription);
+        collection.Clear();
+
+        Assert.Multiple(() => {
+            Assert.That(afterComplete, Is.EqualTo(0));
+            Assert.That(afterRepeatedClear, Is.EqualTo(0));
+            Assert.That(removeCountAfterFirstLifecycle, Is.EqualTo(1));
+            Assert.That(subscription.HandlerCount, Is.EqualTo(0));
+            Assert.That(subscription.RemoveCount, Is.EqualTo(2));
+        });
+    }
+
     [Test]
     public void DefaultLogEventThresholdIsNone() {
         Assert.That(Logging.EventThreshold, Is.EqualTo(LogSeverity.None));

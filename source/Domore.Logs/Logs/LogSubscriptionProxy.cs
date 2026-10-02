@@ -1,9 +1,20 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogSubscriptionProxy {
     private readonly ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        CompleteLocker = new();
+
+    private bool Completed;
 
     public ILogSubscription Agent { get; }
 
@@ -50,7 +61,13 @@ internal sealed class LogSubscriptionProxy {
     }
 
     public void Complete() {
-        Agent.ThresholdChanged -= Agent_ThresholdChanged;
+        lock (CompleteLocker) {
+            if (Completed) {
+                return;
+            }
+            Agent.ThresholdChanged -= Agent_ThresholdChanged;
+            Completed = true;
+        }
     }
 
     private sealed class None : ILogSubscription {

@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogSubscriptionCollection {
     private readonly Dictionary<Type, LogSeverity> Thresholds = [];
     private readonly Dictionary<ILogSubscription, LogSubscriptionProxy> Lookup = [];
@@ -77,29 +78,42 @@ internal sealed class LogSubscriptionCollection {
         if (Count == 0) {
             return false;
         }
+        LogSubscriptionProxy proxy;
         lock (Lookup) {
-            if (Lookup.TryGetValue(item, out var proxy)) {
-                Lookup.Remove(item);
-                Thresholds.Clear();
-                Count = Lookup.Count;
-                proxy.ThresholdChanged -= Item_ThresholdChanged;
-                return true;
+            if (Lookup.TryGetValue(item, out proxy) == false) {
+                return false;
             }
+            Lookup.Remove(item);
+            Thresholds.Clear();
+            Count = Lookup.Count;
+            proxy.ThresholdChanged -= Item_ThresholdChanged;
         }
-        return false;
+        proxy.Complete();
+        return true;
     }
 
     public void Clear() {
-        if (Count == 0) {
-            return;
-        }
+        var items = default(LogSubscriptionProxy[]);
+        var exceptions = new List<Exception>();
         lock (Lookup) {
-            foreach (var item in Lookup.Values) {
+            items = [.. Lookup.Values];
+            foreach (var item in items) {
                 item.ThresholdChanged -= Item_ThresholdChanged;
             }
             Lookup.Clear();
             Thresholds.Clear();
             Count = Lookup.Count;
+        }
+        foreach (var item in items) {
+            try {
+                item.Complete();
+            }
+            catch (Exception ex) {
+                exceptions.Add(ex);
+            }
+        }
+        if (exceptions.Count > 0) {
+            throw new AggregateException("One or more log subscriptions failed to complete.", exceptions);
         }
     }
 
