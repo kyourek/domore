@@ -7,11 +7,18 @@ using System.Linq;
 using System.Threading;
 using DIRECTORY = System.IO.Directory;
 
-namespace Domore.Logs.Service; 
+namespace Domore.Logs.Service;
+
 internal sealed class FileLog : ILogService {
-    private readonly object Locker = new();
     private readonly ConcurrentQueue<string> Queue = new();
     private readonly PathFormatter PathFormatter = new();
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        Locker = new();
 
     private Timer Timer;
 
@@ -164,56 +171,83 @@ internal sealed class FileLog : ILogService {
     }
 
     private void TimerCallback(object _) {
-        using (Timer) {
-            for (; ; ) {
-                lock (Locker) {
-                    if (Complete) {
-                        break;
-                    }
-                    if (Queue.Count == 0) {
-                        break;
-                    }
-                    var limit = LogCountLimit;
-                    var lines = new List<string>(capacity: limit);
-                    for (; ; ) {
-                        if (lines.Count >= limit) {
+        try {
+            using (Timer) {
+                for (; ; ) {
+                    lock (Locker) {
+                        if (Complete) {
                             break;
                         }
-                        var dequeued = Queue.TryDequeue(out var line);
-                        if (dequeued == false) {
+                        if (Queue.Count == 0) {
                             break;
                         }
-                        lines.Add(line);
-                    }
-                    if (lines.Count > 0) {
-                        try {
-                            Log(lines);
-                            Rotate();
+                        var limit = LogCountLimit;
+                        if (limit <= 0) {
+                            throw new InvalidOperationException($"{nameof(LogCountLimit)} must be greater than zero.");
                         }
-                        catch (Exception ex) {
-                            Logging.Notify(ex);
+                        var lines = new List<string>(capacity: limit);
+                        for (; ; ) {
+                            if (lines.Count >= limit) {
+                                break;
+                            }
+                            var dequeued = Queue.TryDequeue(out var line);
+                            if (dequeued == false) {
+                                break;
+                            }
+                            lines.Add(line);
+                        }
+                        if (lines.Count > 0) {
+                            try {
+                                Log(lines);
+                                Rotate();
+                            }
+                            catch (Exception ex) {
+                                Logging.Notify(ex);
+                            }
                         }
                     }
                 }
             }
+            Start();
         }
-        Start();
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
     }
 
     private void Start() {
         if (Complete) {
             return;
         }
-        Timer = new(TimerCallback, state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite);
+        Timer = new(TimerCallback,
+                    state: null,
+                    dueTime: (int)FlushInterval.TotalMilliseconds,
+                    period: Timeout.Infinite);
     }
 
     public int IORetryLimit { get; set; } = 5;
     public int IORetryDelay { get; set; } = 10;
-    public int LogCountLimit { get; set; } = 100;
     public long FileSizeLimit { get; set; } = 100000;
     public long TotalSizeLimit { get; set; } = 100000000;
     public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
     public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(2.5);
+
+    public int LogCountLimit {
+        get {
+            lock (Locker) {
+                return field;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(LogCountLimit), value,
+                    "The log count limit must be greater than zero.");
+            }
+            lock (Locker) {
+                field = value;
+            }
+        }
+    } = 100;
 
     public string Directory {
         get => _Directory;

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Domore.Logs.Service;
 using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs.Services; 
@@ -86,6 +87,36 @@ internal sealed class FileLogTest {
         if (Directory.Exists(TempDir)) {
             Directory.Delete(TempDir, recursive: true);
         }
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void LogCountLimitRejectsNonPositiveValues(int limit) {
+        var fileLog = new FileLog();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.LogCountLimit = limit);
+        Assert.That(fileLog.LogCountLimit, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void LogCountLimitCanBeChangedWhileFileLogIsRunning() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "test.log",
+            FlushInterval = TimeSpan.FromHours(1),
+            LogCountLimit = 5
+        };
+        var service = (ILogService)fileLog;
+        service.Log("test", "queued", LogSeverity.Info);
+
+        Assert.That(fileLog.Started, Is.True);
+        Assert.DoesNotThrow(() => fileLog.LogCountLimit = 2);
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.LogCountLimit = 0);
+        Assert.That(fileLog.LogCountLimit, Is.EqualTo(2));
+
+        service.Complete();
+
+        Assert.That(File.ReadAllText(Path.Combine(TempDir, "test.log")).Trim(), Is.EqualTo("queued"));
     }
 
     [Test]
