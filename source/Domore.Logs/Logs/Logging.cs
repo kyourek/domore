@@ -120,10 +120,15 @@ public sealed class Logging {
             return;
         }
         lock (CompleteLocker) {
-            using (var manager = Instance.Manager) {
-                manager.Complete();
+            var manager = Instance.Manager;
+            try {
+                using (manager) {
+                    manager.Complete();
+                }
             }
-            Instance.Manager = null;
+            finally {
+                Instance.Manager = null;
+            }
         }
     }
 }

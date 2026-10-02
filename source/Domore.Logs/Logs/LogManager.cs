@@ -75,9 +75,28 @@ internal sealed class LogManager : IDisposable {
 
     public void Complete() {
         LogEvent = null;
-        Services.Complete();
-        Subscriptions.Complete();
-        Subscriptions.Clear();
+        var exceptions = new System.Collections.Generic.List<Exception>();
+        try {
+            Services.Complete();
+        }
+        catch (Exception ex) {
+            exceptions.Add(ex);
+        }
+        try {
+            Subscriptions.Complete();
+        }
+        catch (Exception ex) {
+            exceptions.Add(ex);
+        }
+        try {
+            Subscriptions.Clear();
+        }
+        catch (Exception ex) {
+            exceptions.Add(ex);
+        }
+        if (exceptions.Count > 0) {
+            throw new AggregateException("One or more logging components failed to complete.", exceptions);
+        }
     }
 
     public void Dispose() {

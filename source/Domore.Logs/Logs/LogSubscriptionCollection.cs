@@ -38,10 +38,19 @@ internal sealed class LogSubscriptionCollection {
         if (Count == 0) {
             return;
         }
+        var exceptions = new List<Exception>();
         lock (Lookup) {
             foreach (var item in Lookup.Values) {
-                item.Complete();
+                try {
+                    item.Complete();
+                }
+                catch (Exception ex) {
+                    exceptions.Add(ex);
+                }
             }
+        }
+        if (exceptions.Count > 0) {
+            throw new AggregateException("One or more log subscriptions failed to complete.", exceptions);
         }
     }
 

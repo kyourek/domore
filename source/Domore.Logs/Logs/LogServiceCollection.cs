@@ -107,10 +107,19 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public void Complete() {
         Queue.Complete();
+        var exceptions = new List<Exception>();
         lock (Locker) {
             foreach (var item in Set) {
-                item.Value.Complete();
+                try {
+                    item.Value.Complete();
+                }
+                catch (Exception ex) {
+                    exceptions.Add(ex);
+                }
             }
+        }
+        if (exceptions.Count > 0) {
+            throw new AggregateException("One or more log services failed to complete.", exceptions);
         }
     }
 

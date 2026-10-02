@@ -213,6 +213,97 @@ public sealed partial class LoggingTest {
         Assert.That(CompletingLogService.ServiceCompleted.Wait(TimeSpan.FromSeconds(2)), Is.True);
     }
 
+    private sealed class ThrowingCompleteLogService : ILogService {
+        public static ConcurrentQueue<string> Entries { get; } = new();
+        public static bool FailNextComplete { get; set; }
+        public static int CompleteCount { get; private set; }
+
+        public static void Reset() {
+            while (Entries.TryDequeue(out _)) {
+            }
+            FailNextComplete = true;
+            CompleteCount = 0;
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+            Entries.Enqueue(data);
+        }
+
+        public void Complete() {
+            CompleteCount++;
+            if (FailNextComplete) {
+                FailNextComplete = false;
+                throw new InvalidOperationException("Expected test service completion failure.");
+            }
+        }
+    }
+
+    private sealed class HealthyCompleteLogService : ILogService {
+        public static ConcurrentQueue<string> Entries { get; } = new();
+        public static int CompleteCount { get; private set; }
+
+        public static void Reset() {
+            while (Entries.TryDequeue(out _)) {
+            }
+            CompleteCount = 0;
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+            Entries.Enqueue(data);
+        }
+
+        public void Complete() {
+            CompleteCount++;
+        }
+    }
+
+    [Test]
+    public void CompletionErrorDoesNotPoisonNextLoggingSession() {
+        ThrowingCompleteLogService.Reset();
+        HealthyCompleteLogService.Reset();
+        Config = $@"
+                log[a_throw].type = {typeof(ThrowingCompleteLogService).AssemblyQualifiedName}
+                log[a_throw].config.default.severity = info
+                log[z_healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[z_healthy].config.default.severity = info
+            ";
+        Log.Info("before completion");
+
+        var firstCompletionFailed = false;
+        try {
+            Logging.Complete();
+        }
+        catch (Exception) {
+            firstCompletionFailed = true;
+        }
+
+        var healthyCompletionCount = HealthyCompleteLogService.CompleteCount;
+        Config = $@"
+                log[a_throw].type = {typeof(ThrowingCompleteLogService).AssemblyQualifiedName}
+                log[a_throw].config.default.severity = info
+                log[z_healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[z_healthy].config.default.severity = info
+            ";
+        Log.Info("after completion");
+
+        var retryFailed = false;
+        try {
+            Logging.Complete();
+        }
+        catch (Exception) {
+            retryFailed = true;
+            SkipLoggingCompleteOnTearDown = true;
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(firstCompletionFailed, Is.True);
+            Assert.That(healthyCompletionCount, Is.EqualTo(1));
+            Assert.That(retryFailed, Is.False);
+            Assert.That(ThrowingCompleteLogService.Entries.ToArray(), Is.EqualTo(["before completion", "after completion"]));
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["before completion", "after completion"]));
+        });
+    }
+
     private sealed class ThresholdProbeLogService : ILogService {
         public static ConcurrentQueue<string> Entries { get; } = new();
 
