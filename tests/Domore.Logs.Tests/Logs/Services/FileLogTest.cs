@@ -425,6 +425,44 @@ internal sealed class FileLogTest {
     }
 
     [Test]
+    public void InvalidArchiveDatesDoNotAbortRetention() {
+        Directory.CreateDirectory(TempDir);
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "archive.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            TotalSizeLimit = long.MaxValue
+        };
+        var expiredArchive = Path.Combine(TempDir, "archive_20200101-000000-000.log");
+        var invalidArchives = new[] {
+            "archive_20261301-000000-000.log",
+            "archive_20260230-000000-000.log",
+            "archive_20230229-000000-000.log",
+            "archive_20260101-246000-000.log"
+        }.Select(name => Path.Combine(TempDir, name)).ToArray();
+        File.WriteAllText(Path.Combine(TempDir, "archive.log"), "trigger rotation");
+        File.WriteAllText(expiredArchive, "expired");
+        foreach (var path in invalidArchives) {
+            File.WriteAllText(path, "invalid");
+        }
+
+        var fileInfoProperty = typeof(FileLog).GetProperty("FileInfo", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fileDateMethod = typeof(FileLog).GetMethod("FileDate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var rotateMethod = typeof(FileLog).GetMethod("Rotate", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(fileInfoProperty, Is.Not.Null);
+        Assert.That(fileDateMethod, Is.Not.Null);
+        Assert.That(rotateMethod, Is.Not.Null);
+        fileInfoProperty.GetValue(fileLog);
+
+        Assert.That((DateTime?)fileDateMethod.Invoke(fileLog, ["another_20200101-000000-000.log"]), Is.Null);
+        Assert.That((DateTime?)fileDateMethod.Invoke(fileLog, ["archive_20200101-000000-000.txt"]), Is.Null);
+        Assert.DoesNotThrow(() => rotateMethod.Invoke(fileLog, null));
+        Assert.That(File.Exists(expiredArchive), Is.False);
+        Assert.That(invalidArchives.All(File.Exists), Is.True);
+    }
+
+    [Test]
     public void RemovesLogsGreaterThanAgeLimit() {
         var fileDir = TempDir;
         var fileName = $"domore.logs.loggingtest.{nameof(RemovesLogsGreaterThanAgeLimit)}";

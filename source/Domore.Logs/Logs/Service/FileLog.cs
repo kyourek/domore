@@ -59,53 +59,36 @@ internal sealed class FileLog : ILogService {
             return null;
         }
         var prefix = $"{FileNameWithoutExtension}_";
-        if (prefix.Length + FileExtension.Length >= name.Length) {
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !name.EndsWith(FileExtension, StringComparison.OrdinalIgnoreCase) ||
+            prefix.Length + FileExtension.Length >= name.Length) {
             return null;
         }
-        var date = name.Substring(prefix.Length).Substring(0, name.Length - prefix.Length - FileExtension.Length);
+        var date = name.Substring(prefix.Length, name.Length - prefix.Length - FileExtension.Length);
         var hasOffset = date.Length == 24 && (date[19] == '+' || date[19] == '-');
         if (date.Length != 19 && hasOffset == false) {
             return null;
         }
-        if (date[8] != '-') {
-            return null;
-        }
-        if (date[15] != '-') {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(0, 4), out var year)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(4, 2), out var month)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(6, 2), out var day)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(9, 2), out var hour)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(11, 2), out var minute)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(13, 2), out var second)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(16, 3), out var millisecond)) {
+        if (!DateTime.TryParseExact(
+            date.Substring(0, 19),
+            "yyyyMMdd-HHmmss-fff",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var wallTime)) {
             return null;
         }
         if (hasOffset == false) {
-            return new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Local);
+            return DateTime.SpecifyKind(wallTime, DateTimeKind.Local);
         }
-        if (!int.TryParse(date.Substring(20, 2), out var offsetHour) ||
-            !int.TryParse(date.Substring(22, 2), out var offsetMinute) ||
+        if (!int.TryParse(date.Substring(20, 2), NumberStyles.None, CultureInfo.InvariantCulture, out var offsetHour) ||
+            !int.TryParse(date.Substring(22, 2), NumberStyles.None, CultureInfo.InvariantCulture, out var offsetMinute) ||
             offsetHour > 14 || offsetMinute > 59 || (offsetHour == 14 && offsetMinute != 0)) {
             return null;
         }
         var offsetSign = date[19] == '-' ? -1 : 1;
         var offsetValue = TimeSpan.FromMinutes(offsetSign * (offsetHour * 60 + offsetMinute));
         try {
-            return new DateTimeOffset(year, month, day, hour, minute, second, millisecond, offsetValue).UtcDateTime;
+            return new DateTimeOffset(wallTime, offsetValue).UtcDateTime;
         }
         catch (ArgumentException) {
             return null;
