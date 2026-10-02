@@ -100,6 +100,7 @@ internal sealed class FileLog : ILogService {
         if (fileInfo == null) {
             return;
         }
+        var directoryInfo = fileInfo.Directory;
         fileInfo.Refresh();
         var exists = fileInfo.Exists;
         if (exists == false) {
@@ -110,7 +111,7 @@ internal sealed class FileLog : ILogService {
             return;
         }
         var nextName = FileDateName();
-        var nextPath = Path.Combine(DirectoryInfo.FullName, nextName);
+        var nextPath = Path.Combine(directoryInfo.FullName, nextName);
         try {
             fileInfo.MoveTo(nextPath);
         }
@@ -123,7 +124,7 @@ internal sealed class FileLog : ILogService {
         _FileInfo = null;
         var now = DateTime.UtcNow;
         var fileSearchPattern = $"{FileNameWithoutExtension}_*{FileExtension}";
-        var files = DirectoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
+        var files = directoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
         var items = files
             .Select(file => new { File = file, Date = FileDate(file.Name) })
             .Where(item => item.Date.HasValue)
@@ -145,17 +146,19 @@ internal sealed class FileLog : ILogService {
     }
 
     private void Log(IEnumerable<string> lines) {
+        var fileInfo = FileInfo;
+        var directoryInfo = fileInfo.Directory;
         void log() {
-            if (DirectoryInfo.Exists == false) {
-                DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
-                DirectoryInfo.Refresh();
+            if (directoryInfo.Exists == false) {
+                DIRECTORY.CreateDirectory(directoryInfo.FullName);
+                directoryInfo.Refresh();
             }
-            if (FileInfo.Exists == false) {
-                using (FileInfo.Create()) {
+            if (fileInfo.Exists == false) {
+                using (fileInfo.Create()) {
                 }
-                FileInfo.Refresh();
+                fileInfo.Refresh();
             }
-            File.AppendAllLines(FileInfo.FullName, lines);
+            File.AppendAllLines(fileInfo.FullName, lines);
         }
         for (var retry = 1; ; retry++) {
             try {
@@ -172,8 +175,8 @@ internal sealed class FileLog : ILogService {
             if (delay > 0) {
                 Thread.Sleep(delay);
             }
-            DirectoryInfo.Refresh();
-            FileInfo.Refresh();
+            directoryInfo.Refresh();
+            fileInfo.Refresh();
         }
     }
 

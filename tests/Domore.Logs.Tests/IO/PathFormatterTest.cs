@@ -253,6 +253,18 @@ public sealed class PathFormatterTest {
     }
 
     [Test]
+    public void TokensInUncRootAreStillFormatted() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format($@"\\{{thread.managedthreadid}}\share\app.log");
+        var expected = $@"\\{Thread.CurrentThread.ManagedThreadId}\share\app.log";
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
     public void UnixAbsoluteRootIsPreserved() {
         if (Path.DirectorySeparatorChar != '/') {
             Assert.Ignore("A Unix absolute path requires a Unix runtime.");

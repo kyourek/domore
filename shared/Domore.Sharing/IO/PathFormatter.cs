@@ -32,10 +32,13 @@ internal sealed class PathFormatter {
             return "";
         }
         var root = Path.GetPathRoot(path) ?? "";
-        var parts = path.Substring(root.Length)
+        var parts = path
             .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Where(part => part != "")
             .ToArray();
+        var rootPartCount = root
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Count(part => part != "");
         if (parts.Length == 0) {
             return root;
         }
@@ -62,17 +65,37 @@ internal sealed class PathFormatter {
                 parts[i] = parts[i].Insert(idx, val);
             }
         }
-        var formatted = Path.Combine(parts);
+        var rootBuilder = new StringBuilder(root.Length);
+        var rootPartIndex = 0;
+        for (var i = 0; i < root.Length;) {
+            if (root[i] == Path.DirectorySeparatorChar || root[i] == Path.AltDirectorySeparatorChar) {
+                rootBuilder.Append(root[i++]);
+            }
+            else {
+                while (i < root.Length &&
+                       root[i] != Path.DirectorySeparatorChar &&
+                       root[i] != Path.AltDirectorySeparatorChar) {
+                    i++;
+                }
+                rootBuilder.Append(parts[rootPartIndex++]);
+            }
+        }
+        var formattedRoot = rootBuilder.ToString();
+        var relativeParts = parts.Skip(rootPartCount).ToArray();
+        if (relativeParts.Length == 0) {
+            return formattedRoot;
+        }
+        var formatted = Path.Combine(relativeParts);
         if (root.Length == 0) {
             return formatted;
         }
-        var lastRootChar = root[root.Length - 1];
+        var lastRootChar = formattedRoot[formattedRoot.Length - 1];
         if (lastRootChar == Path.DirectorySeparatorChar ||
             lastRootChar == Path.AltDirectorySeparatorChar ||
             lastRootChar == Path.VolumeSeparatorChar) {
-            return root + formatted;
+            return formattedRoot + formatted;
         }
-        return root + Path.DirectorySeparatorChar + formatted;
+        return formattedRoot + Path.DirectorySeparatorChar + formatted;
     }
 
     public string Format(string path) {
