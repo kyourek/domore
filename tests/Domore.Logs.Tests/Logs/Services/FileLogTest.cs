@@ -177,7 +177,7 @@ internal sealed class FileLogTest {
         intervalField.SetValue(fileLog, TimeSpan.FromMilliseconds(-2));
         var service = (ILogService)fileLog;
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => service.Log("test", "first entry", LogSeverity.Info));
+        Assert.Throws<InvalidOperationException>(() => service.Log("test", "first entry", LogSeverity.Info));
         Assert.That(fileLog.Started, Is.False);
         fileLog.FlushInterval = TimeSpan.FromSeconds(1);
         service.Log("test", "retry entry", LogSeverity.Info);

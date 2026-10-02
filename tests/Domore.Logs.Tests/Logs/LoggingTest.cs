@@ -337,6 +337,104 @@ public sealed partial class LoggingTest {
         service.Config.Default.Threshold = LogSeverity.Info;
     }
 
+    private static class ServiceReplacementState {
+        public static readonly ConcurrentQueue<string> Events = new();
+        public static readonly ManualResetEventSlim OldLogStarted = new();
+        public static readonly ManualResetEventSlim ReleaseOldLog = new();
+        public static int OldCompleteCount;
+        public static int NewCompleteCount;
+
+        public static void Reset() {
+            while (Events.TryDequeue(out _)) {
+            }
+            OldLogStarted.Reset();
+            ReleaseOldLog.Reset();
+            OldCompleteCount = 0;
+            NewCompleteCount = 0;
+        }
+    }
+
+    private sealed class OldReplacementLogService : ILogService {
+        public void Log(string name, string data, LogSeverity severity) {
+            ServiceReplacementState.Events.Enqueue("old-log-start");
+            ServiceReplacementState.OldLogStarted.Set();
+            if (ServiceReplacementState.ReleaseOldLog.Wait(TimeSpan.FromSeconds(5)) == false) {
+                throw new TimeoutException("The test did not release the old service log callback.");
+            }
+            ServiceReplacementState.Events.Enqueue("old-log-end");
+        }
+
+        public void Complete() {
+            ServiceReplacementState.Events.Enqueue("old-complete");
+            Interlocked.Increment(ref ServiceReplacementState.OldCompleteCount);
+        }
+    }
+
+    private sealed class NewReplacementLogService : ILogService {
+        public void Log(string name, string data, LogSeverity severity) {
+            ServiceReplacementState.Events.Enqueue($"new-log:{data}");
+        }
+
+        public void Complete() {
+            ServiceReplacementState.Events.Enqueue("new-complete");
+            Interlocked.Increment(ref ServiceReplacementState.NewCompleteCount);
+        }
+    }
+
+    [Test]
+    public void ServiceTypeReplacementCompletesOldServiceAfterInflightDelivery() {
+        ServiceReplacementState.Reset();
+        var proxy = new LogServiceProxy("replacement");
+        proxy.Type = typeof(OldReplacementLogService).AssemblyQualifiedName;
+        proxy.Config.Default.Threshold = LogSeverity.Info;
+        Task delivery = null;
+        Task replacement = null;
+
+        try {
+            delivery = Task.Run(() => proxy.Log(new LogEntry(typeof(LoggingTest), DateTime.UtcNow,
+                LogSeverity.Info, ["before replacement"])));
+            Assert.That(ServiceReplacementState.OldLogStarted.Wait(TimeSpan.FromSeconds(5)), Is.True,
+                "The old service should enter its log callback.");
+
+            using var replacementStarted = new ManualResetEventSlim();
+            replacement = Task.Run(() => {
+                replacementStarted.Set();
+                proxy.Type = typeof(NewReplacementLogService).AssemblyQualifiedName;
+            });
+            Assert.That(replacementStarted.Wait(TimeSpan.FromSeconds(5)), Is.True,
+                "The type replacement should be requested while delivery is active.");
+        }
+        finally {
+            ServiceReplacementState.ReleaseOldLog.Set();
+        }
+
+        var completionAttempted = false;
+        try {
+            Assert.That(delivery.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(replacement.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            proxy.Log(new LogEntry(typeof(LoggingTest), DateTime.UtcNow, LogSeverity.Info, ["after replacement"]));
+            proxy.Complete();
+            completionAttempted = true;
+        }
+        finally {
+            ServiceReplacementState.ReleaseOldLog.Set();
+            if (completionAttempted == false) {
+                proxy.Complete();
+            }
+        }
+
+        var events = ServiceReplacementState.Events.ToArray();
+        var oldLogEnded = Array.IndexOf(events, "old-log-end");
+        var oldCompleted = Array.IndexOf(events, "old-complete");
+        Assert.Multiple(() => {
+            Assert.That(ServiceReplacementState.OldCompleteCount, Is.EqualTo(1));
+            Assert.That(ServiceReplacementState.NewCompleteCount, Is.EqualTo(1));
+            Assert.That(oldLogEnded, Is.GreaterThanOrEqualTo(0));
+            Assert.That(oldCompleted, Is.GreaterThan(oldLogEnded));
+            Assert.That(events, Does.Contain("new-log:after replacement"));
+        });
+    }
+
     private sealed class AddingServiceDuringLog : ILogService {
         private static int Added;
 

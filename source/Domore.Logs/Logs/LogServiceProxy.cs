@@ -1,40 +1,66 @@
 ﻿using System.Threading;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
 
-    private readonly object Locker = new();
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        Locker = new();
 
-    private sealed class None : ILogService {
-        void ILogService.Log(string name, string data, LogSeverity severity) {
-        }
+    private bool ServiceCompleted;
+    private int ServiceCallDepth;
+    private bool PendingTypeChange;
+    private string PendingType;
 
-        void ILogService.Complete() {
-        }
-    }
-
-    public ILogService Service {
-        get {
-            if (_Service == null) {
-                lock (Locker) {
-                    if (_Service == null) {
-                        var service = Factory.Create(Type) ?? new None();
-                        Thread.MemoryBarrier();
-                        _Service = service;
-                    }
-                }
-            }
-            return _Service;
-        }
-    }
     private ILogService _Service;
+
+    private ILogService GetService() {
+        if (_Service is null) {
+            _Service = Factory.Create(Type) ?? new None();
+            ServiceCompleted = false;
+        }
+        return _Service;
+    }
+
+    private void ReplaceType(string value) {
+        var service = _Service;
+        var completeService = service != null && ServiceCompleted == false;
+        _Type = value;
+        _Service = null;
+        ServiceCompleted = false;
+        if (completeService) {
+            ServiceCallDepth++;
+            try {
+                service.Complete();
+            }
+            finally {
+                ServiceCallDepth--;
+                ApplyPendingType();
+            }
+        }
+    }
+
+    private void ApplyPendingType() {
+        if (ServiceCallDepth > 0 || PendingTypeChange == false) {
+            return;
+        }
+        var type = PendingType;
+        PendingType = null;
+        PendingTypeChange = false;
+        ReplaceType(type);
+    }
 
     public LogServiceConfig Config {
         get {
-            if (_Config == null) {
+            if (_Config is null) {
                 lock (Locker) {
-                    if (_Config == null) {
+                    if (_Config is null) {
                         var config = new LogServiceConfig();
                         Thread.MemoryBarrier();
                         _Config = config;
@@ -47,15 +73,26 @@ internal sealed class LogServiceProxy {
     private LogServiceConfig _Config;
 
     public string Type {
-        get => _Type ??= Name;
-        set {
-            if (_Type != value) {
-                lock (Locker) {
-                    if (_Type != value) {
-                        _Type = value;
-                        _Service = null;
-                    }
+        get {
+            lock (Locker) {
+                if (PendingTypeChange) {
+                    return PendingType;
                 }
+                return _Type ??= Name;
+            }
+        }
+        set {
+            lock (Locker) {
+                var current = PendingTypeChange ? PendingType : _Type ?? Name;
+                if (current == value) {
+                    return;
+                }
+                if (ServiceCallDepth > 0) {
+                    PendingType = value;
+                    PendingTypeChange = true;
+                    return;
+                }
+                ReplaceType(value);
             }
         }
     }
@@ -71,17 +108,49 @@ internal sealed class LogServiceProxy {
         if (entry == null) {
             return;
         }
-        var sev = entry.EntrySeverity;
-        var name = entry.LogName;
-        var limit = Config[name].Threshold ?? Config.Default.Threshold;
-        if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
-            var frmt = Config[name].Format ?? Config.Default.Format;
-            var data = entry.LogData(frmt);
-            Service.Log(name, data, sev);
+        lock (Locker) {
+            var sev = entry.EntrySeverity;
+            var name = entry.LogName;
+            var limit = Config[name].Threshold ?? Config.Default.Threshold;
+            if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
+                var frmt = Config[name].Format ?? Config.Default.Format;
+                var data = entry.LogData(frmt);
+                var service = GetService();
+                ServiceCallDepth++;
+                try {
+                    service.Log(name, data, sev);
+                }
+                finally {
+                    ServiceCallDepth--;
+                    ApplyPendingType();
+                }
+            }
         }
     }
 
     public void Complete() {
-        Service.Complete();
+        lock (Locker) {
+            var service = GetService();
+            if (ServiceCompleted) {
+                return;
+            }
+            ServiceCompleted = true;
+            ServiceCallDepth++;
+            try {
+                service.Complete();
+            }
+            finally {
+                ServiceCallDepth--;
+                ApplyPendingType();
+            }
+        }
+    }
+
+    private sealed class None : ILogService {
+        void ILogService.Log(string name, string data, LogSeverity severity) {
+        }
+
+        void ILogService.Complete() {
+        }
     }
 }
