@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs;
@@ -17,6 +18,8 @@ public sealed partial class LoggingTest {
     }
     private ILog _Log;
 
+    private bool SkipLoggingCompleteOnTearDown;
+
     private string Config {
         get => _Config;
         set => CONF.Contain(_Config = value).Configure(Logging.Config, key: "");
@@ -26,11 +29,14 @@ public sealed partial class LoggingTest {
     [SetUp]
     public void SetUp() {
         Log = null;
+        SkipLoggingCompleteOnTearDown = false;
     }
 
     [TearDown]
     public void TearDown() {
-        Logging.Complete();
+        if (SkipLoggingCompleteOnTearDown != true) {
+            Logging.Complete();
+        }
     }
 
     [Test]
@@ -165,6 +171,46 @@ public sealed partial class LoggingTest {
                 log[t].config.default.format = {{log}} [{{sev}}]
                 {config}
             ";
+    }
+
+    private sealed class CompletingLogService : ILogService {
+        public static ManualResetEventSlim CallbackReturned { get; } = new();
+        public static ManualResetEventSlim ServiceCompleted { get; } = new();
+
+        public CompletingLogService() {
+        }
+
+        public static void Reset() {
+            CallbackReturned.Reset();
+            ServiceCompleted.Reset();
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+            Logging.Complete();
+            CallbackReturned.Set();
+        }
+
+        public void Complete() {
+            ServiceCompleted.Set();
+        }
+    }
+
+    [Test]
+    public void CompleteCanBeCalledFromLogServiceCallback() {
+        CompletingLogService.Reset();
+        Config = $@"
+                log[complete].type = {typeof(CompletingLogService).AssemblyQualifiedName}
+                log[complete].config.default.severity = info
+            ";
+
+        Log.Info("complete from callback");
+
+        var callbackReturned = CompletingLogService.CallbackReturned.Wait(TimeSpan.FromSeconds(2));
+        if (callbackReturned == false) {
+            SkipLoggingCompleteOnTearDown = true;
+        }
+        Assert.That(callbackReturned, Is.True, "Logging.Complete should return without joining its own worker thread.");
+        Assert.That(CompletingLogService.ServiceCompleted.Wait(TimeSpan.FromSeconds(2)), Is.True);
     }
 
     private sealed class ThresholdProbeLogService : ILogService {

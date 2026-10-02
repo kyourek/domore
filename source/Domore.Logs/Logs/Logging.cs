@@ -108,6 +108,17 @@ public sealed class Logging {
     /// Completes all logging.
     /// </summary>
     public static void Complete() {
+        if (Instance.Manager.ThreadIsCurrentThread) {
+            ThreadPool.QueueUserWorkItem(_ => {
+                try {
+                    Complete();
+                }
+                catch (Exception ex) {
+                    Notify(ex);
+                }
+            });
+            return;
+        }
         lock (CompleteLocker) {
             using (var manager = Instance.Manager) {
                 manager.Complete();

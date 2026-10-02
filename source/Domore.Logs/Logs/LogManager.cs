@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogManager : IDisposable {
     private readonly LogServiceCollection Services = new();
     private readonly LogSubscriptionCollection Subscriptions = new();
@@ -15,6 +16,9 @@ internal sealed class LogManager : IDisposable {
 
     public LogSeverity LogEventThreshold { get; set; }
     public LogFormatter Formatter { get; } = new LogFormatter();
+
+    public bool ThreadIsCurrentThread =>
+        Services.ThreadIsCurrentThread;
 
     public LogServiceProxy this[string name] =>
         Services[name];

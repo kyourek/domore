@@ -3,13 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogServiceCollection : IDisposable {
     private readonly object Locker = new();
     private readonly BackgroundQueue Queue = new();
     private readonly Dictionary<string, LogServiceProxy> Set = [];
     private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
     private LogSeverity DefaultThreshold;
+
+    public bool ThreadIsCurrentThread =>
+        Queue.ThreadIsCurrentThread;
 
     private void Dispose(bool disposing) {
         if (disposing) {
