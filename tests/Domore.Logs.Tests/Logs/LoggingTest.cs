@@ -173,6 +173,188 @@ public sealed partial class LoggingTest {
         });
     }
 
+    private sealed class SubscribingDuringThresholdSubscription : ILogSubscription {
+        private readonly ILogSubscription Subscription;
+        private bool Added;
+
+        public SubscribingDuringThresholdSubscription(ILogSubscription subscription) {
+            Subscription = subscription;
+        }
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add { }
+            remove { }
+        }
+
+        public LogSeverity Threshold(Type type) {
+            if (Added == false) {
+                Added = true;
+                Logging.Subscribe(Subscription);
+            }
+            return LogSeverity.Info;
+        }
+
+        public void Receive(ILogEntry entry) {
+        }
+    }
+
+    private sealed class SubscribingDuringReceiveSubscription : ILogSubscription {
+        private readonly ILogSubscription Subscription;
+        private bool Added;
+
+        public SubscribingDuringReceiveSubscription(ILogSubscription subscription) {
+            Subscription = subscription;
+        }
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add { }
+            remove { }
+        }
+
+        public LogSeverity Threshold(Type type) => LogSeverity.Info;
+
+        public void Receive(ILogEntry entry) {
+            if (Added == false) {
+                Added = true;
+                Logging.Subscribe(Subscription);
+            }
+        }
+    }
+
+    [Test]
+    public void SubscriptionThresholdCallbackCanAddSubscription() {
+        var addedSubscription = new CompletionWindowSubscription();
+        Logging.Subscribe(new SubscribingDuringThresholdSubscription(addedSubscription));
+        var enabled = false;
+        var loggingCallFailed = false;
+        try {
+            enabled = Log.Info();
+        }
+        catch (Exception) {
+            loggingCallFailed = true;
+        }
+
+        Log.Info("after threshold callback");
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(loggingCallFailed, Is.False);
+            Assert.That(enabled, Is.True);
+            Assert.That(addedSubscription.Entries.ToArray(), Is.EqualTo(["after threshold callback"]));
+        });
+    }
+
+    [Test]
+    public void SubscriptionReceiveCallbackCanAddSubscription() {
+        var addedSubscription = new CompletionWindowSubscription();
+        Logging.Subscribe(new SubscribingDuringReceiveSubscription(addedSubscription));
+        var loggingCallFailed = false;
+        try {
+            Log.Info("adds subscription");
+        }
+        catch (Exception) {
+            loggingCallFailed = true;
+        }
+
+        Log.Info("after receive callback");
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(loggingCallFailed, Is.False);
+            Assert.That(addedSubscription.Entries.ToArray(), Is.EqualTo(["after receive callback"]));
+        });
+    }
+
+    private static void ConfigureCollectionService(LogServiceCollection collection, string name, Type type) {
+        var service = collection[name];
+        service.Type = type.AssemblyQualifiedName;
+        service.Config.Default.Threshold = LogSeverity.Info;
+    }
+
+    private sealed class AddingServiceDuringLog : ILogService {
+        private static int Added;
+
+        public static LogServiceCollection Collection { get; set; }
+
+        public static void Reset(LogServiceCollection collection) {
+            Collection = collection;
+            Added = 0;
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+            if (Interlocked.Exchange(ref Added, 1) == 0) {
+                ConfigureCollectionService(Collection, "z_added", typeof(HealthyCompleteLogService));
+            }
+        }
+
+        public void Complete() {
+        }
+    }
+
+    [Test]
+    public void ServiceDeliverySnapshotSurvivesReentrantConfiguration() {
+        HealthyCompleteLogService.Reset();
+        var collection = new LogServiceCollection();
+        AddingServiceDuringLog.Reset(collection);
+        ConfigureCollectionService(collection, "a_mutating", typeof(AddingServiceDuringLog));
+        ConfigureCollectionService(collection, "y_healthy", typeof(HealthyCompleteLogService));
+        try {
+            collection.Send(new LogEntry(typeof(LoggingTest), DateTime.UtcNow, LogSeverity.Info, ["service snapshot"]));
+            collection.Complete();
+        }
+        finally {
+            collection.Dispose();
+            AddingServiceDuringLog.Reset(null);
+        }
+
+        Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["service snapshot"]));
+    }
+
+    private sealed class AddingServiceDuringComplete : ILogService {
+        private static int Added;
+
+        public static LogServiceCollection Collection { get; set; }
+
+        public static void Reset(LogServiceCollection collection) {
+            Collection = collection;
+            Added = 0;
+        }
+
+        public void Log(string name, string data, LogSeverity severity) {
+        }
+
+        public void Complete() {
+            if (Interlocked.Exchange(ref Added, 1) == 0) {
+                _ = Collection["z_added"];
+            }
+        }
+    }
+
+    [Test]
+    public void ServiceCompletionSnapshotSurvivesReentrantConfiguration() {
+        HealthyCompleteLogService.Reset();
+        var collection = new LogServiceCollection();
+        AddingServiceDuringComplete.Reset(collection);
+        ConfigureCollectionService(collection, "a_mutating", typeof(AddingServiceDuringComplete));
+        ConfigureCollectionService(collection, "y_healthy", typeof(HealthyCompleteLogService));
+        var completionFailed = false;
+        try {
+            collection.Complete();
+        }
+        catch (Exception) {
+            completionFailed = true;
+        }
+        finally {
+            collection.Dispose();
+            AddingServiceDuringComplete.Reset(null);
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(completionFailed, Is.False);
+            Assert.That(HealthyCompleteLogService.CompleteCount, Is.EqualTo(1));
+        });
+    }
+
     [Test]
     public void DefaultLogEventThresholdIsNone() {
         Assert.That(Logging.EventThreshold, Is.EqualTo(LogSeverity.None));

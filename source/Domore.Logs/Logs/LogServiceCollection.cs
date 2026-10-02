@@ -2,14 +2,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Domore.Logs;
 
 internal sealed class LogServiceCollection : IDisposable {
-    private readonly object Locker = new();
     private readonly BackgroundQueue Queue = new();
     private readonly Dictionary<string, LogServiceProxy> Set = [];
     private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        Locker = new();
+
     private LogSeverity DefaultThreshold;
 
     public bool ThreadIsCurrentThread =>
@@ -97,14 +105,16 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public void Send(LogEntry entry) {
         Queue.Add(() => {
+            LogServiceProxy[] services;
             lock (Locker) {
-                foreach (var item in Set) {
-                    try {
-                        item.Value.Log(entry);
-                    }
-                    catch (Exception ex) {
-                        Logging.Notify(ex);
-                    }
+                services = [.. Set.Values];
+            }
+            foreach (var service in services) {
+                try {
+                    service.Log(entry);
+                }
+                catch (Exception ex) {
+                    Logging.Notify(ex);
                 }
             }
         });
@@ -112,15 +122,17 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public void Complete() {
         Queue.Complete();
-        var exceptions = new List<Exception>();
+        LogServiceProxy[] services;
         lock (Locker) {
-            foreach (var item in Set) {
-                try {
-                    item.Value.Complete();
-                }
-                catch (Exception ex) {
-                    exceptions.Add(ex);
-                }
+            services = [.. Set.Values];
+        }
+        var exceptions = new List<Exception>();
+        foreach (var service in services) {
+            try {
+                service.Complete();
+            }
+            catch (Exception ex) {
+                exceptions.Add(ex);
             }
         }
         if (exceptions.Count > 0) {

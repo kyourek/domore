@@ -2,7 +2,7 @@
 
 Reviewed on 2026-10-02 at commit `830f962c92523328345a6424a4fb4f3fc0477875`.
 
-Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–7 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs).
+Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–8 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs).
 
 Severity: **High** means a hang, application failure, lost messages, or destructive behavior under the stated trigger; **Medium** means a reliability or correctness problem; **Low** means a narrower formatting problem. Numbers are stable reference IDs, not a severity ranking.
 
@@ -16,7 +16,8 @@ Severity: **High** means a hang, application failure, lost messages, or destruct
 - The issue 4 shutdown-window regression test failed against the old implementation because a subscription accepted during completion was cleared before the next session. It passes with the fix on `net10.0`.
 - Both issue 5 regression tests failed against the old delivery loop: one used a throwing `Log()` callback and one a service type resolution failure. Both pass with per-service exception handling.
 - The issue 6 event-handler regression test failed against the old implementation because the throwing handler propagated and blocked later handlers and delivery. It passes with per-handler exception isolation.
-- Both issue 7 subscription-cleanup regression tests failed against the old implementation: unsubscribe left handlers attached, and clear did not detach them. They pass with idempotent cleanup. The complete logging suite passes all 122 tests on `net462`, `net8.0`, and `net10.0`; the library builds without warnings or errors for all nine declared targets.
+- Both issue 7 subscription-cleanup regression tests failed against the old implementation: unsubscribe left handlers attached, and clear did not detach them. They pass with idempotent cleanup.
+- All four issue 8 reentrant-callback regression tests failed against the live-dictionary implementation and pass with snapshot iteration. The complete logging suite passes all 126 tests on `net462`, `net8.0`, and `net10.0`; the library builds without warnings or errors for all nine declared targets.
 - A temporary .NET 10 harness compiled the unchanged logging and shared sources and confirmed 22 targeted checks. Two further checks used the built configuration assemblies. These covered the report's reproduced failures, including controlled cache/shutdown interleavings and a worker shutdown hang isolated in a child process.
 - Issue 21 is established by inspection of the queue implementations; an out-of-memory stress test was not performed. The other findings have executable reproductions. Some reproductions used internal types or reflection to isolate the failing path rather than relying on a scheduling race.
 - Runtime reproductions were on Windows. The library was built for all declared targets and the tests ran on `net462`, `net8.0`, and `net10.0`; Unix runtime behavior and test execution on `net40`, `net45`, and `net48` were not independently exercised. Passing baseline tests do not cover the edge cases below.
@@ -37,7 +38,7 @@ Before the fix, the aggregate type threshold considered only explicit type overr
 
 **Status: Fixed.** When completion is requested on the service worker thread, [Logging.cs](source/Domore.Logs/Logs/Logging.cs) queues the regular completion operation to the thread pool and returns, allowing the callback to finish before the worker is joined. Worker-thread detection is exposed through [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs) and the logging manager.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 122 tests.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite now passes all 126 tests.
 
 **Location:** [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 8–16 and 46–56; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 66–79 and 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 14–16; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 19–21.
 
@@ -51,7 +52,7 @@ Before the fix, `ILogService.Log` ran on the background worker and a call to `Lo
 
 **Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that a failing service does not prevent a healthy service from completing and that a subsequent logging session delivers messages. The test failed against the old implementation, then passed with the fix on `net10.0`.
 
-**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 113–129; [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 37–54; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 85–109.
+**Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 181–207; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 115–132; [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 50–69; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 85–109.
 
 Before the fix, if one custom service's `Complete()` threw, later services were not completed and subscription cleanup was skipped. Although the manager's queue was disposed, the assignment clearing `Instance.Manager` was never executed. Subsequent enabled log calls were silently discarded by the disposed queue, and retrying completion threw `ObjectDisposedException`. The skipped completion, dropped later message, and failed retry were reproduced.
 
@@ -61,7 +62,7 @@ Before the fix, if one custom service's `Complete()` threw, later services were 
 
 **Status: Fixed.** [Logging.cs](source/Domore.Logs/Logs/Logging.cs) now leases the active manager for each logging and subscription operation. Completion atomically detaches the active manager, waits for previously accepted operations to finish, then drains and retires it. New operations create or use the next manager. Calls from a retiring service worker remain recognized so the issue 2 deadlock protection is preserved.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) pauses service completion, subscribes and logs during the shutdown window, then verifies that the subscription is still registered and receives messages in the next session. The test failed against the old implementation and passed with the fix on `net10.0`. The existing callback-completion regression also passes. The full .NET 10 suite passes all 122 tests.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) pauses service completion, subscribes and logs during the shutdown window, then verifies that the subscription is still registered and receives messages in the next session. The test failed against the old implementation and passed with the fix on `net10.0`. The existing callback-completion regression also passes. The full .NET 10 suite passes all 126 tests.
 
 **Location:** [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 12–101 and 106–207; [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 26–32; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 70–85.
 
@@ -73,7 +74,7 @@ Before the fix, completion was serialized only against other completion calls. T
 
 **Status: Fixed.** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs) now catches and reports failures around each service's complete log path, then continues with the remaining services.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies delivery continues after a service's `Log()` throws and after service type resolution throws during initialization. Both tests failed against the old delivery loop and passed with the fix on `net10.0`. The full suite passes all 122 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies delivery continues after a service's `Log()` throws and after service type resolution throws during initialization. Both tests failed against the old delivery loop and passed with the fix on `net10.0`. The full suite passes all 126 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–112; [LogServiceProxy.cs](source/Domore.Logs/Logs/LogServiceProxy.cs), lines 15–24 and 64–82; [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs), lines 34–41.
 
@@ -85,7 +86,7 @@ Before the fix, exception handling surrounded the entire queued action rather th
 
 **Status: Fixed.** [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs) now snapshots the event handler delegate and invokes each subscribed handler independently. Exceptions are reported through `Logging.Notify`, while subsequent handlers, subscriptions, and services still receive the log.
 
-**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies the logging call returns, a later event handler runs, and a subscription and service both receive the entry. The test failed against the old code and passed with the fix on `net10.0`. The full suite passes all 122 tests on `net462`, `net8.0`, and `net10.0`.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies the logging call returns, a later event handler runs, and a subscription and service both receive the entry. The test failed against the old code and passed with the fix on `net10.0`. The full suite passes all 126 tests on `net462`, `net8.0`, and `net10.0`.
 
 **Location:** [LogManager.cs](source/Domore.Logs/Logs/LogManager.cs), lines 57–82.
 
@@ -99,7 +100,7 @@ Before the fix, `LogEvent?.Invoke(...)` ran before subscriptions and services wi
 
 **Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies handler counts across repeated add/remove cycles, clear, and complete-then-clear, including that each proxy detaches only once. Both tests failed against the old collection and passed with the fix on `net10.0`.
 
-**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 73–117; [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs), lines 7–63.
+**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 89–132; [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs), lines 7–71.
 
 Before the fix, removing a subscription detached the collection from the proxy but never called the proxy's `Complete()` to detach it from `Agent.ThresholdChanged`. A long-lived subscription retained the removed proxy and its cached types; repeated subscribe/unsubscribe cycles accumulated handlers. `Clear()` also relied on callers having separately completed every proxy.
 
@@ -107,19 +108,23 @@ Before the fix, removing a subscription detached the collection from the proxy b
 
 ### 8. High — Subscription callbacks can invalidate live collection enumeration
 
-**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 23–29 and 133–143; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–129.
+**Status: Fixed.** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs) snapshots proxies for threshold queries, delivery, and completion, then invokes callbacks outside the collection lock. [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs) does the same for queued delivery and service completion. The subscription threshold cache uses a generation check before storing a snapshot result.
 
-Subscription delivery enumerates the live dictionary while calling user code under its lock. Locks are reentrant: a `Receive()` callback can call `Logging.Subscribe()` and add another entry during that enumeration. The next enumerator step throws `InvalidOperationException` outside the proxy's callback catch, interrupting the logging call and later delivery. This was reproduced. Service delivery/finalization similarly invokes external callbacks while enumerating the live service dictionary; reentrant configuration that adds a service has the same structural risk.
+**Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) covers subscriptions added from threshold and receive callbacks, plus services added from log and completion callbacks. All four tests failed against the old iteration and passed with the fix on `net10.0`. The full suite passes all 126 tests on `net462`, `net8.0`, and `net10.0`.
 
-**Fix plan:** Snapshot the relevant proxies under the collection lock, then invoke callbacks outside that lock. Apply the same approach to threshold callbacks and service delivery/finalization, while preserving lifecycle coordination. Test callbacks that register new subscriptions/services and coordinate with another thread.
+**Location:** [LogSubscriptionCollection.cs](source/Domore.Logs/Logs/LogSubscriptionCollection.cs), lines 19–46 and 50–153; [LogServiceCollection.cs](source/Domore.Logs/Logs/LogServiceCollection.cs), lines 98–132.
+
+Before the fix, subscription threshold and delivery paths invoked user callbacks while enumerating the live subscription dictionary under a reentrant lock. A callback that added a subscription invalidated the enumerator. Service delivery and completion similarly invoked services while enumerating the live service dictionary; reentrant configuration that added a service could invalidate those iterations. The resulting exception interrupted subsequent callbacks or skipped later service work.
+
+**Fix:** Snapshot the relevant collections under their locks, then invoke callbacks outside the locks. Version the aggregate threshold cache so a callback-triggered subscription change cannot store a result computed from an outdated snapshot.
 
 ### 9. Medium — A threshold change can be overwritten by an in-flight cache fill
 
-**Location:** [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs), lines 15–17 and 22–34.
+**Location:** [LogSubscriptionProxy.cs](source/Domore.Logs/Logs/LogSubscriptionProxy.cs), lines 26–29 and 33–45.
 
 `ThresholdChanged` clears the cache, but an already executing `GetOrAdd` factory can subsequently insert the old threshold into the cleared cache. The old value then persists until another change event. A gated reproduction paused a query returning `Warn`, changed the subscription to `Debug` and raised its event, then released the old query; subsequent queries still returned `Warn`. Delivery and enablement can therefore continue using obsolete filtering.
 
-**Fix plan:** Swap the cache instance atomically on invalidation so old queries populate only the retired cache, or use a generation check and retry stale computations. Coordinate the aggregate cache as well. Add a deterministic in-flight-query/change-event test.
+**Fix plan:** Swap the proxy cache instance atomically on invalidation so old queries populate only the retired cache, or use a generation check and retry stale computations. The aggregate collection cache now uses a generation check; add a deterministic in-flight proxy-query/change-event test.
 
 ### 10. High — Nonpositive log batch limits can spin or fail outside the timer catch
 
