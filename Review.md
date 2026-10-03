@@ -262,11 +262,13 @@ The service queue uses an unbounded `BlockingCollection<Action>`, and the file w
 
 ### 22. Medium — Failed configuration-file setup permanently reports success state
 
-**Location:** [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 7–20.
+**Status: Fixed.** [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs) now configures a local candidate before publishing it as the active file watcher. If setup throws, it disposes the candidate and leaves `Configured` false so a later call can retry.
+
+**Location:** [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 10–23.
 
 `Log.Conf.Configure()` publishes `File` before `File.Configure(watch: true)` succeeds. If setup throws, `Configured` still returns true and every later call returns false. A reproduction used a path in a nonexistent directory: watcher setup threw, the configured flag became true, and retrying with a valid file returned false. Failed setup can also leave partially initialized resources retained by the static field.
 
-**Fix plan:** Construct and configure a local candidate, publish it only after success, and dispose it on failure. Keep the one-time initialization lock but allow retry after a failed attempt. Test watcher/setup failures followed by a valid retry.
+**Fix:** Keep the one-time initialization lock, configure a local candidate, and publish it only after configuration succeeds. Dispose the candidate on failure and propagate the original exception so a later call can retry.
 
 ### 23. Medium — The configuration watcher keeps targeting a retired manager
 
