@@ -218,6 +218,90 @@ internal sealed class FileLogTest {
         });
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FileNameParentIsCreatedForAbsoluteAndRelativeNames(bool absoluteName) {
+        var configuredDirectory = Path.Combine(TempDir, "configured");
+        var activeDirectory = absoluteName
+            ? Path.Combine(TempDir, "actual", "nested")
+            : Path.Combine(configuredDirectory, "nested");
+        var activePath = Path.Combine(activeDirectory, "app.log");
+        var writer = new FileLog {
+            Directory = configuredDirectory,
+            Name = absoluteName ? activePath : Path.Combine("nested", "app.log"),
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)writer;
+
+        service.Log("test", "created in resolved parent", LogSeverity.Info);
+        service.Complete();
+
+        Assert.That(File.ReadAllLines(activePath), Is.EqualTo(["created in resolved parent"]));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FileNameParentControlsRotationAndRetention(bool absoluteName) {
+        var configuredDirectory = Path.Combine(TempDir, "configured");
+        var activeDirectory = absoluteName
+            ? Path.Combine(TempDir, "actual", "nested")
+            : Path.Combine(configuredDirectory, "nested");
+        Directory.CreateDirectory(configuredDirectory);
+        Directory.CreateDirectory(activeDirectory);
+        var archiveName = "app_20200101-000000-000+0000.log";
+        var unrelatedArchive = Path.Combine(configuredDirectory, archiveName);
+        var expiredArchive = Path.Combine(activeDirectory, archiveName);
+        var oversizedArchive = Path.Combine(activeDirectory,
+            "app_" + DateTime.UtcNow.AddHours(-1).ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "+0000.log");
+        File.WriteAllText(unrelatedArchive, "another directory's archive");
+        File.WriteAllText(expiredArchive, "expired");
+        File.WriteAllText(oversizedArchive, new string('x', 2048));
+        var activePath = Path.Combine(activeDirectory, "app.log");
+        var writer = new FileLog {
+            Directory = configuredDirectory,
+            Name = absoluteName ? activePath : Path.Combine("nested", "app.log"),
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            TotalSizeLimit = 1024,
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)writer;
+
+        service.Log("test", "resolved parent archive", LogSeverity.Info);
+        service.Complete();
+
+        var archives = Directory.GetFiles(activeDirectory, "app_*.log");
+        Assert.Multiple(() => {
+            Assert.That(File.Exists(activePath), Is.False);
+            Assert.That(File.Exists(expiredArchive), Is.False);
+            Assert.That(File.Exists(oversizedArchive), Is.False);
+            Assert.That(File.ReadAllText(unrelatedArchive), Is.EqualTo("another directory's archive"));
+            Assert.That(archives, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllLines(archives.Single()), Is.EqualTo(["resolved parent archive"]));
+            Assert.That(Directory.GetFiles(configuredDirectory, "app_*.log"), Is.EqualTo([unrelatedArchive]));
+        });
+    }
+
+    [Test]
+    public void AppendPreservesFileCreatedAfterMissingStateWasCached() {
+        var writer = new FileLog {
+            Directory = TempDir,
+            Name = "append.log",
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var property = typeof(FileLog).GetProperty("FileInfo", BindingFlags.Instance | BindingFlags.NonPublic);
+        var file = (FileInfo)property.GetValue(writer);
+        Assert.That(file.Exists, Is.False);
+        Directory.CreateDirectory(TempDir);
+        File.WriteAllLines(file.FullName, ["other writer's data"]);
+        var service = (ILogService)writer;
+
+        service.Log("test", "logger's data", LogSeverity.Info);
+        service.Complete();
+
+        Assert.That(File.ReadAllLines(file.FullName), Is.EqualTo(["other writer's data", "logger's data"]));
+    }
+
     [Test]
     public void LogsData() {
         ConfigFile();

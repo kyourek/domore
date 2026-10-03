@@ -1,6 +1,8 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 
 namespace Domore.IO; 
@@ -273,6 +275,34 @@ public sealed class PathFormatterTest {
         var actual = Subject.Format("/var/log/app.log");
 
         Assert.That(actual, Is.EqualTo("/var/log/app.log"));
+    }
+
+    [TestCase("{Thread.ManagedThreadId}-{thread.managedthreadid}.log", "-")]
+    [TestCase("{THREAD.MANAGEDTHREADID}{Thread.ManagedThreadId}.log", "")]
+    public void EveryRepeatedMixedCaseTokenIsReplaced(string path, string separator) {
+        var id = Thread.CurrentThread.ManagedThreadId;
+
+        Assert.That(Subject.Format(path), Is.EqualTo($"{id}{separator}{id}.log"));
+    }
+
+    [Test]
+    public void RepeatedTokenValuesAreResolvedOnceWithoutExpandingInsertedTokens() {
+        var firstCalls = 0;
+        var secondCalls = 0;
+        var args = new Dictionary<string, Func<object>> {
+            ["first"] = () => { firstCalls++; return "{second}/value"; },
+            ["second"] = () => { secondCalls++; return "expanded"; }
+        };
+        var format = typeof(PathFormatter).GetMethod("Format", BindingFlags.Static | BindingFlags.NonPublic);
+        var path = Path.Combine("{first}-{FIRST}", "{first}-{second}.log");
+        var actual = (string)format.Invoke(null, [path, args]);
+        var expected = Path.Combine("{second}_value-{second}_value", "{second}_value-expanded.log");
+
+        Assert.Multiple(() => {
+            Assert.That(actual, Is.EqualTo(expected));
+            Assert.That(firstCalls, Is.EqualTo(1));
+            Assert.That(secondCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]

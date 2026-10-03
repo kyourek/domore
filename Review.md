@@ -2,12 +2,13 @@
 
 Reviewed on 2026-10-02 at commit `830f962c92523328345a6424a4fb4f3fc0477875`.
 
-Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, issues 1–16 were fixed and covered by regression tests in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs), [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), and [PathFormatterTest.cs](tests/Domore.Logs.Tests/IO/PathFormatterTest.cs).
+Scope: all production files in `source/Domore.Logs`, its imported `Domore.Sharing` sources, the logging tests and sample, and the adjacent `Domore.Logs.Conf` integration. Issues 22–23 belong to that companion project. After the review, fixes for issues 1–18, 20, 22, and 23 received regression coverage in [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs), [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs), [PathFormatterTest.cs](tests/Domore.Logs.Tests/IO/PathFormatterTest.cs), and [LogConfFileTest.cs](tests/Domore.Logs.Tests/Logs/LogConfFileTest.cs).
 
 Severity: **High** means a hang, application failure, lost messages, or destructive behavior under the stated trigger; **Medium** means a reliability or correctness problem; **Low** means a narrower formatting problem. Numbers are stable reference IDs, not a severity ranking.
 
 ## Validation
 
+- Follow-up branch-review finding 5 is addressed with 11 regression cases for issues 17, 18, 20, 22, and 23. In an isolated copy, each group failed against its corresponding source file immediately before the fix: four cases before `b82cf99` (issue 17), three before `e8c823d` (issue 18), one before `b8d1e1f` (issue 20), one before `971f318` (issue 22), and two before `4033eb9` (issue 23). All 11 pass with the current sources. The complete suite runs sequentially on `net462`, `net8.0`, and `net10.0`, with 163 passes and one Unix-only skip per target (489 passes and three skips total). These cover the original reported triggers; the separate branch-review findings about service replacement and reload concurrent with shutdown remain outside this coverage change.
 - Follow-up branch-review finding 1 (deferred completion targeting a later session) is fixed. `DeferredCompletionCannotRetireNextLoggingSession` failed against the previous implementation because the new subscription was cleared and its service missed delivery. The fix binds and coalesces requests to their originating manager; two additional regression cases cover completion requests from retiring event and service callbacks. The updated suite has 153 cases per target: 152 pass and the Unix-root case is skipped on `net462`, `net8.0`, and `net10.0` (456 passes and three skips). All nine targets of both logging projects build without warnings or errors. An initial parallel target run encountered an existing shared-path collision in `LogsToFormattedPath`; the .NET 8 suite passed when rerun alone.
 - Domore.Logs built successfully, with no warnings or errors, for all nine declared targets: `net40`, `net45`, `net462`, `net48`, `netstandard2.0`, `netcoreapp3.1`, `net6.0`, `net8.0`, and `net10.0`.
 - Each of `net462`, `net8.0`, and `net10.0` ran 150 test cases: 149 passed and the Unix-root case was skipped because these tests ran on Windows (447 passes and three skips total).
@@ -223,6 +224,8 @@ Before the fix, subscription threshold and delivery paths invoked user callbacks
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now derives directory creation, rotation destinations, and archive retention searches from the resolved active file path. Absolute names remain supported, and relative names with subdirectories are created and maintained in their resolved parent directory.
 
+**Regression coverage:** `FileNameParentIsCreatedForAbsoluteAndRelativeNames` and `FileNameParentControlsRotationAndRetention` in [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) cover both absolute and relative-subdirectory names. They verify creation of missing parents, rotation beside the active file, age and total-size retention in that directory, and preservation of archives in the configured base directory. All four cases fail before the issue 17 fix and pass afterward.
+
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 27–28, 98–112, and 133–144.
 
 An absolute `Name` overrides `Directory` when the active path is combined, but rotation and archive discovery always use `DirectoryInfo.FullName`. With `Directory=A` and `Name=B/app.log`, the active log is written in B and the archive is moved into A. This was reproduced. The destination directory and archive retention scope therefore differ from the active log's location. Relative names containing subdirectories also need an explicit policy because creation currently prepares only the configured base directory.
@@ -232,6 +235,8 @@ An absolute `Name` overrides `Directory` when the active path is combined, but r
 ### 18. Low — Repeated path tokens in a component are only partly replaced
 
 **Status: Fixed.** [PathFormatter.cs](shared/Domore.Sharing/IO/PathFormatter.cs) now scans each original path component once, replaces every case-insensitive token occurrence, and caches each sanitized token value for reuse. Replacement output is appended without rescanning it.
+
+**Regression coverage:** `EveryRepeatedMixedCaseTokenIsReplaced` and `RepeatedTokenValuesAreResolvedOnceWithoutExpandingInsertedTokens` in [PathFormatterTest.cs](tests/Domore.Logs.Tests/IO/PathFormatterTest.cs) verify repeated and adjacent mixed-case tokens, single value resolution across components, sanitization, and literal token-like replacement output. All three cases fail before the issue 18 fix and pass afterward.
 
 **Location:** [PathFormatter.cs](shared/Domore.Sharing/IO/PathFormatter.cs), lines 50–90.
 
@@ -251,6 +256,8 @@ The replacement loop calls `IndexOf` once per token per path component. For `{Th
 
 **Status: Fixed.** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs) now appends directly to the active path after ensuring its parent directory exists. The append operation creates a missing file without truncating a file another writer created.
 
+**Regression coverage:** `AppendPreservesFileCreatedAfterMissingStateWasCached` in [FileLogTest.cs](tests/Domore.Logs.Tests/Logs/Services/FileLogTest.cs) caches a missing `FileInfo.Exists` result, creates the file through another writer, then completes the logger and verifies both writers' data remains. It fails before the issue 20 fix because the other writer's line is truncated, and passes afterward.
+
 **Location:** [FileLog.cs](source/Domore.Logs/Logs/Service/FileLog.cs), lines 148–156.
 
 The file writer calls `FileInfo.Create()` if the cached `Exists` value is false, then appends. `Create()` truncates a file if another writer creates it between the existence check and creation, or if that cached result has become stale. A controlled reproduction cached a missing-file result, wrote existing content through another writer, and then flushed the logger: the existing content disappeared and only the new log line remained.
@@ -269,6 +276,8 @@ The service queue uses an unbounded `BlockingCollection<Action>`, and the file w
 
 **Status: Fixed.** [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs) now configures a local candidate before publishing it as the active file watcher. If setup throws, it disposes the candidate and leaves `Configured` false so a later call can retry.
 
+**Regression coverage:** `FailedWatcherSetupLeavesConfigurationRetryable` in [LogConfFileTest.cs](tests/Domore.Logs.Tests/Logs/LogConfFileTest.cs) forces watcher setup to fail on a nonexistent parent, verifies `Configured` remains false, retries successfully with a valid file, and verifies its configuration is applied. It fails before the issue 22 fix and passes afterward. The fixture disposes the watcher and resets the one-time static state between tests.
+
 **Location:** [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 10–23.
 
 `Log.Conf.Configure()` publishes `File` before `File.Configure(watch: true)` succeeds. If setup throws, `Configured` still returns true and every later call returns false. A reproduction used a path in a nonexistent directory: watcher setup threw, the configured flag became true, and retrying with a valid file returned false. Failed setup can also leave partially initialized resources retained by the static field.
@@ -278,6 +287,8 @@ The service queue uses an unbounded `BlockingCollection<Action>`, and the file w
 ### 23. Medium — The configuration watcher keeps targeting a retired manager
 
 **Status: Fixed.** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs) now gives `ConfFile` a target proxy whose `Log` property resolves through `Logging.Config` each time the file is applied. Reloads therefore configure the current manager after logging restarts.
+
+**Regression coverage:** Both cases of `ConfigurationReloadTargetsCurrentManagerAfterRestart` in [LogConfFileTest.cs](tests/Domore.Logs.Tests/Logs/LogConfFileTest.cs) start logging from a configuration file, complete that session, change the file, then verify the new manager enables and delivers the new severity. One case applies the file explicitly; the other waits for a real filesystem-watcher reload. Both fail before the issue 23 fix and pass afterward.
 
 **Location:** [LogConfFile.cs](source/Domore.Logs.Conf/Logs/LogConfFile.cs), lines 5–26; [Logging.cs](source/Domore.Logs/Logs/Logging.cs), lines 21–28, 157–158, and 181–207; [Log.cs](source/Domore.Logs.Conf/Logs/Log.cs), lines 5–20.
 
