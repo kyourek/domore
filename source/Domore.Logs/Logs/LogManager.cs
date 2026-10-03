@@ -62,7 +62,11 @@ internal sealed class LogManager : IDisposable {
             logType: type,
             entryDate: DateTime.UtcNow,
             entrySeverity: severity,
-            entryList: Formatter.Format(data));
+            entryList: Formatter.Format(data),
+            /*
+             * Format materializes a fresh array that belongs exclusively to this entry.
+             */
+            takeOwnership: true);
         var handlers = LogEvent;
         if (handlers is not null) {
             var thresholdMet = LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity;
