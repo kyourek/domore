@@ -5,13 +5,11 @@ namespace Domore.Logs;
 
 internal sealed class LogConfFile : IDisposable {
     private sealed class Target {
-        public object Log {
-            get {
-                var config = Logging.Config;
-                var property = config.GetType().GetProperty(nameof(Log));
-                return property?.GetValue(config, null) ??
-                    throw new InvalidOperationException("The logging configuration has no Log target.");
-            }
+        [ConfPopulatedCallback]
+        private void Populate(IConf conf) {
+            // This callback runs for explicit and watcher-driven applications.
+            // Resolve and lease one manager for every pair in this file.
+            Logging.Configure(target => conf.Configure(target, key: ""));
         }
     }
 

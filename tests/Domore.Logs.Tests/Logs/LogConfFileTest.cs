@@ -10,7 +10,7 @@ namespace Domore.Logs;
 
 [TestFixture]
 [NonParallelizable]
-public sealed class LogConfFileTest {
+public sealed partial class LogConfFileTest {
     private static readonly FieldInfo ConfigFile = typeof(Log.Conf).GetField("File", BindingFlags.Static | BindingFlags.NonPublic);
     private string DirectoryPath;
     private string FilePath;

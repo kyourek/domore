@@ -68,6 +68,13 @@ public sealed class Logging {
         });
     }
 
+    internal static void Configure(Action<object> configure) {
+        if (configure is null) {
+            throw new ArgumentNullException(nameof(configure));
+        }
+        Instance.UseManager(manager => configure(new { Log = manager }));
+    }
+
     internal bool Log(Logger logger, LogSeverity severity) {
         return UseManager(manager => manager.Log(severity, logger?.Type));
     }
