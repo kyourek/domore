@@ -7,6 +7,7 @@ using System.Threading;
 namespace Domore.Logs;
 
 internal sealed class LogServiceCollection : IDisposable {
+    private readonly LogManager Manager;
     private readonly BackgroundQueue Queue = new();
     private readonly Dictionary<string, LogServiceProxy> Set = [];
     private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
@@ -80,7 +81,7 @@ internal sealed class LogServiceCollection : IDisposable {
         get {
             lock (Locker) {
                 if (Set.TryGetValue(name, out var value) == false) {
-                    Set[name] = value = new LogServiceProxy(name);
+                    Set[name] = value = new LogServiceProxy(name, Manager);
                     Set[name].Config.TypeThresholdChanged += Config_TypeThresholdChanged;
                     Set[name].Config.DefaultThresholdChanged += Config_DefaultThresholdChanged;
                 }
@@ -91,6 +92,10 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public int Count =>
         Set.Count;
+
+    public LogServiceCollection(LogManager manager = null) {
+        Manager = manager;
+    }
 
     public bool Send(LogSeverity severity, Type type) {
         lock (Locker) {

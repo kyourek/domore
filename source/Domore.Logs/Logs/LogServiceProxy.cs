@@ -4,6 +4,7 @@ namespace Domore.Logs;
 
 internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
+    private readonly LogManager Manager;
 
     private readonly
 #if NET9_0_OR_GREATER
@@ -35,7 +36,7 @@ internal sealed class LogServiceProxy {
         if (completeService) {
             ServiceCallDepth++;
             try {
-                service.Complete();
+                Logging.CompleteService(Manager, service);
             }
             finally {
                 ServiceCallDepth--;
@@ -107,8 +108,9 @@ internal sealed class LogServiceProxy {
 
     public string Name { get; }
 
-    public LogServiceProxy(string name) {
+    public LogServiceProxy(string name, LogManager manager = null) {
         Name = name;
+        Manager = manager;
     }
 
     public void Log(LogEntry entry) {
@@ -144,7 +146,7 @@ internal sealed class LogServiceProxy {
             ServiceCompleted = true;
             ServiceCallDepth++;
             try {
-                service.Complete();
+                Logging.CompleteService(Manager, service);
             }
             finally {
                 ServiceCallDepth--;

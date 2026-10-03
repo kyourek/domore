@@ -3,7 +3,7 @@
 namespace Domore.Logs;
 
 internal sealed class LogManager : IDisposable {
-    private readonly LogServiceCollection Services = new();
+    private readonly LogServiceCollection Services;
     private readonly LogSubscriptionCollection Subscriptions = new();
 
     private void Dispose(bool disposing) {
@@ -22,6 +22,10 @@ internal sealed class LogManager : IDisposable {
 
     public LogServiceProxy this[string name] =>
         Services[name];
+
+    public LogManager() {
+        Services = new LogServiceCollection(this);
+    }
 
     public bool Subscribe(ILogSubscription subscription) {
         return Subscriptions.Add(subscription);

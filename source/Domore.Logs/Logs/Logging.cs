@@ -82,6 +82,19 @@ public sealed class Logging {
         try { Console.WriteLine(obj); } catch { }
     }
 
+    internal static void CompleteService(LogManager manager, ILogService service) {
+        // Replacement can invoke this on a configuration thread while holding a proxy lock.
+        // Preserve the owner so reentrant shutdown defers and cannot retire a later session.
+        var previousManager = UsedManager;
+        UsedManager = manager ?? previousManager;
+        try {
+            service.Complete();
+        }
+        finally {
+            UsedManager = previousManager;
+        }
+    }
+
     /// <summary>
     /// Raised when a log event occurs.
     /// </summary>
