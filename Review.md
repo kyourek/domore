@@ -228,11 +228,13 @@ An absolute `Name` overrides `Directory` when the active path is combined, but r
 
 ### 18. Low — Repeated path tokens in a component are only partly replaced
 
-**Location:** [PathFormatter.cs](shared/Domore.Sharing/IO/PathFormatter.cs), lines 52–67.
+**Status: Fixed.** [PathFormatter.cs](shared/Domore.Sharing/IO/PathFormatter.cs) now scans each original path component once, replaces every case-insensitive token occurrence, and caches each sanitized token value for reuse. Replacement output is appended without rescanning it.
+
+**Location:** [PathFormatter.cs](shared/Domore.Sharing/IO/PathFormatter.cs), lines 50–90.
 
 The replacement loop calls `IndexOf` once per token per path component. For `{Thread.ManagedThreadId}-{thread.managedthreadid}.log`, only the first occurrence is replaced and the second remains literal. This was reproduced with mixed token casing, producing a file name that differs from the configured template's intended result.
 
-**Fix plan:** Replace every occurrence case-insensitively, evaluating and sanitizing each token value once. Advance through the original template so inserted text is not reinterpreted. Test repeated tokens in one file name and one directory component.
+**Fix:** Build each formatted component from the original component, matching token keys case-insensitively and advancing past each original token. This replaces repeated tokens while leaving inserted token-like text untouched.
 
 ### 19. Medium — Observers can mutate the log data received by other observers
 
