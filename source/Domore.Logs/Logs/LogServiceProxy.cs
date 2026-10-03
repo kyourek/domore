@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Domore.Logs;
 
@@ -18,30 +20,35 @@ internal sealed class LogServiceProxy {
     private int ServiceCallDepth;
     private bool PendingTypeChange;
     private string PendingType;
+    private ILogService PendingService;
 
     private ILogService GetServiceUnsafe() {
         if (_Service is null) {
-            _Service = Factory.Create(Type) ?? new None();
+            _Service = Factory.Create(_Type ?? Name) ?? new None();
             ServiceCompleted = false;
         }
         return _Service;
     }
 
-    private void ReplaceType(string value) {
+    private void CompleteServiceUnsafe(ILogService service) {
+        ServiceCallDepth++;
+        try {
+            Logging.CompleteService(Manager, service);
+        }
+        finally {
+            ServiceCallDepth--;
+            ApplyPendingType();
+        }
+    }
+
+    private void ReplaceType(string value, ILogService replacement = null) {
         var service = _Service;
         var completeService = service != null && ServiceCompleted == false;
         _Type = value;
-        _Service = null;
+        _Service = replacement;
         ServiceCompleted = false;
         if (completeService) {
-            ServiceCallDepth++;
-            try {
-                Logging.CompleteService(Manager, service);
-            }
-            finally {
-                ServiceCallDepth--;
-                ApplyPendingType();
-            }
+            CompleteServiceUnsafe(service);
         }
     }
 
@@ -50,14 +57,20 @@ internal sealed class LogServiceProxy {
             return;
         }
         var type = PendingType;
+        var service = PendingService;
         PendingType = null;
+        PendingService = null;
         PendingTypeChange = false;
-        ReplaceType(type);
+        ReplaceType(type, service);
     }
 
     public ILogService Service {
         get {
             lock (Locker) {
+                // Configure the future instance without changing delivery during the active callback.
+                if (PendingTypeChange) {
+                    return PendingService ??= Factory.Create(PendingType) ?? new None();
+                }
                 return GetServiceUnsafe();
             }
         }
@@ -96,8 +109,13 @@ internal sealed class LogServiceProxy {
                     return;
                 }
                 if (ServiceCallDepth > 0) {
-                    PendingType = value;
-                    PendingTypeChange = true;
+                    var discarded = PendingService;
+                    PendingService = null;
+                    PendingTypeChange = value != (_Type ?? Name);
+                    PendingType = PendingTypeChange ? value : null;
+                    if (discarded is not null) {
+                        CompleteServiceUnsafe(discarded);
+                    }
                     return;
                 }
                 ReplaceType(value);
@@ -139,18 +157,24 @@ internal sealed class LogServiceProxy {
 
     public void Complete() {
         lock (Locker) {
-            var service = GetServiceUnsafe();
-            if (ServiceCompleted) {
-                return;
+            List<Exception> exceptions = null;
+            // A completion callback may configure and install another live instance.
+            do {
+                var service = GetServiceUnsafe();
+                if (ServiceCompleted) {
+                    break;
+                }
+                ServiceCompleted = true;
+                try {
+                    CompleteServiceUnsafe(service);
+                }
+                catch (Exception ex) {
+                    (exceptions ??= []).Add(ex);
+                }
             }
-            ServiceCompleted = true;
-            ServiceCallDepth++;
-            try {
-                Logging.CompleteService(Manager, service);
-            }
-            finally {
-                ServiceCallDepth--;
-                ApplyPendingType();
+            while (_Service is not null && ServiceCompleted == false);
+            if (exceptions is not null) {
+                throw new AggregateException("One or more instances of the log service failed to complete.", exceptions);
             }
         }
     }
