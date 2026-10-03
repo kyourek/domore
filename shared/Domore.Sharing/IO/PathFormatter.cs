@@ -22,7 +22,8 @@ internal sealed class PathFormatter {
 
     private static string Lookup(Environment.SpecialFolder folder) {
         if (FolderCache.TryGetValue(folder, out var path) == false) {
-            FolderCache[folder] = path = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
+            FolderCache[folder] = path =
+                Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
         }
         return path;
     }
