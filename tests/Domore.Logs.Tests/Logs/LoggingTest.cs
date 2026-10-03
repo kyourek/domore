@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using CONF = Domore.Conf.Conf;
@@ -655,6 +656,158 @@ public sealed partial class LoggingTest {
         }
         Assert.That(callbackReturned, Is.True, "Logging.Complete should return without joining its own worker thread.");
         Assert.That(CompletingLogService.ServiceCompleted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+    }
+
+    private sealed class DeferredCompletionSubscription : ILogSubscription {
+        public ManualResetEventSlim Detached { get; } = new();
+        public ConcurrentQueue<string> Entries { get; } = new();
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add { }
+            remove => Detached.Set();
+        }
+
+        public LogSeverity Threshold(Type type) => LogSeverity.Info;
+
+        public void Receive(ILogEntry entry) {
+            foreach (var item in entry.LogList) {
+                Entries.Enqueue(item);
+            }
+        }
+    }
+
+    private static int DeferredCompletionCount() {
+        var flags = BindingFlags.Static | BindingFlags.NonPublic;
+        var instance = typeof(Logging).GetField("Instance", flags).GetValue(null);
+        var locker = typeof(Logging).GetField("ManagerLocker", flags).GetValue(null);
+        var requests = (HashSet<LogManager>)typeof(Logging)
+            .GetField("DeferredCompletions", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance);
+        lock (locker) {
+            return requests.Count;
+        }
+    }
+
+    private static void WaitForDeferredCompletions() {
+        Assert.That(SpinWait.SpinUntil(() => DeferredCompletionCount() == 0, TimeSpan.FromSeconds(5)), Is.True,
+            "Queued completion requests should finish before checking the next session.");
+    }
+
+    [Test]
+    public void DeferredCompletionCannotRetireNextLoggingSession() {
+        CompletingLogService.Reset();
+        HealthyCompleteLogService.Reset();
+        var subscription = new DeferredCompletionSubscription();
+        var completeLocker = typeof(Logging).GetField("CompleteLocker", BindingFlags.Static | BindingFlags.NonPublic)
+            .GetValue(null);
+
+        // Hold shutdown so callback requests cannot run until the next session exists.
+        lock (completeLocker) {
+            Config = $@"
+                log[complete].type = {typeof(CompletingLogService).AssemblyQualifiedName}
+                log[complete].config.default.severity = info
+            ";
+            Log.Info("first completion request");
+            Log.Info("second completion request");
+            Assert.That(CompletingLogService.CallbackReturned.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Logging.Complete();
+            Assert.That(CompletingLogService.ServiceCompleted.IsSet, Is.True);
+            Assert.That(DeferredCompletionCount(), Is.EqualTo(1), "Repeated requests should share one queued completion.");
+
+            Assert.That(Logging.Subscribe(subscription), Is.True);
+            Config = $@"
+                log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[healthy].config.default.severity = info
+            ";
+        }
+
+        WaitForDeferredCompletions();
+        var detachedByOldRequest = subscription.Detached.IsSet;
+        var subscriptionStillRegistered = Logging.Subscribe(subscription) == false;
+        Log.Info("next session survives deferred completion");
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(detachedByOldRequest, Is.False, "An old completion request must not clear the new session.");
+            Assert.That(subscriptionStillRegistered, Is.True);
+            Assert.That(subscription.Entries.ToArray(), Is.EqualTo(["next session survives deferred completion"]));
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["next session survives deferred completion"]));
+            Assert.That(HealthyCompleteLogService.CompleteCount, Is.EqualTo(1));
+        });
+    }
+
+    private sealed class RetiringCompletionLogService : ILogService {
+        public static Action Callback { get; set; }
+
+        public void Log(string name, string data, LogSeverity severity) => Callback();
+        public void Complete() { }
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void CompletionFromRetiringCallbackCannotRetireNextSession(bool serviceCallback) {
+        HealthyCompleteLogService.Reset();
+        using var callbackEntered = new ManualResetEventSlim();
+        using var releaseCallback = new ManualResetEventSlim();
+        using var callbackReturned = new ManualResetEventSlim();
+        void callback() {
+            callbackEntered.Set();
+            if (releaseCallback.Wait(TimeSpan.FromSeconds(5)) == false) {
+                throw new TimeoutException("The test did not release the retiring callback.");
+            }
+            Logging.Complete();
+            callbackReturned.Set();
+        }
+        object currentManager() {
+            var config = Logging.Config;
+            return config.GetType().GetProperty("Log").GetValue(config, null);
+        }
+        if (serviceCallback) {
+            RetiringCompletionLogService.Callback = callback;
+            Config = $@"
+                log[retiring].type = {typeof(RetiringCompletionLogService).AssemblyQualifiedName}
+                log[retiring].config.default.severity = info
+            ";
+        }
+        else {
+            Logging.EventThreshold = LogSeverity.Info;
+            Logging.Event += (_, __) => callback();
+        }
+        var oldManager = currentManager();
+        var subscription = new DeferredCompletionSubscription();
+        var logging = Task.Run(() => Log.Info("retiring session"));
+        Task completion = null;
+        try {
+            Assert.That(callbackEntered.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            completion = Task.Run(Logging.Complete);
+            Assert.That(SpinWait.SpinUntil(() => !ReferenceEquals(oldManager, currentManager()), TimeSpan.FromSeconds(5)), Is.True,
+                "Shutdown should detach the old manager before waiting for its callback.");
+            Assert.That(Logging.Subscribe(subscription), Is.True);
+            Config = $@"
+                log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+                log[healthy].config.default.severity = info
+            ";
+        }
+        finally {
+            releaseCallback.Set();
+            logging.Wait(TimeSpan.FromSeconds(5));
+            completion?.Wait(TimeSpan.FromSeconds(5));
+            RetiringCompletionLogService.Callback = null;
+        }
+        Assert.That(callbackReturned.IsSet, Is.True);
+        Assert.That(completion.IsCompleted, Is.True);
+        WaitForDeferredCompletions();
+        var detachedByOldRequest = subscription.Detached.IsSet;
+        var subscriptionStillRegistered = Logging.Subscribe(subscription) == false;
+        Log.Info("next session survives retiring callback");
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(detachedByOldRequest, Is.False);
+            Assert.That(subscriptionStillRegistered, Is.True);
+            Assert.That(subscription.Entries.ToArray(), Is.EqualTo(["next session survives retiring callback"]));
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["next session survives retiring callback"]));
+            Assert.That(HealthyCompleteLogService.CompleteCount, Is.EqualTo(1));
+        });
     }
 
     private sealed class ThrowingCompleteLogService : ILogService {

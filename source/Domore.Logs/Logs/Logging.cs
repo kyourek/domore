@@ -13,11 +13,12 @@ public sealed class Logging {
     private static readonly object CompleteLocker = new();
 
     [ThreadStatic]
-    private static int UseManagerDepth;
+    private static LogManager UsedManager;
     private static readonly Logging Instance = new();
 
     private readonly List<LogManager> CompletedManagers = [];
     private readonly Dictionary<LogManager, int> UseManagerCount = [];
+    private readonly HashSet<LogManager> DeferredCompletions = [];
 
     private LogManager Manager;
 
@@ -40,12 +41,13 @@ public sealed class Logging {
             UseManagerCount.TryGetValue(manager, out var count);
             UseManagerCount[manager] = count + 1;
         }
-        UseManagerDepth++;
+        var previousManager = UsedManager;
+        UsedManager = manager;
         try {
             return action(manager);
         }
         finally {
-            UseManagerDepth--;
+            UsedManager = previousManager;
             lock (ManagerLocker) {
                 var count = UseManagerCount[manager] - 1;
                 if (count == 0) {
@@ -142,21 +144,58 @@ public sealed class Logging {
     /// Completes all logging.
     /// </summary>
     public static void Complete() {
-        if (UseManagerDepth > 0 || isCurrentThreadManagerThread(Instance)) {
+        LogManager manager;
+        bool defer;
+        lock (ManagerLocker) {
+            manager = UsedManager;
+            if (manager is null) {
+                foreach (var completed in Instance.CompletedManagers) {
+                    if (completed.ThreadIsCurrentThread) {
+                        manager = completed;
+                        break;
+                    }
+                }
+                manager ??= Instance.Manager;
+            }
+            // A callback on a retiring manager must not complete a later session.
+            if (manager is null || manager != Instance.Manager) {
+                return;
+            }
+            defer = UsedManager is not null || manager.ThreadIsCurrentThread;
+            if (defer && Instance.DeferredCompletions.Add(manager) == false) {
+                return;
+            }
+        }
+        if (defer) {
             ThreadPool.QueueUserWorkItem(_ => {
                 try {
-                    Complete();
+                    Complete(manager);
                 }
                 catch (Exception ex) {
                     Notify(ex);
                 }
+                finally {
+                    lock (ManagerLocker) {
+                        Instance.DeferredCompletions.Remove(manager);
+                    }
+                }
             });
             return;
         }
+        Complete(manager);
+    }
+
+    private static void Complete(LogManager manager) {
         lock (CompleteLocker) {
-            var manager = completeManager(Instance);
-            if (manager is null) {
-                return;
+            lock (ManagerLocker) {
+                if (manager != Instance.Manager) {
+                    return;
+                }
+                Instance.Manager = null;
+                Instance.CompletedManagers.Add(manager);
+                while (Instance.UseManagerCount.ContainsKey(manager)) {
+                    Monitor.Wait(ManagerLocker);
+                }
             }
             try {
                 using (manager) {
@@ -167,34 +206,6 @@ public sealed class Logging {
                 lock (ManagerLocker) {
                     Instance.CompletedManagers.Remove(manager);
                 }
-            }
-        }
-        static bool isCurrentThreadManagerThread(Logging instance) {
-            lock (ManagerLocker) {
-                if (instance.Manager?.ThreadIsCurrentThread == true) {
-                    return true;
-                }
-                foreach (var manager in instance.CompletedManagers) {
-                    if (manager.ThreadIsCurrentThread) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-        }
-        static LogManager completeManager(Logging instance) {
-            lock (ManagerLocker) {
-                var manager = instance.Manager;
-                if (manager is null) {
-                    return null;
-                }
-                instance.Manager = null;
-                instance.CompletedManagers.Add(manager);
-                while (instance.UseManagerCount.ContainsKey(manager)) {
-                    Monitor.Wait(ManagerLocker);
-                }
-                return manager;
             }
         }
     }

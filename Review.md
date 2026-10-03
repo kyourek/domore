@@ -8,6 +8,7 @@ Severity: **High** means a hang, application failure, lost messages, or destruct
 
 ## Validation
 
+- Follow-up branch-review finding 1 (deferred completion targeting a later session) is fixed. `DeferredCompletionCannotRetireNextLoggingSession` failed against the previous implementation because the new subscription was cleared and its service missed delivery. The fix binds and coalesces requests to their originating manager; two additional regression cases cover completion requests from retiring event and service callbacks. The updated suite has 153 cases per target: 152 pass and the Unix-root case is skipped on `net462`, `net8.0`, and `net10.0` (456 passes and three skips). All nine targets of both logging projects build without warnings or errors. An initial parallel target run encountered an existing shared-path collision in `LogsToFormattedPath`; the .NET 8 suite passed when rerun alone.
 - Domore.Logs built successfully, with no warnings or errors, for all nine declared targets: `net40`, `net45`, `net462`, `net48`, `netstandard2.0`, `netcoreapp3.1`, `net6.0`, `net8.0`, and `net10.0`.
 - Each of `net462`, `net8.0`, and `net10.0` ran 150 test cases: 149 passed and the Unix-root case was skipped because these tests ran on Windows (447 passes and three skips total).
 - The two issue 1 regression tests failed against the old threshold calculation, then both passed against the fix on `net10.0`.
@@ -39,6 +40,8 @@ Before the fix, the aggregate type threshold considered only explicit type overr
 ### 2. High — Completing logging from a service callback deadlocks the worker
 
 **Status: Fixed.** When completion is requested on the service worker thread, [Logging.cs](source/Domore.Logs/Logs/Logging.cs) queues the regular completion operation to the thread pool and returns, allowing the callback to finish before the worker is joined. Worker-thread detection is exposed through [BackgroundQueue.cs](shared/Domore.Sharing/Threading/BackgroundQueue.cs) and the logging manager.
+
+Deferred requests now retain their originating manager and repeated requests for that manager share one queued operation. If another completion already retired it, the queued request does nothing. Event and service callbacks executing on a retiring manager cannot complete the next session. Regression coverage in `DeferredCompletionCannotRetireNextLoggingSession` and both cases of `CompletionFromRetiringCallbackCannotRetireNextSession` verifies that the new session retains its subscription and continues delivering to services.
 
 **Regression coverage:** [LoggingTest.cs](tests/Domore.Logs.Tests/Logs/LoggingTest.cs) verifies that `Logging.Complete()` returns from a service callback and that service completion follows. It failed on the old code after the guarded timeout, then passed with the fix. The full .NET 10 suite has 150 test cases: 149 pass and the Unix-root case is skipped on this Windows runner.
 
