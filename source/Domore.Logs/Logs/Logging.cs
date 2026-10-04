@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
@@ -8,24 +8,19 @@ namespace Domore.Logs;
 /// Provides implementations of <see cref="ILog"/>.
 /// </summary>
 public sealed class Logging {
-    private static readonly object ManagerLocker = new();
     private static readonly object CompleteLocker = new();
     private static readonly Logging Instance = new();
 
     private LogManager Manager {
         get {
-            if (_Manager == null) {
-                lock (ManagerLocker) {
-                    if (_Manager == null) {
-                        var manager = new LogManager();
-                        Thread.MemoryBarrier();
-                        _Manager = manager;
-                    }
-                }
+            var manager = Interlocked.CompareExchange(ref _Manager, null, null);
+            if (manager != null) {
+                return manager;
             }
-            return _Manager;
+
+            var created = new LogManager();
+            return Interlocked.CompareExchange(ref _Manager, created, null) ?? created;
         }
-        set => _Manager = value;
     }
     private LogManager _Manager;
 
@@ -33,11 +28,22 @@ public sealed class Logging {
     }
 
     internal bool Log(Logger logger, LogSeverity severity) {
-        return Manager.Log(severity, logger?.Type);
+        try {
+            return Manager.Log(severity, logger?.Type);
+        }
+        catch (Exception ex) {
+            Notify(ex);
+            return false;
+        }
     }
 
     internal void Log(Logger logger, LogSeverity severity, params object[] data) {
-        Manager.Log(severity, logger?.Type, data);
+        try {
+            Manager.Log(severity, logger?.Type, data);
+        }
+        catch (Exception ex) {
+            Notify(ex);
+        }
     }
 
     internal static void Notify(object obj) {
@@ -109,10 +115,15 @@ public sealed class Logging {
     /// </summary>
     public static void Complete() {
         lock (CompleteLocker) {
-            using (var manager = Instance.Manager) {
-                manager.Complete();
+            var manager = Interlocked.Exchange(ref Instance._Manager, null);
+            if (manager != null) {
+                try {
+                    manager.Complete();
+                }
+                finally {
+                    manager.Dispose();
+                }
             }
-            Instance.Manager = null;
         }
     }
 }

@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Threading;
 
 namespace Domore.Logs; 
 internal sealed class LogManager : IDisposable {
+    [ThreadStatic]
+    private static int _LogDepth;
+
     private readonly LogServiceCollection Services = new();
     private readonly LogSubscriptionCollection Subscriptions = new();
 
@@ -51,21 +55,43 @@ internal sealed class LogManager : IDisposable {
     }
 
     public void Log(LogSeverity severity, Type type, object[] data) {
-        if (data != null) {
+        if (type == null || severity == LogSeverity.None || data == null) {
+            return;
+        }
+
+        var depth = _LogDepth++;
+        try {
             var entry = new LogEntry(
                 logType: type,
                 entryDate: DateTime.UtcNow,
                 entrySeverity: severity,
                 entryList: Formatter.Format(data));
-            if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
-                LogEvent?.Invoke(this, new LogEventArgs(entry));
+
+            if (depth == 0) {
+                var logEvent = LogEvent;
+                if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity && logEvent != null) {
+                    var args = new LogEventArgs(entry);
+                    foreach (LogEventHandler handler in logEvent.GetInvocationList()) {
+                        try {
+                            handler(this, args);
+                        }
+                        catch (Exception ex) {
+                            Logging.Notify(ex);
+                        }
+                    }
+                }
+                if (Subscriptions.Count > 0) {
+                    Subscriptions.Send(entry);
+                }
             }
-            if (Subscriptions.Count > 0) {
-                Subscriptions.Send(entry);
-            }
+
+            /* Keep nested entries flowing to services while skipping synchronous callbacks. */
             if (Services.Count > 0) {
                 Services.Send(entry);
             }
+        }
+        finally {
+            _LogDepth--;
         }
     }
 
