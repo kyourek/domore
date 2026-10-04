@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Domore.Logs; 
 internal sealed class LogSubscriptionProxy {
-    private readonly ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
+    private const int MaxThresholdAttempts = 3;
+    private readonly ConcurrentDictionary<Type, ThresholdValue> ThresholdCache = [];
+    private int Completed;
+    private long ThresholdGeneration;
 
     public ILogSubscription Agent { get; }
 
@@ -13,6 +17,7 @@ internal sealed class LogSubscriptionProxy {
     }
 
     private void Agent_ThresholdChanged(object sender, EventArgs e) {
+        Interlocked.Increment(ref ThresholdGeneration);
         ThresholdCache.Clear();
         ThresholdChanged?.Invoke(this, e);
     }
@@ -23,15 +28,33 @@ internal sealed class LogSubscriptionProxy {
         if (type == null) {
             return LogSeverity.None;
         }
-        return ThresholdCache.GetOrAdd(type, type => {
+
+        var severity = LogSeverity.None;
+        for (var attempt = 0; attempt < MaxThresholdAttempts; attempt++) {
+            var generation = Interlocked.Read(ref ThresholdGeneration);
+            if (ThresholdCache.TryGetValue(type, out var cached) && cached.Generation == generation) {
+                if (generation == Interlocked.Read(ref ThresholdGeneration)) {
+                    return cached.Severity;
+                }
+                continue;
+            }
+
             try {
-                return Agent.Threshold(type);
+                severity = Agent.Threshold(type);
             }
             catch (Exception ex) {
                 Logging.Notify(ex);
+                severity = LogSeverity.None;
             }
-            return LogSeverity.None;
-        });
+
+            if (generation == Interlocked.Read(ref ThresholdGeneration)) {
+                ThresholdCache[type] = new ThresholdValue(generation, severity);
+                if (generation == Interlocked.Read(ref ThresholdGeneration)) {
+                    return severity;
+                }
+            }
+        }
+        return severity;
     }
 
     public void Receive(LogEntry entry) {
@@ -50,7 +73,25 @@ internal sealed class LogSubscriptionProxy {
     }
 
     public void Complete() {
-        Agent.ThresholdChanged -= Agent_ThresholdChanged;
+        if (Interlocked.Exchange(ref Completed, 1) != 0) {
+            return;
+        }
+        try {
+            Agent.ThresholdChanged -= Agent_ThresholdChanged;
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+    }
+
+    private readonly struct ThresholdValue {
+        public long Generation { get; }
+        public LogSeverity Severity { get; }
+
+        public ThresholdValue(long generation, LogSeverity severity) {
+            Generation = generation;
+            Severity = severity;
+        }
     }
 
     private sealed class None : ILogSubscription {
