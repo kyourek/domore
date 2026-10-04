@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Domore.Conf;
 
@@ -107,7 +108,8 @@ internal sealed class ConfPopulator {
         if (pairs is null) {
             throw new ArgumentNullException(nameof(pairs));
         }
-        foreach (var pair in pairs) {
+        /* Apply parent properties before nested settings that may depend on them. */
+        foreach (var pair in pairs.OrderBy(pair => pair?.Key?.Parts.Count ?? int.MaxValue)) {
             if (pair is not null && (
                 pair.Value?.Content != "" || (includeEmptyStrings && IsStringTarget(pair.Key, target)))) {
                 Populate(pair.Key, pair.Value, target, conf);

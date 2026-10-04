@@ -511,7 +511,7 @@ If `log[x].type = file` is configured without `service.directory`, `Environment.
 
 ---
 
-## 32. `LogServiceProxy.Complete()` instantiates services that were never used. **Low**
+## 32. `LogServiceProxy.Complete()` instantiates services that were never used. **Low** (Resolved)
 
 **File:** `Logs/LogServiceProxy.cs` lines 84–86
 
@@ -521,7 +521,7 @@ If `log[x].type = file` is configured without `service.directory`, `Environment.
 
 ---
 
-## 33. Configuration is order-dependent. **Low**
+## 33. Configuration is order-dependent. **Low** (Resolved)
 
 **File:** `Logs/LogServiceProxy.cs` lines 49–62
 
