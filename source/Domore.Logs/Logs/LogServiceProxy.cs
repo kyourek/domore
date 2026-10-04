@@ -8,7 +8,13 @@ internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
     private readonly LogManager Manager;
     private readonly Domore.Threading.BackgroundQueue DispatchQueue;
-    private readonly object AdmissionLocker = new();
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        AdmissionLocker = new();
 
     private readonly
 #if NET9_0_OR_GREATER
@@ -24,8 +30,6 @@ internal sealed class LogServiceProxy {
     private bool PendingTypeChange;
     private string PendingType;
     private ILogService PendingService;
-    private int _QueueItemLimit = 1024;
-    private long _QueueByteLimit = 8L * 1024 * 1024;
     private long PendingItemCount;
     private long PendingMessageBytes;
     private long DroppedItemCount;
@@ -38,7 +42,7 @@ internal sealed class LogServiceProxy {
     public int QueueItemLimit {
         get {
             lock (AdmissionLocker) {
-                return _QueueItemLimit;
+                return field;
             }
         }
         set {
@@ -47,15 +51,15 @@ internal sealed class LogServiceProxy {
                     "The queue item limit must be greater than zero.");
             }
             lock (AdmissionLocker) {
-                _QueueItemLimit = value;
+                field = value;
             }
         }
-    }
+    } = 1024;
 
     public long QueueByteLimit {
         get {
             lock (AdmissionLocker) {
-                return _QueueByteLimit;
+                return field;
             }
         }
         set {
@@ -64,18 +68,18 @@ internal sealed class LogServiceProxy {
                     "The queue byte limit must be greater than zero.");
             }
             lock (AdmissionLocker) {
-                _QueueByteLimit = value;
+                field = value;
             }
         }
-    }
+    } = 8L * 1024 * 1024;
 
     public LogQueueStatus QueueStatus {
         get {
             LogQueueStatistics dispatchQueue;
             lock (AdmissionLocker) {
                 dispatchQueue = new LogQueueStatistics(
-                    _QueueItemLimit,
-                    _QueueByteLimit,
+                    QueueItemLimit,
+                    QueueByteLimit,
                     PendingItemCount,
                     PendingMessageBytes,
                     DroppedItemCount,
@@ -114,9 +118,9 @@ internal sealed class LogServiceProxy {
             if (AdmissionClosed) {
                 return false;
             }
-            if (PendingItemCount >= _QueueItemLimit ||
-                messageBytes > _QueueByteLimit ||
-                PendingMessageBytes > _QueueByteLimit - messageBytes) {
+            if (PendingItemCount >= QueueItemLimit ||
+                messageBytes > QueueByteLimit ||
+                PendingMessageBytes > QueueByteLimit - messageBytes) {
                 DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
                 DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, messageBytes);
                 rejected = true;
@@ -168,7 +172,7 @@ internal sealed class LogServiceProxy {
             try {
                 using (LogCallbackGuard.EnterManager(Manager))
                 using (LogCallbackGuard.Enter()) {
-                    _Service = Factory.Create(_Type ?? Name) ?? new None();
+                    _Service = Factory.Create(Type) ?? new None();
                 }
                 ServiceInitializationError = null;
                 ServiceCompleted = false;
@@ -192,28 +196,14 @@ internal sealed class LogServiceProxy {
         }
     }
 
-    private void ReplaceType(string value, ILogService replacement = null) {
-        var service = _Service;
-        var completeService = service != null && ServiceCompleted == false;
-        _Type = value;
-        _Service = replacement;
-        ServiceInitializationError = null;
-        ServiceCompleted = false;
-        if (completeService) {
-            CompleteServiceUnsafe(service);
-        }
-    }
-
     private void ApplyPendingType() {
         if (ServiceCallDepth > 0 || PendingTypeChange == false) {
             return;
         }
         var type = PendingType;
-        var service = PendingService;
         PendingType = null;
-        PendingService = null;
         PendingTypeChange = false;
-        ReplaceType(type, service);
+        Type = type;
     }
 
     public ILogService Service {
@@ -237,19 +227,18 @@ internal sealed class LogServiceProxy {
 
     public LogServiceConfig Config {
         get {
-            if (_Config is null) {
+            if (field is null) {
                 lock (Locker) {
-                    if (_Config is null) {
+                    if (field is null) {
                         var config = new LogServiceConfig();
                         Thread.MemoryBarrier();
-                        _Config = config;
+                        field = config;
                     }
                 }
             }
-            return _Config;
+            return field;
         }
     }
-    private LogServiceConfig _Config;
 
     public string Type {
         get {
@@ -257,30 +246,39 @@ internal sealed class LogServiceProxy {
                 if (PendingTypeChange) {
                     return PendingType;
                 }
-                return _Type ??= Name;
+                return field ??= Name;
             }
         }
         set {
             lock (Locker) {
-                var current = PendingTypeChange ? PendingType : _Type ?? Name;
+                var current = PendingTypeChange ? PendingType : field ?? Name;
                 if (current == value) {
                     return;
                 }
                 if (ServiceCallDepth > 0) {
                     var discarded = PendingService;
                     PendingService = null;
-                    PendingTypeChange = value != (_Type ?? Name);
+                    PendingTypeChange = value != (field ?? Name);
                     PendingType = PendingTypeChange ? value : null;
                     if (discarded is not null) {
                         CompleteServiceUnsafe(discarded);
                     }
                     return;
                 }
-                ReplaceType(value);
+                var replacement = PendingService;
+                PendingService = null;
+                var service = _Service;
+                var completeService = service is not null && ServiceCompleted == false;
+                field = value;
+                _Service = replacement;
+                ServiceInitializationError = null;
+                ServiceCompleted = false;
+                if (completeService) {
+                    CompleteServiceUnsafe(service);
+                }
             }
         }
     }
-    private string _Type;
 
     public string Name { get; }
 
