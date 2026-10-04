@@ -22,7 +22,14 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     private readonly Queue<PendingLog> Queue = new();
     private readonly PathFormatter PathFormatter = new();
-    private readonly object AdmissionLocker = new();
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        AdmissionLocker = new();
+
     private readonly
 #if NET9_0_OR_GREATER
         Lock
@@ -32,42 +39,39 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         Locker = new();
 
     private Timer Timer;
-    private int _IORetryLimit = 5;
-    private int _IORetryDelay = 10;
-    private long _FileSizeLimit = 100000;
-    private long _TotalSizeLimit = 100000000;
-    private TimeSpan _FileAgeLimit = TimeSpan.FromDays(28);
-    private int _QueueItemLimit = 1024;
-    private long _QueueByteLimit = 8L * 1024 * 1024;
     private long PendingMessageBytes;
     private long DroppedItemCount;
     private long DroppedMessageBytes;
-    private bool _Started;
-    private bool _Complete;
     private bool TimerStarting;
     private bool AdmissionClosed;
 
-    public string FileName => _FileName ??=
-        FileInfo.Name;
-    private string _FileName;
+    public string FileName {
+        get => field ??= FileInfo.Name;
+        private set;
+    }
 
-    public string FileNameWithoutExtension => _FileNameWithoutExtension ??=
-        Path.GetFileNameWithoutExtension(FileName);
-    private string _FileNameWithoutExtension;
+    public string FileNameWithoutExtension {
+        get => field ??= Path.GetFileNameWithoutExtension(FileName);
+        private set;
+    }
 
-    public string FileExtension => _FileExtension ??=
-        Path.GetExtension(FileName);
-    private string _FileExtension;
+    public string FileExtension {
+        get => field ??= Path.GetExtension(FileName);
+        private set;
+    }
 
-    private FileInfo FileInfo => _FileInfo ??=
-        new(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
-    private FileInfo _FileInfo;
+    private FileInfo FileInfo {
+        get => field ??= new(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
+        set;
+    }
 
-    private DirectoryInfo DirectoryInfo => _DirectoryInfo ??= new(
-        PathFormatter.Format(
-            PathFormatter.Expand(
-                Environment.ExpandEnvironmentVariables(Directory))));
-    private DirectoryInfo _DirectoryInfo;
+    private DirectoryInfo DirectoryInfo {
+        get => field ??= new(
+            PathFormatter.Format(
+                PathFormatter.Expand(
+                    Environment.ExpandEnvironmentVariables(Directory))));
+        set;
+    }
 
     private string FileDateName() {
         var now = DateTimeOffset.Now;
@@ -120,7 +124,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
     }
 
     private void Rotate() {
-        var fileInfo = _FileInfo;
+        var fileInfo = FileInfo;
         if (fileInfo == null) {
             return;
         }
@@ -145,7 +149,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
             }
             throw;
         }
-        _FileInfo = null;
+        FileInfo = null;
         var now = DateTime.UtcNow;
         var fileSearchPattern = $"{FileNameWithoutExtension}_*{FileExtension}";
         var files = directoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
@@ -238,7 +242,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
             lock (AdmissionLocker) {
                 timer = Timer;
                 Timer = null;
-                if (_Complete) {
+                if (Complete) {
                     timer?.Dispose();
                     return;
                 }
@@ -248,7 +252,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                 for (; ; ) {
                     List<string> lines;
                     lock (AdmissionLocker) {
-                        if (_Complete || Queue.Count == 0) {
+                        if (Complete || Queue.Count == 0) {
                             break;
                         }
                         var limit = LogCountLimit;
@@ -269,14 +273,14 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                     }
                 }
 
-                var dueTime = ValidateFlushIntervalInMilliseconds(_FlushInterval);
+                var dueTime = ValidateFlushIntervalInMilliseconds(FlushInterval);
                 lock (AdmissionLocker) {
-                    if (_Complete == false) {
+                    if (Complete == false) {
                         Timer = new Timer(TimerCallback,
                                           state: null,
                                           dueTime: dueTime,
                                           period: Timeout.Infinite);
-                        _Started = true;
+                        Started = true;
                     }
                 }
             }
@@ -284,8 +288,8 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         catch (Exception ex) {
             Logging.Notify(ex);
             lock (AdmissionLocker) {
-                if (_Complete == false) {
-                    _Started = false;
+                if (Complete == false) {
+                    Started = false;
                     TimerStarting = false;
                 }
             }
@@ -313,12 +317,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         var dueTime = ValidateFlushIntervalInMilliseconds(FlushInterval);
         lock (AdmissionLocker) {
             try {
-                if (_Complete == false) {
+                if (Complete == false) {
                     Timer = new Timer(TimerCallback,
                                       state: null,
                                       dueTime: dueTime,
                                       period: Timeout.Infinite);
-                    _Started = true;
+                    Started = true;
                 }
             }
             finally {
@@ -330,82 +334,81 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
     public int IORetryLimit {
         get {
             lock (Locker) {
-                return _IORetryLimit;
+                return field;
             }
         }
         set {
             lock (Locker) {
-                _IORetryLimit = value;
+                field = value;
             }
         }
-    }
+    } = 5;
 
     public int IORetryDelay {
         get {
             lock (Locker) {
-                return _IORetryDelay;
+                return field;
             }
         }
         set {
             lock (Locker) {
-                _IORetryDelay = value;
+                field = value;
             }
         }
-    }
+    } = 10;
 
     public long FileSizeLimit {
         get {
             lock (Locker) {
-                return _FileSizeLimit;
+                return field;
             }
         }
         set {
             lock (Locker) {
-                _FileSizeLimit = value;
+                field = value;
             }
         }
-    }
+    } = 100000;
 
     public long TotalSizeLimit {
         get {
             lock (Locker) {
-                return _TotalSizeLimit;
+                return field;
             }
         }
         set {
             lock (Locker) {
-                _TotalSizeLimit = value;
+                field = value;
             }
         }
-    }
+    } = 100000000;
 
     public TimeSpan FileAgeLimit {
         get {
             lock (Locker) {
-                return _FileAgeLimit;
+                return field;
             }
         }
         set {
             lock (Locker) {
-                _FileAgeLimit = value;
+                field = value;
             }
         }
-    }
+    } = TimeSpan.FromDays(28);
 
     public TimeSpan FlushInterval {
         get {
             lock (Locker) {
-                return _FlushInterval;
+                return field;
             }
         }
         set {
             ValidateFlushIntervalInMilliseconds(value, nameof(FlushInterval));
             lock (Locker) {
-                _FlushInterval = value;
+                field = value;
             }
         }
-    }
-    private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
+    } = TimeSpan.FromSeconds(2.5);
 
     public int LogCountLimit {
         get {
@@ -427,7 +430,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
     public int QueueItemLimit {
         get {
             lock (AdmissionLocker) {
-                return _QueueItemLimit;
+                return field;
             }
         }
         set {
@@ -436,15 +439,15 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                     "The queue item limit must be greater than zero.");
             }
             lock (AdmissionLocker) {
-                _QueueItemLimit = value;
+                field = value;
             }
         }
-    }
+    } = 1024;
 
     public long QueueByteLimit {
         get {
             lock (AdmissionLocker) {
-                return _QueueByteLimit;
+                return field;
             }
         }
         set {
@@ -453,17 +456,17 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                     "The queue byte limit must be greater than zero.");
             }
             lock (AdmissionLocker) {
-                _QueueByteLimit = value;
+                field = value;
             }
         }
-    }
+    } = 8L * 1024 * 1024;
 
     public LogQueueStatistics QueueStatus {
         get {
             lock (AdmissionLocker) {
                 return new LogQueueStatistics(
-                    _QueueItemLimit,
-                    _QueueByteLimit,
+                    QueueItemLimit,
+                    QueueByteLimit,
                     Queue.Count,
                     PendingMessageBytes,
                     DroppedItemCount,
@@ -473,53 +476,61 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
     }
 
     public string Directory {
-        get => _Directory;
+        get;
         set {
-            if (_Directory != value) {
+            if (field != value) {
                 lock (Locker) {
-                    if (_Directory != value) {
-                        _Directory = value;
-                        _DirectoryInfo = null;
-                        _FileInfo = null;
-                        _FileName = null;
-                        _FileNameWithoutExtension = null;
-                        _FileExtension = null;
+                    if (field != value) {
+                        field = value;
+                        DirectoryInfo = null;
+                        FileInfo = null;
+                        FileName = null;
+                        FileNameWithoutExtension = null;
+                        FileExtension = null;
                     }
                 }
             }
         }
     }
-    private string _Directory;
 
     public string Name {
-        get => _Name;
+        get;
         set {
-            if (_Name != value) {
+            if (field != value) {
                 lock (Locker) {
-                    if (_Name != value) {
-                        _Name = value;
-                        _FileInfo = null;
-                        _FileName = null;
-                        _FileNameWithoutExtension = null;
-                        _FileExtension = null;
+                    if (field != value) {
+                        field = value;
+                        FileInfo = null;
+                        FileName = null;
+                        FileNameWithoutExtension = null;
+                        FileExtension = null;
                     }
                 }
             }
         }
     }
-    private string _Name;
 
     public bool Started {
         get {
             lock (AdmissionLocker) {
-                return _Started;
+                return field;
+            }
+        }
+        private set {
+            lock (AdmissionLocker) {
+                field = value;
             }
         }
     }
     public bool Complete {
         get {
             lock (AdmissionLocker) {
-                return _Complete;
+                return field;
+            }
+        }
+        private set {
+            lock (AdmissionLocker) {
+                field = value;
             }
         }
     }
@@ -528,7 +539,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         Timer timer;
         lock (AdmissionLocker) {
             AdmissionClosed = true;
-            _Complete = true;
+            Complete = true;
             timer = Timer;
             Timer = null;
         }
@@ -560,12 +571,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         var startTimer = false;
         var dropped = false;
         lock (AdmissionLocker) {
-            if (AdmissionClosed || _Complete) {
+            if (AdmissionClosed || Complete) {
                 return;
             }
-            if (Queue.Count >= _QueueItemLimit ||
-                pending.Bytes > _QueueByteLimit ||
-                PendingMessageBytes > _QueueByteLimit - pending.Bytes) {
+            if (Queue.Count >= QueueItemLimit ||
+                pending.Bytes > QueueByteLimit ||
+                PendingMessageBytes > QueueByteLimit - pending.Bytes) {
                 DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
                 DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, pending.Bytes);
                 dropped = true;
@@ -573,7 +584,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
             else {
                 Queue.Enqueue(pending);
                 PendingMessageBytes += pending.Bytes;
-                if (_Started == false && TimerStarting == false) {
+                if (Started == false && TimerStarting == false) {
                     TimerStarting = true;
                     startTimer = true;
                 }
