@@ -76,10 +76,8 @@ partial class LoggingTest {
         });
         try {
             Assert.That(completionEntered.Wait(TimeSpan.FromSeconds(5)), Is.True);
-            var services = (LogServiceCollection)typeof(LogManager)
-                .GetField("Services", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(manager);
-            var queue = (BackgroundQueue)typeof(LogServiceCollection)
-                .GetField("Queue", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(services);
+            var queue = (BackgroundQueue)typeof(LogServiceProxy)
+                .GetField("DispatchQueue", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(proxy);
             queue.Add(() => {
                 workerEntered.Set();
                 // A synchronous shutdown would wait for this worker while holding the proxy lock.

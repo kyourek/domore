@@ -1,4 +1,3 @@
-﻿using Domore.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,6 @@ namespace Domore.Logs;
 
 internal sealed class LogServiceCollection : IDisposable {
     private readonly LogManager Manager;
-    private readonly BackgroundQueue Queue;
     private readonly Dictionary<string, LogServiceProxy> Set = [];
     private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
     private readonly
@@ -21,12 +19,23 @@ internal sealed class LogServiceCollection : IDisposable {
 
     private LogSeverity DefaultThreshold;
 
-    public bool ThreadIsCurrentThread =>
-        Queue.ThreadIsCurrentThread;
+    public bool ThreadIsCurrentThread {
+        get {
+            lock (Locker) {
+                return Set.Values.Any(service => service.ThreadIsCurrentThread);
+            }
+        }
+    }
 
     private void Dispose(bool disposing) {
         if (disposing) {
-            Queue.Dispose();
+            LogServiceProxy[] services;
+            lock (Locker) {
+                services = [.. Set.Values];
+            }
+            foreach (var service in services) {
+                service.DisposeQueue();
+            }
         }
     }
 
@@ -95,7 +104,6 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public LogServiceCollection(LogManager manager = null) {
         Manager = manager;
-        Queue = new BackgroundQueue(Logging.Notify);
     }
 
     public bool Send(LogSeverity severity, Type type) {
@@ -110,24 +118,21 @@ internal sealed class LogServiceCollection : IDisposable {
     }
 
     public void Send(LogEntry entry) {
-        Queue.Add(() => {
-            LogServiceProxy[] services;
-            lock (Locker) {
-                services = [.. Set.Values];
+        LogServiceProxy[] services;
+        lock (Locker) {
+            services = [.. Set.Values];
+        }
+        foreach (var service in services) {
+            try {
+                service.Enqueue(entry);
             }
-            foreach (var service in services) {
-                try {
-                    service.Log(entry);
-                }
-                catch (Exception ex) {
-                    Logging.Notify(ex);
-                }
+            catch (Exception ex) {
+                LogQueueDiagnostics.ReportFailure(ex);
             }
-        });
+        }
     }
 
     public void Complete() {
-        Queue.Complete();
         LogServiceProxy[] services;
         lock (Locker) {
             services = [.. Set.Values];
@@ -135,7 +140,23 @@ internal sealed class LogServiceCollection : IDisposable {
         var exceptions = new List<Exception>();
         foreach (var service in services) {
             try {
-                service.Complete();
+                service.CloseAdmission();
+            }
+            catch (Exception ex) {
+                exceptions.Add(ex);
+            }
+        }
+        foreach (var service in services) {
+            try {
+                service.DrainQueue();
+            }
+            catch (Exception ex) {
+                exceptions.Add(ex);
+            }
+        }
+        foreach (var service in services) {
+            try {
+                service.CompleteService();
             }
             catch (Exception ex) {
                 exceptions.Add(ex);
@@ -144,6 +165,19 @@ internal sealed class LogServiceCollection : IDisposable {
         if (exceptions.Count > 0) {
             throw new AggregateException("One or more log services failed to complete.", exceptions);
         }
+    }
+
+    public LogQueueStatus GetQueueStatus(string name) {
+        if (name is null) {
+            throw new ArgumentNullException(nameof(name));
+        }
+        LogServiceProxy service;
+        lock (Locker) {
+            if (Set.TryGetValue(name, out service) == false) {
+                return null;
+            }
+        }
+        return service.QueueStatus;
     }
 
     public void Dispose() {

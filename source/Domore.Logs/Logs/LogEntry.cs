@@ -15,11 +15,17 @@ internal sealed class LogEntry : ILogEntry {
         { LogSeverity.Warn, "wrn" }
     };
 
-    private readonly Dictionary<string, string> Format = [];
+    private readonly object FormatLocker = new();
     private readonly string[] EntryList;
     private readonly ReadOnlyCollection<string> EntryView;
 
-    private DateTime LocalDate => _LocalDate ??= EntryDate.ToLocalTime();
+    private DateTime LocalDate {
+        get {
+            lock (FormatLocker) {
+                return _LocalDate ??= EntryDate.ToLocalTime();
+            }
+        }
+    }
     private DateTime? _LocalDate;
 
     private string GetFormat(string format) {
@@ -44,14 +50,19 @@ internal sealed class LogEntry : ILogEntry {
             : (s + Environment.NewLine + string.Join(Environment.NewLine, logList.Select(line => $"  {line}")));
     }
 
-    public string LogName =>
-        _LogName ?? (
-        _LogName = LogType.Name);
+    public string LogName {
+        get {
+            lock (FormatLocker) {
+                return _LogName ??= LogType.Name;
+            }
+        }
+    }
     private string _LogName;
 
     public Type LogType { get; }
     public DateTime EntryDate { get; }
     public LogSeverity EntrySeverity { get; }
+    public long RetainedTextBytes { get; }
 
     public LogEntry(Type logType,
                     DateTime entryDate,
@@ -67,16 +78,21 @@ internal sealed class LogEntry : ILogEntry {
          */
         EntryList = takeOwnership ? entryList : (string[])entryList.Clone();
         EntryView = Array.AsReadOnly(EntryList);
+        long retainedTextBytes = 0;
+        foreach (var line in EntryList) {
+            if (line is not null) {
+                retainedTextBytes += 2L * line.Length;
+            }
+        }
+        RetainedTextBytes = retainedTextBytes;
         EntryDate = entryDate;
         EntrySeverity = entrySeverity;
     }
 
     public string LogData(string format) {
-        var key = format ?? "";
-        if (Format.TryGetValue(key, out var value) == false) {
-            Format[key] = value = GetFormat(key);
+        lock (FormatLocker) {
+            return GetFormat(format ?? "");
         }
-        return value;
     }
 
     Type ILogEntry.LogType => LogType;

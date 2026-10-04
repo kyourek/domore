@@ -1,6 +1,5 @@
 ﻿using Domore.IO;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -10,9 +9,20 @@ using DIRECTORY = System.IO.Directory;
 
 namespace Domore.Logs.Service;
 
-internal sealed class FileLog : ILogService {
-    private readonly ConcurrentQueue<string> Queue = new();
+internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
+    private sealed class PendingLog {
+        public readonly string Data;
+        public readonly long Bytes;
+
+        public PendingLog(string data) {
+            Data = data;
+            Bytes = 2L * data.Length;
+        }
+    }
+
+    private readonly Queue<PendingLog> Queue = new();
     private readonly PathFormatter PathFormatter = new();
+    private readonly object AdmissionLocker = new();
     private readonly
 #if NET9_0_OR_GREATER
         Lock
@@ -27,6 +37,15 @@ internal sealed class FileLog : ILogService {
     private long _FileSizeLimit = 100000;
     private long _TotalSizeLimit = 100000000;
     private TimeSpan _FileAgeLimit = TimeSpan.FromDays(28);
+    private int _QueueItemLimit = 1024;
+    private long _QueueByteLimit = 8L * 1024 * 1024;
+    private long PendingMessageBytes;
+    private long DroppedItemCount;
+    private long DroppedMessageBytes;
+    private bool _Started;
+    private bool _Complete;
+    private bool TimerStarting;
+    private bool AdmissionClosed;
 
     public string FileName => _FileName ??=
         FileInfo.Name;
@@ -215,62 +234,60 @@ internal sealed class FileLog : ILogService {
 
     private void TimerCallback(object _) {
         try {
-            using (Timer) {
+            Timer timer;
+            lock (AdmissionLocker) {
+                timer = Timer;
+                Timer = null;
+                if (_Complete) {
+                    timer?.Dispose();
+                    return;
+                }
+            }
+            timer?.Dispose();
+            lock (Locker) {
                 for (; ; ) {
-                    lock (Locker) {
-                        if (Complete) {
-                            break;
-                        }
-                        if (Queue.Count == 0) {
+                    List<string> lines;
+                    lock (AdmissionLocker) {
+                        if (_Complete || Queue.Count == 0) {
                             break;
                         }
                         var limit = LogCountLimit;
-                        if (limit <= 0) {
-                            throw new InvalidOperationException(
-                                $"{nameof(LogCountLimit)} must be greater than zero.");
+                        lines = new List<string>(capacity: limit);
+                        while (lines.Count < limit && Queue.Count > 0) {
+                            var pending = Queue.Dequeue();
+                            PendingMessageBytes -= pending.Bytes;
+                            lines.Add(pending.Data);
                         }
-                        var lines = new List<string>(capacity: limit);
-                        for (; ; ) {
-                            if (lines.Count >= limit) {
-                                break;
-                            }
-                            var dequeued = Queue.TryDequeue(out var line);
-                            if (dequeued == false) {
-                                break;
-                            }
-                            lines.Add(line);
+                    }
+                    if (lines.Count > 0) {
+                        try {
+                            Flush(lines);
                         }
-                        if (lines.Count > 0) {
-                            try {
-                                Flush(lines);
-                            }
-                            catch (Exception ex) {
-                                Logging.Notify(ex);
-                            }
+                        catch (Exception ex) {
+                            Logging.Notify(ex);
                         }
+                    }
+                }
+
+                var dueTime = ValidateFlushIntervalInMilliseconds(_FlushInterval);
+                lock (AdmissionLocker) {
+                    if (_Complete == false) {
+                        Timer = new Timer(TimerCallback,
+                                          state: null,
+                                          dueTime: dueTime,
+                                          period: Timeout.Infinite);
+                        _Started = true;
                     }
                 }
             }
         }
         catch (Exception ex) {
             Logging.Notify(ex);
-        }
-        finally {
-            try {
-                lock (Locker) {
-                    if (Complete == false) {
-                        try {
-                            Start();
-                        }
-                        catch (Exception ex) {
-                            Started = false;
-                            Logging.Notify(ex);
-                        }
-                    }
+            lock (AdmissionLocker) {
+                if (_Complete == false) {
+                    _Started = false;
+                    TimerStarting = false;
                 }
-            }
-            catch (Exception ex) {
-                Logging.Notify(ex);
             }
         }
     }
@@ -293,13 +310,21 @@ internal sealed class FileLog : ILogService {
     }
 
     private void Start() {
-        if (Complete) {
-            return;
+        var dueTime = ValidateFlushIntervalInMilliseconds(FlushInterval);
+        lock (AdmissionLocker) {
+            try {
+                if (_Complete == false) {
+                    Timer = new Timer(TimerCallback,
+                                      state: null,
+                                      dueTime: dueTime,
+                                      period: Timeout.Infinite);
+                    _Started = true;
+                }
+            }
+            finally {
+                TimerStarting = false;
+            }
         }
-        Timer = new(TimerCallback,
-                    state: null,
-                    dueTime: ValidateFlushIntervalInMilliseconds(FlushInterval),
-                    period: Timeout.Infinite);
     }
 
     public int IORetryLimit {
@@ -399,6 +424,54 @@ internal sealed class FileLog : ILogService {
         }
     } = 100;
 
+    public int QueueItemLimit {
+        get {
+            lock (AdmissionLocker) {
+                return _QueueItemLimit;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(QueueItemLimit), value,
+                    "The queue item limit must be greater than zero.");
+            }
+            lock (AdmissionLocker) {
+                _QueueItemLimit = value;
+            }
+        }
+    }
+
+    public long QueueByteLimit {
+        get {
+            lock (AdmissionLocker) {
+                return _QueueByteLimit;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(QueueByteLimit), value,
+                    "The queue byte limit must be greater than zero.");
+            }
+            lock (AdmissionLocker) {
+                _QueueByteLimit = value;
+            }
+        }
+    }
+
+    public LogQueueStatistics QueueStatus {
+        get {
+            lock (AdmissionLocker) {
+                return new LogQueueStatistics(
+                    _QueueItemLimit,
+                    _QueueByteLimit,
+                    Queue.Count,
+                    PendingMessageBytes,
+                    DroppedItemCount,
+                    DroppedMessageBytes);
+            }
+        }
+    }
+
     public string Directory {
         get => _Directory;
         set {
@@ -436,43 +509,93 @@ internal sealed class FileLog : ILogService {
     }
     private string _Name;
 
-    public bool Started { get; private set; }
-    public bool Complete { get; private set; }
+    public bool Started {
+        get {
+            lock (AdmissionLocker) {
+                return _Started;
+            }
+        }
+    }
+    public bool Complete {
+        get {
+            lock (AdmissionLocker) {
+                return _Complete;
+            }
+        }
+    }
 
     void ILogService.Complete() {
+        Timer timer;
+        lock (AdmissionLocker) {
+            AdmissionClosed = true;
+            _Complete = true;
+            timer = Timer;
+            Timer = null;
+        }
+        timer?.Dispose();
         lock (Locker) {
-            var lines = new List<string>(capacity: Queue.Count);
-            try {
+            List<string> lines;
+            lock (AdmissionLocker) {
+                lines = new List<string>(Queue.Count);
                 while (Queue.Count > 0) {
-                    while (Queue.TryDequeue(out var line)) {
-                        lines.Add(line);
-                    }
+                    var pending = Queue.Dequeue();
+                    PendingMessageBytes -= pending.Bytes;
+                    lines.Add(pending.Data);
                 }
             }
-            finally {
-                Complete = true;
+            if (lines.Count == 0) {
+                return;
             }
-            if (lines.Count > 0) {
-                try {
-                    Flush(lines);
-                }
-                catch (Exception ex) {
-                    Logging.Notify(ex);
-                }
+            try {
+                Flush(lines);
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
             }
         }
     }
 
     void ILogService.Log(string name, string data, LogSeverity severity) {
-        lock (Locker) {
-            if (Complete) {
+        var pending = new PendingLog(data ?? "");
+        var startTimer = false;
+        var dropped = false;
+        lock (AdmissionLocker) {
+            if (AdmissionClosed || _Complete) {
                 return;
             }
-            Queue.Enqueue(data);
-            if (Started == false) {
+            if (Queue.Count >= _QueueItemLimit ||
+                pending.Bytes > _QueueByteLimit ||
+                PendingMessageBytes > _QueueByteLimit - pending.Bytes) {
+                DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
+                DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, pending.Bytes);
+                dropped = true;
+            }
+            else {
+                Queue.Enqueue(pending);
+                PendingMessageBytes += pending.Bytes;
+                if (_Started == false && TimerStarting == false) {
+                    TimerStarting = true;
+                    startTimer = true;
+                }
+            }
+        }
+        if (dropped) {
+            LogQueueDiagnostics.ReportOverflow();
+            return;
+        }
+        if (startTimer) {
+            try {
                 Start();
-                Started = true;
+            }
+            catch {
+                lock (AdmissionLocker) {
+                    TimerStarting = false;
+                }
+                throw;
             }
         }
     }
+
+    private static long SaturatingAdd(long value, long increment) =>
+        value > long.MaxValue - increment ? long.MaxValue : value + increment;
 }

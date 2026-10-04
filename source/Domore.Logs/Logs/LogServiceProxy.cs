@@ -7,6 +7,8 @@ namespace Domore.Logs;
 internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
     private readonly LogManager Manager;
+    private readonly Domore.Threading.BackgroundQueue DispatchQueue;
+    private readonly object AdmissionLocker = new();
 
     private readonly
 #if NET9_0_OR_GREATER
@@ -22,6 +24,144 @@ internal sealed class LogServiceProxy {
     private bool PendingTypeChange;
     private string PendingType;
     private ILogService PendingService;
+    private int _QueueItemLimit = 1024;
+    private long _QueueByteLimit = 8L * 1024 * 1024;
+    private long PendingItemCount;
+    private long PendingMessageBytes;
+    private long DroppedItemCount;
+    private long DroppedMessageBytes;
+    private bool AdmissionClosed;
+
+    public bool ThreadIsCurrentThread =>
+        DispatchQueue.ThreadIsCurrentThread;
+
+    public int QueueItemLimit {
+        get {
+            lock (AdmissionLocker) {
+                return _QueueItemLimit;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(QueueItemLimit), value,
+                    "The queue item limit must be greater than zero.");
+            }
+            lock (AdmissionLocker) {
+                _QueueItemLimit = value;
+            }
+        }
+    }
+
+    public long QueueByteLimit {
+        get {
+            lock (AdmissionLocker) {
+                return _QueueByteLimit;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(QueueByteLimit), value,
+                    "The queue byte limit must be greater than zero.");
+            }
+            lock (AdmissionLocker) {
+                _QueueByteLimit = value;
+            }
+        }
+    }
+
+    public LogQueueStatus QueueStatus {
+        get {
+            LogQueueStatistics dispatchQueue;
+            lock (AdmissionLocker) {
+                dispatchQueue = new LogQueueStatistics(
+                    _QueueItemLimit,
+                    _QueueByteLimit,
+                    PendingItemCount,
+                    PendingMessageBytes,
+                    DroppedItemCount,
+                    DroppedMessageBytes);
+            }
+
+            LogQueueStatistics serviceQueue = null;
+            var service = _Service;
+            if (service is ILogQueueStatusProvider provider) {
+                try {
+                    // Optional service code is called after releasing the short admission lock.
+                    using (LogCallbackGuard.EnterManager(Manager))
+                    using (LogCallbackGuard.Enter()) {
+                        serviceQueue = provider.QueueStatus;
+                    }
+                }
+                catch {
+                    // Status reporting must not interfere with the logging path.
+                }
+            }
+            return new LogQueueStatus(dispatchQueue, serviceQueue);
+        }
+    }
+
+    private static long SaturatingAdd(long value, long increment) =>
+        value > long.MaxValue - increment ? long.MaxValue : value + increment;
+
+    public bool Enqueue(LogEntry entry) {
+        if (entry is null) {
+            return false;
+        }
+
+        var messageBytes = entry.RetainedTextBytes;
+        var rejected = false;
+        lock (AdmissionLocker) {
+            if (AdmissionClosed) {
+                return false;
+            }
+            if (PendingItemCount >= _QueueItemLimit ||
+                messageBytes > _QueueByteLimit ||
+                PendingMessageBytes > _QueueByteLimit - messageBytes) {
+                DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
+                DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, messageBytes);
+                rejected = true;
+            }
+            else {
+                PendingItemCount++;
+                PendingMessageBytes += messageBytes;
+                DispatchQueue.Add(() => Deliver(entry, messageBytes));
+            }
+        }
+        if (rejected) {
+            LogQueueDiagnostics.ReportOverflow();
+            return false;
+        }
+        return true;
+    }
+
+    private void Deliver(LogEntry entry, long messageBytes) {
+        lock (AdmissionLocker) {
+            if (PendingItemCount > 0) {
+                PendingItemCount--;
+            }
+            if (PendingMessageBytes >= messageBytes) {
+                PendingMessageBytes -= messageBytes;
+            }
+            else {
+                PendingMessageBytes = 0;
+            }
+        }
+        Log(entry);
+    }
+
+    public void CloseAdmission() {
+        lock (AdmissionLocker) {
+            AdmissionClosed = true;
+        }
+    }
+
+    public void DrainQueue() {
+        DispatchQueue.Complete();
+    }
+
+    public void DisposeQueue() {
+        DispatchQueue.Dispose();
+    }
 
     private ILogService GetServiceUnsafe() {
         if (_Service is null) {
@@ -93,7 +233,7 @@ internal sealed class LogServiceProxy {
             }
         }
     }
-    private ILogService _Service;
+    private volatile ILogService _Service;
 
     public LogServiceConfig Config {
         get {
@@ -147,6 +287,7 @@ internal sealed class LogServiceProxy {
     public LogServiceProxy(string name, LogManager manager = null) {
         Name = name;
         Manager = manager;
+        DispatchQueue = new Domore.Threading.BackgroundQueue(Logging.Notify);
     }
 
     public void Log(LogEntry entry) {
@@ -177,6 +318,12 @@ internal sealed class LogServiceProxy {
     }
 
     public void Complete() {
+        CloseAdmission();
+        DrainQueue();
+        CompleteService();
+    }
+
+    public void CompleteService() {
         lock (Locker) {
             // Completing a configured proxy must not instantiate a service that has
             // never been requested or used.
