@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace Domore.Logs; 
 internal sealed class LogServiceConfig {
@@ -39,16 +38,15 @@ internal sealed class LogServiceConfig {
                 lock (Locker) {
                     if (_Default == null) {
                         var @default = new LogTypeConfig();
-                        Thread.MemoryBarrier();
+                        @default.ThresholdChanged += Default_ThresholdChanged;
                         _Default = @default;
-                        _Default.ThresholdChanged += Default_ThresholdChanged;
                     }
                 }
             }
             return _Default;
         }
     }
-    private LogTypeConfig _Default;
+    private volatile LogTypeConfig _Default;
 
     public IEnumerable<string> Names {
         get {

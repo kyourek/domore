@@ -149,7 +149,12 @@ internal sealed class LogSubscriptionCollection {
             items = Lookup.Values.ToArray();
         }
         foreach (var item in items) {
-            item.Receive(entry);
+            try {
+                item.Receive(entry);
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
+            }
         }
     }
 }

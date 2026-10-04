@@ -36,10 +36,7 @@ internal sealed class LogManager : IDisposable {
     }
 
     public bool Log(LogSeverity severity, Type type) {
-        if (type == null) {
-            return false;
-        }
-        if (severity == LogSeverity.None) {
+        if (type is null || severity == LogSeverity.None) {
             return false;
         }
         if (LogEvent != null && LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
@@ -59,14 +56,18 @@ internal sealed class LogManager : IDisposable {
     }
 
     public void Log(LogSeverity severity, Type type, object[] data) {
-        if (data is null) {
+        if (type is null || severity == LogSeverity.None || Log(severity, type) == false) {
             return;
+        }
+        string[] formatted;
+        using (LogCallbackGuard.Enter()) {
+            formatted = Formatter.Format(data);
         }
         var entry = new LogEntry(
             logType: type,
             entryDate: DateTime.UtcNow,
             entrySeverity: severity,
-            entryList: Formatter.Format(data),
+            entryList: formatted,
             /*
              * Format materializes a fresh array that belongs exclusively to this entry.
              */
@@ -80,7 +81,9 @@ internal sealed class LogManager : IDisposable {
                 foreach (var item in list) {
                     if (item is LogEventHandler handler) {
                         try {
-                            handler(this, args);
+                            using (LogCallbackGuard.Enter()) {
+                                handler(this, args);
+                            }
                         }
                         catch (Exception ex) {
                             Logging.Notify(ex);

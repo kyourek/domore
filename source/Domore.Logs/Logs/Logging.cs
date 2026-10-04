@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 
 namespace Domore.Logs;
@@ -35,27 +34,34 @@ public sealed class Logging {
         Manager ??= new LogManager();
 
     private T UseManager<T>(Func<LogManager, T> action) {
-        LogManager manager;
-        lock (ManagerLocker) {
-            manager = GetManagerUnsafe();
-            UseManagerCount.TryGetValue(manager, out var count);
-            UseManagerCount[manager] = count + 1;
-        }
+        LogManager manager = null;
         var previousManager = UsedManager;
-        UsedManager = manager;
+        var leased = false;
         try {
-            return action(manager);
+            lock (ManagerLocker) {
+                manager = GetManagerUnsafe();
+                UseManagerCount.TryGetValue(manager, out var count);
+                UseManagerCount[manager] = count + 1;
+                leased = true;
+            }
+            UsedManager = manager;
+            using (LogCallbackGuard.EnterManager(manager)) {
+                return action(manager);
+            }
         }
         finally {
             UsedManager = previousManager;
-            lock (ManagerLocker) {
-                var count = UseManagerCount[manager] - 1;
-                if (count == 0) {
-                    UseManagerCount.Remove(manager);
+            if (leased) {
+                lock (ManagerLocker) {
+                    if (UseManagerCount.TryGetValue(manager, out var count)) {
+                        if (count <= 1) {
+                            UseManagerCount.Remove(manager);
+                        }
+                        else {
+                            UseManagerCount[manager] = count - 1;
+                        }
+                    }
                     Monitor.PulseAll(ManagerLocker);
-                }
-                else {
-                    UseManagerCount[manager] = count;
                 }
             }
         }
@@ -76,17 +82,55 @@ public sealed class Logging {
     }
 
     internal bool Log(Logger logger, LogSeverity severity) {
-        return UseManager(manager => manager.Log(severity, logger?.Type));
+        try {
+            if (LogCallbackGuard.IsActive) {
+                return false;
+            }
+            var type = logger?.Type;
+            if (type is null) {
+                return false;
+            }
+            return UseManager(manager => manager.Log(severity, type));
+        }
+        catch (Exception ex) {
+            Notify(ex);
+            return false;
+        }
     }
 
     internal void Log(Logger logger, LogSeverity severity, params object[] data) {
-        UseManager(manager => manager.Log(severity, logger?.Type, data));
+        try {
+            if (LogCallbackGuard.IsActive) {
+                return;
+            }
+            var type = logger?.Type;
+            if (type is null) {
+                return;
+            }
+            UseManager(manager => manager.Log(severity, type, data));
+        }
+        catch (Exception ex) {
+            Notify(ex);
+        }
     }
 
     internal static void Notify(object obj) {
-        try { Debug.WriteLine(obj); } catch { }
-        try { Trace.WriteLine(obj); } catch { }
-        try { Console.WriteLine(obj); } catch { }
+        try {
+            if (LogCallbackGuard.IsDiagnosing) {
+                return;
+            }
+            using (LogCallbackGuard.EnterDiagnostic()) {
+                try {
+                    Console.Error.WriteLine(obj);
+                }
+                catch {
+                    // Diagnostic output must not interfere with logging.
+                }
+            }
+        }
+        catch {
+            // Guard setup and diagnostic output are both best-effort.
+        }
     }
 
     internal static void CompleteService(LogManager manager, ILogService service) {
@@ -95,7 +139,10 @@ public sealed class Logging {
         var previousManager = UsedManager;
         UsedManager = manager ?? previousManager;
         try {
-            service.Complete();
+            using (LogCallbackGuard.EnterManager(manager))
+            using (LogCallbackGuard.Enter()) {
+                service?.Complete();
+            }
         }
         finally {
             UsedManager = previousManager;
@@ -167,7 +214,7 @@ public sealed class Logging {
         LogManager manager;
         bool defer;
         lock (ManagerLocker) {
-            manager = UsedManager;
+            manager = UsedManager ?? LogCallbackGuard.CurrentManager;
             if (manager is null) {
                 foreach (var completed in Instance.CompletedManagers) {
                     if (completed.ThreadIsCurrentThread) {
@@ -181,7 +228,7 @@ public sealed class Logging {
             if (manager is null || manager != Instance.Manager) {
                 return;
             }
-            defer = UsedManager is not null || manager.ThreadIsCurrentThread;
+            defer = UsedManager is not null || LogCallbackGuard.IsActive || manager.ThreadIsCurrentThread;
             if (defer && Instance.DeferredCompletions.Add(manager) == false) {
                 return;
             }
