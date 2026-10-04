@@ -8,14 +8,33 @@ internal sealed class LogManager : IDisposable {
 
     private readonly LogServiceCollection Services = new();
     private readonly LogSubscriptionCollection Subscriptions = new();
+    private readonly object CompletionLocker = new();
+    private bool _Completed;
 
-    private void Dispose(bool disposing) {
-        if (disposing) {
-            Services.Dispose();
+    private event LogEventHandler _LogEvent;
+
+    private LogEventHandler CurrentLogEvent {
+        get {
+            lock (CompletionLocker) {
+                return _LogEvent;
+            }
         }
     }
 
-    public event LogEventHandler LogEvent;
+    public event LogEventHandler LogEvent {
+        add {
+            lock (CompletionLocker) {
+                if (_Completed == false) {
+                    _LogEvent += value;
+                }
+            }
+        }
+        remove {
+            lock (CompletionLocker) {
+                _LogEvent -= value;
+            }
+        }
+    }
 
     public LogSeverity LogEventThreshold { get; set; }
     public LogFormatter Formatter { get; } = new LogFormatter();
@@ -24,7 +43,9 @@ internal sealed class LogManager : IDisposable {
         Services[name];
 
     public bool Subscribe(ILogSubscription subscription) {
-        return Subscriptions.Add(subscription);
+        lock (CompletionLocker) {
+            return _Completed == false && Subscriptions.Add(subscription);
+        }
     }
 
     public bool Unsubscribe(ILogSubscription subscription) {
@@ -38,7 +59,8 @@ internal sealed class LogManager : IDisposable {
         if (severity == LogSeverity.None) {
             return false;
         }
-        if (LogEvent != null && LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
+        var logEvent = CurrentLogEvent;
+        if (logEvent != null && LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity) {
             return true;
         }
         if (Subscriptions.Count > 0) {
@@ -55,7 +77,7 @@ internal sealed class LogManager : IDisposable {
     }
 
     public void Log(LogSeverity severity, Type type, object[] data) {
-        if (type == null || severity == LogSeverity.None || data == null) {
+        if (type == null || severity == LogSeverity.None) {
             return;
         }
         if (Log(severity, type) == false) {
@@ -71,7 +93,7 @@ internal sealed class LogManager : IDisposable {
                 entryList: Formatter.Format(data));
 
             if (depth == 0) {
-                var logEvent = LogEvent;
+                var logEvent = CurrentLogEvent;
                 if (LogEventThreshold != LogSeverity.None && LogEventThreshold <= severity && logEvent != null) {
                     var args = new LogEventArgs(entry);
                     foreach (LogEventHandler handler in logEvent.GetInvocationList()) {
@@ -99,11 +121,9 @@ internal sealed class LogManager : IDisposable {
     }
 
     public bool Complete(TimeSpan timeout) {
-        try {
-            LogEvent = null;
-        }
-        catch (Exception ex) {
-            Logging.Notify(ex);
+        lock (CompletionLocker) {
+            _Completed = true;
+            _LogEvent = null;
         }
 
         var queueDrained = false;
@@ -129,11 +149,6 @@ internal sealed class LogManager : IDisposable {
     }
 
     public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    ~LogManager() {
-        Dispose(false);
+        Services.Dispose();
     }
 }

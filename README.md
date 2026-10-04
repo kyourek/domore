@@ -94,7 +94,9 @@ var settings = Conf.Configure(new AppSettings());
 
 ## Domore.Logs
 
-A lightweight, simple, and very opinionated logging library. Create a log per type, and write to the console, debug output, trace, or files. Logging runs on a background queue, so it stays out of your hot paths.
+A lightweight, simple, and very opinionated logging library. Create a log per type, and write to the console, debug
+output, trace, or files. Logging uses a bounded 1,024-item background queue, so it stays out of your hot paths. When
+full, the queue drops the newest item and reports the dropped count when `Logging.Complete()` runs.
 
 ```csharp
 using Domore.Logs;
@@ -112,7 +114,10 @@ class Sample {
 }
 ```
 
-Severity thresholds, per-log formats, console colors, custom formatters for your own types, and custom `ILogService` handlers are all configurable at runtime.
+Severity thresholds, per-log formats, console colors, custom formatters for your own types, and custom `ILogService`
+handlers are all configurable at runtime.
+Log service types named in configuration are resolved and instantiated via reflection, so logging configuration files
+must be treated as trusted input.
 
 ## Domore.Logs.Conf
 

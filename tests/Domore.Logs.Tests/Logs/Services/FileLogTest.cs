@@ -262,7 +262,7 @@ internal sealed class FileLogTest {
         Log.Info("here's some data");
         Logging.Complete();
         var actual = ReadFile();
-        var expected = "LoggingTest [inf] here's some data";
+        var expected = $"{typeof(LoggingTest).FullName} [inf] here's some data";
         Assert.That(actual, Is.EqualTo(expected));
     }
 
@@ -277,13 +277,13 @@ internal sealed class FileLogTest {
         Log.Info("here's some data");
         Logging.Complete();
         var actual = ReadFile();
-        var expected = "LoggingTest [inf] here's some data";
+        var expected = $"{typeof(LoggingTest).FullName} [inf] here's some data";
         Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]
     public void DoesNotLogDataIfSeverityNotMet() {
-        ConfigFile("log[f].config[LoggingTest].severity = warn");
+        ConfigFile($"log[f].config[{typeof(LoggingTest).FullName}].severity = warn");
         Log.Info("here's some data");
         Logging.Complete();
         var actual = ReadFile();
@@ -292,19 +292,20 @@ internal sealed class FileLogTest {
 
     [Test]
     public void LogsDataIfSeverityIsChanged() {
-        ConfigFile("log[f].config[LoggingTest].severity = error");
+        ConfigFile($"log[f].config[{typeof(LoggingTest).FullName}].severity = error");
         Log.Warn("here's some data");
         Thread.Sleep(100);
-        CONF.Contain("log[f].config[LoggingTest].severity = warn").Configure(Logging.Config, key: "");
+        CONF.Contain($"log[f].config[{typeof(LoggingTest).FullName}].severity = warn")
+            .Configure(Logging.Config, key: "");
         Log.Warn("this Should be logged");
         Logging.Complete();
         var actual = ReadFile();
-        Assert.That(actual, Is.EqualTo("LoggingTest [wrn] this Should be logged"));
+        Assert.That(actual, Is.EqualTo($"{typeof(LoggingTest).FullName} [wrn] this Should be logged"));
     }
 
     [Test]
     public void LogsLotsOfData() {
-        ConfigFile("log[f].config[LoggingTest].format = {sev}");
+        ConfigFile($"log[f].config[{typeof(LoggingTest).FullName}].format = {{sev}}");
         for (var i = 0; i < 100; i++) {
             Log.Info($"{i}");
         }

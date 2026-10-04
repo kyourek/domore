@@ -188,7 +188,7 @@ public sealed partial class LoggingTest {
         Log.Info("Some message");
         Logging.Complete();
         var actual = TestLogService.Instance.Items.Select(i => i.Data);
-        var expected = new[] { "LoggingTest [inf] Some message" };
+        var expected = new[] { $"{typeof(LoggingTest).FullName} [inf] Some message" };
         Assert.That(actual, Is.EqualTo(expected));
     }
 
@@ -198,7 +198,7 @@ public sealed partial class LoggingTest {
         Log.Info("Here", "are some", "messages.");
         Logging.Complete();
         var actual = TestLogService.Instance.Items.Select(i => i.Data).Single();
-        var expected = @"LoggingTest [inf]
+        var expected = $@"{typeof(LoggingTest).FullName} [inf]
   Here
   are some
   messages.";
@@ -218,7 +218,7 @@ public sealed partial class LoggingTest {
         Logging.Complete();
         var actual = TestLogService.Instance.Items.Select(i => i.Data).Single();
         var expected =
-            "LoggingTest [err]" + Environment.NewLine +
+            $"{typeof(LoggingTest).FullName} [err]" + Environment.NewLine +
             string.Join(Environment.NewLine, err
                 .ToString()
                 .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -246,15 +246,15 @@ public sealed partial class LoggingTest {
         Log.Warn(new XYPoint { X = 1, Y = 2 }, new XYPoint { X = 3, Y = 4 });
         Logging.Complete();
         var actual = TestLogService.Instance.Items.Select(i => i.Data).Single();
-        var expected = @"LoggingTest [wrn]
-  XY {
+        var expected = $@"{typeof(LoggingTest).FullName} [wrn]
+  XY {{
     x: 1
     y: 2
-  }
-  XY {
+  }}
+  XY {{
     x: 3
     y: 4
-  }";
+  }}";
         Assert.That(actual, Is.EqualTo(expected));
     }
 

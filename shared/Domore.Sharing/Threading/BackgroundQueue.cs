@@ -6,9 +6,12 @@ using System.Threading;
 namespace Domore.Threading;
 
 internal sealed class BackgroundQueue : IDisposable {
+    private const int DefaultCapacity = 1024;
+
     private Thread Thread;
     private readonly object ThreadLocker = new();
-    private readonly BlockingCollection<Action> Collection = new();
+    private readonly BlockingCollection<Action> Collection;
+    private long _DroppedCount;
 
     private void ThreadStart() {
         for (; ; ) {
@@ -60,10 +63,14 @@ internal sealed class BackgroundQueue : IDisposable {
         return true;
     }
 
-    private void Dispose(bool disposing) {
-        if (disposing) {
-            Collection.Dispose();
-        }
+    public long DroppedCount =>
+        Interlocked.Read(ref _DroppedCount);
+
+    public BackgroundQueue() : this(DefaultCapacity) {
+    }
+
+    public BackgroundQueue(int capacity) {
+        Collection = new BlockingCollection<Action>(new ConcurrentQueue<Action>(), capacity);
     }
 
     public void Add(Action action) {
@@ -81,7 +88,10 @@ internal sealed class BackgroundQueue : IDisposable {
                         }
                     }
                 }
-                Collection.Add(action);
+                /* Drop the newest submission so queued work retains FIFO order. */
+                if (Collection.TryAdd(action) == false) {
+                    Interlocked.Increment(ref _DroppedCount);
+                }
             }
             catch {
             }
@@ -92,11 +102,6 @@ internal sealed class BackgroundQueue : IDisposable {
     public bool Complete(TimeSpan timeout) => Complete(new TimeSpan?(timeout));
 
     public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    ~BackgroundQueue() {
-        Dispose(false);
+        Collection.Dispose();
     }
 }

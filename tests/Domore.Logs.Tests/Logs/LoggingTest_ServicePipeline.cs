@@ -68,8 +68,10 @@ public sealed partial class LoggingTest {
             Assert.That(secondReceived, Is.True, "the replacement service did not receive the second entry");
             Assert.That(oldServiceCompletedBeforeLoggingComplete, Is.True,
                 "the old service was not completed when its type changed");
-            Assert.That(ChangingPipelineLogServiceA.Messages, Is.EqualTo(new[] { "LoggingTest first entry" }));
-            Assert.That(ChangingPipelineLogServiceB.Messages, Is.EqualTo(new[] { "LoggingTest second entry" }));
+            Assert.That(ChangingPipelineLogServiceA.Messages,
+                Is.EqualTo(new[] { $"{typeof(LoggingTest).FullName} first entry" }));
+            Assert.That(ChangingPipelineLogServiceB.Messages,
+                Is.EqualTo(new[] { $"{typeof(LoggingTest).FullName} second entry" }));
         });
     }
 
@@ -170,7 +172,7 @@ log[x].type = {typeof(DefaultThresholdPipelineLogService).AssemblyQualifiedName}
 log[x].config.default.severity = debug
 log[x].config.default.format = {{log}}
 log[y].type = {typeof(ExplicitThresholdPipelineLogService).AssemblyQualifiedName}
-log[y].config[{typeof(LoggingTest).Name}].severity = error
+log[y].config[{typeof(LoggingTest).FullName}].severity = error
 log[y].config.default.format = {{log}}
 ";
         var log = Logging.For(typeof(LoggingTest));
@@ -186,7 +188,7 @@ log[y].config.default.format = {{log}}
             Assert.That(enabled, Is.True);
             Assert.That(received, Is.True, "the service with a default Debug threshold missed the entry");
             Assert.That(DefaultThresholdPipelineLogService.Messages,
-                Is.EqualTo(new[] { "LoggingTest mixed threshold entry" }));
+                Is.EqualTo(new[] { $"{typeof(LoggingTest).FullName} mixed threshold entry" }));
             Assert.That(ExplicitThresholdPipelineLogService.Messages, Is.Empty);
         });
     }
