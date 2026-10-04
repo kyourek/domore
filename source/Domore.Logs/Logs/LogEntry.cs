@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 
@@ -14,14 +15,18 @@ internal sealed class LogEntry : ILogEntry {
     };
 
     private readonly Dictionary<string, string> Format = [];
+    private readonly ReadOnlyCollection<string> ReadOnlyEntryList;
 
     private DateTime LocalDate => _LocalDate ??= EntryDate.ToLocalTime();
     private DateTime? _LocalDate;
 
-    private string GetFormat(string format) {            
+    private string GetFormat(string format) {
+        var severityName = Sev.TryGetValue(EntrySeverity, out var severity)
+            ? severity
+            : ((int)EntrySeverity).ToString(CultureInfo.InvariantCulture);
         var s = format
             .Replace("{log}", LogName)
-            .Replace("{sev}", Sev[EntrySeverity])
+            .Replace("{sev}", severityName)
             .Replace("{dat}", EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
             .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture))
             .Replace("{loc.dat}", LocalDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
@@ -50,6 +55,7 @@ internal sealed class LogEntry : ILogEntry {
     public LogEntry(Type logType, DateTime entryDate, LogSeverity entrySeverity, string[] entryList) {
         LogType = logType ?? throw new ArgumentNullException(nameof(logType));
         EntryList = entryList ?? throw new ArgumentNullException(nameof(entryList));
+        ReadOnlyEntryList = Array.AsReadOnly(EntryList);
         EntryDate = entryDate;
         EntrySeverity = entrySeverity;
     }
@@ -65,5 +71,5 @@ internal sealed class LogEntry : ILogEntry {
     Type ILogEntry.LogType => LogType;
     DateTime ILogEntry.LogDate => EntryDate;
     LogSeverity ILogEntry.LogSeverity => EntrySeverity;
-    IEnumerable<string> ILogEntry.LogList => EntryList;
+    IEnumerable<string> ILogEntry.LogList => ReadOnlyEntryList;
 }

@@ -479,7 +479,7 @@ This happens even when nothing is enabled (#28).
 
 ---
 
-## 29. Undefined severities throw in the formatter. **Low**
+## 29. Undefined severities throw in the formatter. **Low** (Resolved)
 
 **File:** `Logs/LogEntry.cs` line 23
 
@@ -531,7 +531,7 @@ If a conf file lists `log[f].service.name = ...` **before** `log[f].type = file`
 
 ---
 
-## 34. The mutable `string[]` behind `LogList` is shared across threads. **Low**
+## 34. The mutable `string[]` behind `LogList` is shared across threads. **Low** (Resolved)
 
 **Files:** `Logs/LogEntry.cs` lines 46, 67, `Logs/LogEvent.cs` line 45
 
