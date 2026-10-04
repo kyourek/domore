@@ -17,10 +17,10 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 7 | High | FileLog | Resolved: Bad config values can crash the process from the timer callback or permanently stop file logging |
 | 8 | High | Logging/LogServiceCollection | Resolved: One failing `ILogService.Complete()` stops the rest from flushing and leaves a disposed manager installed for good |
 | 9 | High | Logging/BackgroundQueue | Resolved: `Complete()` can hang forever, or deadlock when called from a service thread |
-| 10 | Medium | LogServiceCollection | One throwing service drops the entry for all later services |
-| 11 | Medium | LogServiceProxy | `Service` double-read races with a `Type` change (NRE). The old service is never completed |
-| 12 | Medium | LogServiceConfig | `Default` is published before its `ThresholdChanged` handler is attached (lost update) |
-| 13 | Medium | LogServiceCollection | The aggregate threshold used by `Enabled()` is wrong when type and default thresholds are mixed across services |
+| 10 | Medium | LogServiceCollection | Resolved: One throwing service drops the entry for all later services |
+| 11 | Medium | LogServiceProxy | Resolved: `Service` double-read races with a `Type` change (NRE). The old service is never completed |
+| 12 | Medium | LogServiceConfig | Resolved: `Default` is published before its `ThresholdChanged` handler is attached (lost update) |
+| 13 | Medium | LogServiceCollection | Resolved: The aggregate threshold used by `Enabled()` is wrong when type and default thresholds are mixed across services |
 | 14 | Medium | LogSubscriptionProxy | Threshold cache invalidation race can make a stale threshold permanent |
 | 15 | Medium | LogSubscriptionCollection | `Remove`/`Clear` leave the proxy subscribed to the agent's `ThresholdChanged` |
 | 16 | Medium | BackgroundQueue | Item added before the worker thread starts can be lost by a concurrent `Complete()` |
@@ -211,7 +211,7 @@ Several paths re-enter logging:
 
 ---
 
-## 10. One throwing service drops the entry for all other services. **Medium**
+## 10. One throwing service drops the entry for all other services. **Medium** (Resolved)
 
 **File:** `Logs/LogServiceCollection.cs` lines 83–89, `Logs/LogServiceProxy.cs` lines 70–82
 
@@ -221,7 +221,7 @@ The single queued action loops over all services. If any `proxy.Log(entry)` thro
 
 ---
 
-## 11. `LogServiceProxy.Service` races with `Type` changes, and the old service is leaked. **Medium**
+## 11. `LogServiceProxy.Service` races with `Type` changes, and the old service is leaked. **Medium** (Resolved)
 
 **File:** `Logs/LogServiceProxy.cs` lines 17–31, 49–62
 
@@ -235,7 +235,7 @@ The single queued action loops over all services. If any `proxy.Log(entry)` thro
 
 ---
 
-## 12. `LogServiceConfig.Default` is published before its event handler is attached. **Medium**
+## 12. `LogServiceConfig.Default` is published before its event handler is attached. **Medium** (Resolved)
 
 **File:** `Logs/LogServiceConfig.cs` lines 36–51
 
@@ -255,7 +255,7 @@ Volatile.Write(ref _Default, d);
 
 ---
 
-## 13. The aggregate threshold used by `Enabled()` is wrong for mixed configurations. **Medium**
+## 13. The aggregate threshold used by `Enabled()` is wrong for mixed configurations. **Medium** (Resolved)
 
 **File:** `Logs/LogServiceCollection.cs` lines 20–45, 71–80, compared with `Logs/LogServiceProxy.cs` line 76
 

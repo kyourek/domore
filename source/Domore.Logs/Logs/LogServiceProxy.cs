@@ -1,10 +1,12 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace Domore.Logs; 
 internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
 
     private readonly object Locker = new();
+    private readonly Action<ILogService> CompleteService;
 
     private sealed class None : ILogService {
         void ILogService.Log(string name, string data, LogSeverity severity) {
@@ -16,16 +18,17 @@ internal sealed class LogServiceProxy {
 
     public ILogService Service {
         get {
-            if (_Service == null) {
+            var service = Interlocked.CompareExchange(ref _Service, null, null);
+            if (service == null) {
                 lock (Locker) {
-                    if (_Service == null) {
-                        var service = Factory.Create(Type) ?? new None();
-                        Thread.MemoryBarrier();
-                        _Service = service;
+                    service = Interlocked.CompareExchange(ref _Service, null, null);
+                    if (service == null) {
+                        service = Factory.Create(_Type ??= Name) ?? new None();
+                        Interlocked.Exchange(ref _Service, service);
                     }
                 }
             }
-            return _Service;
+            return service;
         }
     }
     private ILogService _Service;
@@ -47,14 +50,26 @@ internal sealed class LogServiceProxy {
     private LogServiceConfig _Config;
 
     public string Type {
-        get => _Type ??= Name;
+        get {
+            lock (Locker) {
+                return _Type ??= Name;
+            }
+        }
         set {
-            if (_Type != value) {
-                lock (Locker) {
-                    if (_Type != value) {
-                        _Type = value;
-                        _Service = null;
-                    }
+            ILogService service = null;
+            lock (Locker) {
+                if (_Type != value) {
+                    _Type = value;
+                    service = Interlocked.Exchange(ref _Service, null);
+                }
+            }
+
+            if (service != null) {
+                try {
+                    CompleteService(service);
+                }
+                catch (Exception ex) {
+                    Logging.Notify(ex);
                 }
             }
         }
@@ -63,8 +78,9 @@ internal sealed class LogServiceProxy {
 
     public string Name { get; }
 
-    public LogServiceProxy(string name) {
+    public LogServiceProxy(string name, Action<ILogService> completeService) {
         Name = name;
+        CompleteService = completeService ?? throw new ArgumentNullException(nameof(completeService));
     }
 
     public void Log(LogEntry entry) {
@@ -77,7 +93,12 @@ internal sealed class LogServiceProxy {
         if (limit.HasValue && limit.Value != LogSeverity.None && limit.Value <= sev) {
             var frmt = Config[name].Format ?? Config.Default.Format;
             var data = entry.LogData(frmt);
-            Service.Log(name, data, sev);
+            try {
+                Service.Log(name, data, sev);
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
+            }
         }
     }
 

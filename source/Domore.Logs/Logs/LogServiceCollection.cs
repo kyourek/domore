@@ -34,14 +34,36 @@ internal sealed class LogServiceCollection : IDisposable {
         }
     }
 
+    private void QueueServiceCompletion(ILogService service) {
+        try {
+            Queue.Add(() => {
+                try {
+                    service.Complete();
+                }
+                catch (Exception ex) {
+                    Logging.Notify(ex);
+                }
+            });
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+            try {
+                service.Complete();
+            }
+            catch (Exception completionException) {
+                Logging.Notify(completionException);
+            }
+        }
+    }
+
     private void SetThresholdChanged() {
         lock (Locker) {
-            var names = Set.SelectMany(item => item.Value.Config.Names).Distinct();
+            var proxies = Set.Values.ToArray();
+            var names = proxies.SelectMany(proxy => proxy.Config.Names).Distinct();
             var typeThreshold = new Dictionary<string, LogSeverity>();
             foreach (var name in names) {
-                var severity = Set
-                    .Select(item => item.Value)
-                    .Select(log => log.Config[name].Threshold)
+                var severity = proxies
+                    .Select(proxy => proxy.Config[name].Threshold ?? proxy.Config.DefaultThreshold)
                     .Where(sev => sev.HasValue)
                     .Select(sev => sev.Value)
                     .Where(sev => sev != LogSeverity.None)
@@ -51,9 +73,8 @@ internal sealed class LogServiceCollection : IDisposable {
                     typeThreshold[name] = severity;
                 }
             }
-            var defaultThreshold = Set
-                .Select(item => item.Value)
-                .Select(log => log.Config.Default.Threshold)
+            var defaultThreshold = proxies
+                .Select(proxy => proxy.Config.DefaultThreshold)
                 .Where(sev => sev.HasValue)
                 .Select(sev => sev.Value)
                 .Where(sev => sev != LogSeverity.None)
@@ -75,11 +96,12 @@ internal sealed class LogServiceCollection : IDisposable {
         get {
             lock (Locker) {
                 if (Set.TryGetValue(name, out var value) == false) {
-                    value = new LogServiceProxy(name);
+                    value = new LogServiceProxy(name, QueueServiceCompletion);
                     value.Config.TypeThresholdChanged += Config_TypeThresholdChanged;
                     value.Config.DefaultThresholdChanged += Config_DefaultThresholdChanged;
                     Set[name] = value;
                     Proxies = Set.Values.ToArray();
+                    SetThresholdChanged();
                 }
                 return value;
             }
