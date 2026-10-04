@@ -17,6 +17,7 @@ internal sealed class LogServiceProxy {
         Locker = new();
 
     private bool ServiceCompleted;
+    private Exception ServiceInitializationError;
     private int ServiceCallDepth;
     private bool PendingTypeChange;
     private string PendingType;
@@ -24,11 +25,18 @@ internal sealed class LogServiceProxy {
 
     private ILogService GetServiceUnsafe() {
         if (_Service is null) {
-            using (LogCallbackGuard.EnterManager(Manager))
-            using (LogCallbackGuard.Enter()) {
-                _Service = Factory.Create(_Type ?? Name) ?? new None();
+            try {
+                using (LogCallbackGuard.EnterManager(Manager))
+                using (LogCallbackGuard.Enter()) {
+                    _Service = Factory.Create(_Type ?? Name) ?? new None();
+                }
+                ServiceInitializationError = null;
+                ServiceCompleted = false;
             }
-            ServiceCompleted = false;
+            catch (Exception ex) {
+                ServiceInitializationError = ex;
+                throw;
+            }
         }
         return _Service;
     }
@@ -49,6 +57,7 @@ internal sealed class LogServiceProxy {
         var completeService = service != null && ServiceCompleted == false;
         _Type = value;
         _Service = replacement;
+        ServiceInitializationError = null;
         ServiceCompleted = false;
         if (completeService) {
             CompleteServiceUnsafe(service);
@@ -169,10 +178,18 @@ internal sealed class LogServiceProxy {
 
     public void Complete() {
         lock (Locker) {
+            // Completing a configured proxy must not instantiate a service that has
+            // never been requested or used.
+            if (_Service is null) {
+                if (ServiceInitializationError is not null) {
+                    throw new AggregateException("The log service could not be initialized.", ServiceInitializationError);
+                }
+                return;
+            }
             List<Exception> exceptions = null;
             // A completion callback may configure and install another live instance.
             do {
-                var service = GetServiceUnsafe();
+                var service = _Service;
                 if (ServiceCompleted) {
                     break;
                 }

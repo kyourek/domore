@@ -310,9 +310,84 @@ public sealed class BranchComparisonTest {
             queue.Dispose();
         }
         Assert.That(adding.Join(TimeSpan.FromSeconds(2)), Is.True);
-        Assert.That(executed, Is.EqualTo(accepted),
-            "Complete must drain an item already accepted before the worker starts.");
+        Assert.Multiple(() => {
+            Assert.That(accepted, Is.EqualTo(1), "The startup gate must hold one accepted item before worker startup.");
+            Assert.That(executed, Is.EqualTo(accepted),
+                "Complete must drain an item already accepted before the worker starts.");
+            Assert.That(queue.Complete(TimeSpan.Zero), Is.True, "Completing an already disposed queue is idempotent.");
+            Assert.DoesNotThrow(queue.Dispose, "Repeated disposal must be safe.");
+        });
     }
+
+    [Test]
+    public void QueueWorkerContinuesAfterInterruptedTake() {
+        using var firstTaken = new ManualResetEventSlim();
+        using var takeInterrupted = new ManualResetEventSlim();
+        using var secondTaken = new ManualResetEventSlim();
+        var queue = new Domore.Threading.BackgroundQueue(ex => {
+            if (ex is ThreadInterruptedException) takeInterrupted.Set();
+        });
+        var workerField = typeof(Domore.Threading.BackgroundQueue).GetField("Thread",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        queue.Add(() => firstTaken.Set());
+        Assert.That(firstTaken.Wait(TimeSpan.FromSeconds(5)), Is.True);
+        var worker = (Thread)workerField.GetValue(queue);
+        Assert.That(SpinWait.SpinUntil(() => (worker.ThreadState & ThreadState.WaitSleepJoin) != 0,
+            TimeSpan.FromSeconds(5)), Is.True, "The worker should return to its blocking queue wait.");
+
+        worker.Interrupt();
+        Assert.That(takeInterrupted.Wait(TimeSpan.FromSeconds(5)), Is.True,
+            "The worker should observe and contain the interrupted Take.");
+        queue.Add(() => secondTaken.Set());
+        Assert.That(secondTaken.Wait(TimeSpan.FromSeconds(5)), Is.True,
+            "An interrupted queue wait must not abandon later accepted actions.");
+        queue.Dispose();
+    }
+
+    [Test]
+    public void QueueCompletionContinuesAfterInterruptedJoin() {
+        using var actionEntered = new ManualResetEventSlim();
+        using var releaseAction = new ManualResetEventSlim();
+        using var waiterReady = new ManualResetEventSlim();
+        using var completionReturned = new ManualResetEventSlim();
+        var queue = new Domore.Threading.BackgroundQueue();
+        Exception completionError = null;
+        queue.Add(() => {
+            actionEntered.Set();
+            releaseAction.Wait(TimeSpan.FromSeconds(5));
+        });
+        Assert.That(actionEntered.Wait(TimeSpan.FromSeconds(5)), Is.True);
+
+        Thread waiter = null;
+        var completion = new Thread(() => {
+            waiter = Thread.CurrentThread;
+            waiterReady.Set();
+            try {
+                queue.Complete();
+            }
+            catch (Exception ex) {
+                completionError = ex;
+            }
+            finally {
+                completionReturned.Set();
+            }
+        }) { IsBackground = true };
+        completion.Start();
+        try {
+            Assert.That(waiterReady.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            waiter.Interrupt();
+        }
+        finally {
+            releaseAction.Set();
+        }
+
+        Assert.That(completionReturned.Wait(TimeSpan.FromSeconds(5)), Is.True,
+            "An interrupted Join must keep waiting until the accepted queue has drained.");
+        Assert.That(completion.Join(TimeSpan.FromSeconds(5)), Is.True);
+        Assert.That(completionError, Is.Null, "Completion should contain an interrupted Join and resume waiting.");
+        Assert.DoesNotThrow(queue.Dispose);
+    }
+
     [Test]
     public void FileCreatedAfterCachedMissKeepsExistingContent() {
         var dir = NewDirectory();

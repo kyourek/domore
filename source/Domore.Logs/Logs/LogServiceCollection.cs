@@ -8,7 +8,7 @@ namespace Domore.Logs;
 
 internal sealed class LogServiceCollection : IDisposable {
     private readonly LogManager Manager;
-    private readonly BackgroundQueue Queue = new();
+    private readonly BackgroundQueue Queue;
     private readonly Dictionary<string, LogServiceProxy> Set = [];
     private readonly Dictionary<string, LogSeverity> TypeThreshold = [];
     private readonly
@@ -95,6 +95,7 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public LogServiceCollection(LogManager manager = null) {
         Manager = manager;
+        Queue = new BackgroundQueue(Logging.Notify);
     }
 
     public bool Send(LogSeverity severity, Type type) {

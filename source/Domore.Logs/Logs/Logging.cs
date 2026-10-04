@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Domore.Logs;
@@ -9,19 +10,35 @@ namespace Domore.Logs;
 /// </summary>
 public sealed class Logging {
     private static readonly object ManagerLocker = new();
-    private static readonly object CompleteLocker = new();
+    private static readonly TimeSpan InfiniteTimeout = TimeSpan.FromMilliseconds(-1);
 
     [ThreadStatic]
     private static LogManager UsedManager;
     private static readonly Logging Instance = new();
 
-    private readonly List<LogManager> CompletedManagers = [];
     private readonly Dictionary<LogManager, int> UseManagerCount = [];
-    private readonly HashSet<LogManager> DeferredCompletions = [];
+    private readonly Dictionary<LogManager, Retirement> RetiringManagers = [];
 
     private LogManager Manager;
 
     private Logging() {
+    }
+
+    static Logging() {
+        AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+    }
+
+    private sealed class Retirement {
+        public readonly object Locker = new();
+        public LogManager Manager;
+        public Exception Error;
+        public int Started;
+        public Thread Worker;
+        public bool IsCompleted;
+
+        public Retirement(LogManager manager) {
+            Manager = manager;
+        }
     }
 
     private LogManager GetManager() {
@@ -220,68 +237,272 @@ public sealed class Logging {
     /// Completes all logging.
     /// </summary>
     public static void Complete() {
-        LogManager manager;
-        bool defer;
-        lock (ManagerLocker) {
-            manager = UsedManager ?? LogCallbackGuard.CurrentManager;
-            if (manager is null) {
-                foreach (var completed in Instance.CompletedManagers) {
-                    if (completed.ThreadIsCurrentThread) {
-                        manager = completed;
-                        break;
-                    }
-                }
-                manager ??= Instance.Manager;
-            }
-            // A callback on a retiring manager must not complete a later session.
-            if (manager is null || manager != Instance.Manager) {
-                return;
-            }
-            defer = UsedManager is not null || LogCallbackGuard.IsActive || manager.ThreadIsCurrentThread;
-            if (defer && Instance.DeferredCompletions.Add(manager) == false) {
-                return;
-            }
-        }
-        if (defer) {
-            ThreadPool.QueueUserWorkItem(_ => {
-                try {
-                    Complete(manager);
-                }
-                catch (Exception ex) {
-                    Notify(ex);
-                }
-                finally {
-                    lock (ManagerLocker) {
-                        Instance.DeferredCompletions.Remove(manager);
-                    }
-                }
-            });
-            return;
-        }
-        Complete(manager);
+        Instance.CompleteCore(InfiniteTimeout);
     }
 
-    private static void Complete(LogManager manager) {
-        lock (CompleteLocker) {
-            lock (ManagerLocker) {
-                if (manager != Instance.Manager) {
+    /// <summary>
+    /// Completes all logging, waiting up to <paramref name="timeout"/> for pending
+    /// manager retirements. Retirements continue safely in the background after a
+    /// timeout.
+    /// </summary>
+    /// <param name="timeout">A nonnegative timeout, or -1 millisecond for an infinite wait.</param>
+    /// <returns>True if all retirements completed before this call returned.</returns>
+    public static bool Complete(TimeSpan timeout) {
+        if (timeout < TimeSpan.Zero && timeout != InfiniteTimeout) {
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+        }
+        return Instance.CompleteCore(timeout);
+    }
+
+    private static void ProcessExit(object sender, EventArgs e) {
+        try {
+            Instance.CompleteCore(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex) {
+            // Do not let an arbitrary Console.Error writer extend the process-exit
+            // budget. Report asynchronously once the bounded shutdown has returned.
+            try {
+                ThreadPool.QueueUserWorkItem(_ => Notify(ex));
+            }
+            catch {
+                // Process shutdown is already in progress.
+            }
+        }
+    }
+
+    private bool CompleteCore(TimeSpan timeout) {
+        var stopwatch = Stopwatch.StartNew();
+        var records = new List<Retirement>();
+        var deferWait = false;
+
+        lock (ManagerLocker) {
+            var owner = UsedManager ?? LogCallbackGuard.CurrentManager;
+            var current = Manager;
+
+            // Flowed manager context identifies callbacks and child tasks even when
+            // ThreadStatic UsedManager is absent and callback depth has unwound.
+            if (owner is not null && owner != current) {
+                return false;
+            }
+            if (LogCallbackGuard.IsActive && owner is null) {
+                return false;
+            }
+
+            deferWait = owner is not null || LogCallbackGuard.IsActive || current?.ThreadIsCurrentThread == true;
+
+            foreach (var retirement in RetiringManagers.Values) {
+                records.Add(retirement);
+            }
+
+            if (current is not null) {
+                Manager = null;
+                var retirement = new Retirement(current);
+                RetiringManagers.Add(current, retirement);
+                records.Add(retirement);
+            }
+        }
+
+        foreach (var retirement in records) {
+            StartRetirement(retirement);
+        }
+
+        if (deferWait) {
+            return false;
+        }
+        if (WaitForRetirements(records, timeout, stopwatch) == false) {
+            return false;
+        }
+
+        var errors = new List<Exception>();
+        foreach (var retirement in records) {
+            if (retirement.Error is AggregateException aggregate) {
+                errors.AddRange(aggregate.Flatten().InnerExceptions);
+            }
+            else if (retirement.Error is not null) {
+                errors.Add(retirement.Error);
+            }
+        }
+        if (errors.Count > 0) {
+            throw new AggregateException("One or more logging managers failed to complete.", errors);
+        }
+        return true;
+    }
+
+    private static bool WaitForRetirements(List<Retirement> records, TimeSpan timeout, Stopwatch stopwatch) {
+        var infinite = timeout == InfiniteTimeout;
+        foreach (var retirement in records) {
+            lock (retirement.Locker) {
+                while (retirement.IsCompleted == false) {
+                    if (infinite) {
+                        try {
+                            Monitor.Wait(retirement.Locker);
+                        }
+                        catch (ThreadInterruptedException) {
+                            // Interruption does not cancel an explicit full flush.
+                        }
+                        continue;
+                    }
+
+                    var remaining = timeout - stopwatch.Elapsed;
+                    if (remaining <= TimeSpan.Zero) {
+                        return false;
+                    }
+
+                    var milliseconds = remaining.TotalMilliseconds >= int.MaxValue
+                        ? int.MaxValue
+                        : Math.Max(1, (int)Math.Ceiling(remaining.TotalMilliseconds));
+                    try {
+                        Monitor.Wait(retirement.Locker, milliseconds);
+                    }
+                    catch (ThreadInterruptedException) {
+                        // Preserve the original deadline across interrupted waits.
+                    }
+                    if (retirement.IsCompleted == false && stopwatch.Elapsed >= timeout) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private void StartRetirement(Retirement retirement) {
+        if (Interlocked.CompareExchange(ref retirement.Started, 1, 0) != 0) {
+            return;
+        }
+
+        Thread thread = null;
+        try {
+            thread = new Thread(() => Retire(retirement)) {
+                Name = "Logging retirement",
+                IsBackground = true
+            };
+            retirement.Worker = thread;
+            thread.Start();
+            return;
+        }
+        catch (Exception startError) {
+            if (thread?.IsAlive == true) {
+                return;
+            }
+            retirement.Worker = null;
+            try {
+                if (ThreadPool.QueueUserWorkItem(_ => Retire(retirement))) {
                     return;
                 }
-                Instance.Manager = null;
-                Instance.CompletedManagers.Add(manager);
-                while (Instance.UseManagerCount.ContainsKey(manager)) {
+            }
+            catch {
+                // Leave the record pending so a later completion can retry startup.
+            }
+
+            Interlocked.Exchange(ref retirement.Started, 0);
+            throw new InvalidOperationException("Could not start safe logging retirement.", startError);
+        }
+    }
+
+    private void Retire(Retirement retirement) {
+        var manager = retirement.Manager;
+        var errors = new List<Exception>();
+        Exception retryFailure = null;
+        var retryFailureReported = false;
+        var completionAttempted = false;
+        while (true) {
+            var disposed = false;
+            try {
+                using (LogCallbackGuard.EnterManager(manager)) {
+                    WaitForManagerUses(manager);
+                    if (completionAttempted == false) {
+                        completionAttempted = true;
+                        try {
+                            manager.Complete();
+                        }
+                        catch (Exception ex) {
+                            errors.Add(ex);
+                        }
+                    }
+                    try {
+                        manager.Dispose();
+                        disposed = true;
+                    }
+                    catch (Exception ex) {
+                        retryFailure ??= ex;
+                    }
+                }
+            }
+            catch (Exception ex) {
+                // Keep the retirement record live and retry. In particular, never
+                // proceed to disposal if manager ownership or lease inspection failed.
+                retryFailure ??= ex;
+            }
+
+            if (disposed) {
+                try {
+                    var allErrors = new List<Exception>(errors);
+                    if (retryFailure is not null) {
+                        allErrors.Add(retryFailure);
+                    }
+                    if (allErrors.Count == 1) {
+                        retirement.Error = allErrors[0];
+                    }
+                    else if (allErrors.Count > 1) {
+                        retirement.Error = new AggregateException("One or more logging components failed during retirement.", allErrors);
+                    }
+                    lock (ManagerLocker) {
+                        RetiringManagers.Remove(manager);
+                        retirement.Manager = null;
+                        retirement.Worker = null;
+                    }
+                    lock (retirement.Locker) {
+                        retirement.IsCompleted = true;
+                        Monitor.PulseAll(retirement.Locker);
+                    }
+                }
+                catch (Exception ex) {
+                    retryFailure ??= ex;
+                    disposed = false;
+                }
+                if (disposed) {
+                    if (retirement.Error is not null) {
+                        try {
+                            using (LogCallbackGuard.EnterManager(manager)) {
+                                Notify(retirement.Error);
+                            }
+                        }
+                        catch { }
+                    }
+                    return;
+                }
+            }
+
+            if (retryFailure is not null && retryFailureReported == false) {
+                try {
+                    using (LogCallbackGuard.EnterManager(manager)) {
+                        Notify(retryFailure);
+                    }
+                }
+                catch { }
+                retryFailureReported = true;
+            }
+            try { Thread.Sleep(10); } catch { }
+        }
+    }
+
+    private void WaitForManagerUses(LogManager manager) {
+        while (true) {
+            try {
+                lock (ManagerLocker) {
+                    if (UseManagerCount.ContainsKey(manager) == false) {
+                        return;
+                    }
                     Monitor.Wait(ManagerLocker);
                 }
             }
-            try {
-                using (manager) {
-                    manager.Complete();
-                }
+            catch (ThreadInterruptedException) {
+                // Retry. A lease must reach zero before any manager resource is closed.
             }
-            finally {
-                lock (ManagerLocker) {
-                    Instance.CompletedManagers.Remove(manager);
-                }
+            catch (Exception ex) {
+                try { Notify(ex); } catch { }
+                try { Thread.Sleep(10); } catch { }
             }
         }
     }
