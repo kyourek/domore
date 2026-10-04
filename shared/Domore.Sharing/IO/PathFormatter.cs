@@ -22,7 +22,8 @@ internal sealed class PathFormatter {
 
     private static string Lookup(Environment.SpecialFolder folder) {
         if (FolderCache.TryGetValue(folder, out var path) == false) {
-            FolderCache[folder] = path = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
+            FolderCache[folder] = path =
+                Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
         }
         return path;
     }
@@ -31,43 +32,94 @@ internal sealed class PathFormatter {
         if (string.IsNullOrWhiteSpace(path)) {
             return "";
         }
+        var root = Path.GetPathRoot(path) ?? "";
         var parts = path
             .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Where(part => part != "")
             .ToArray();
+        var rootPartCount = root
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Count(part => part != "");
         if (parts.Length == 0) {
-            return "";
-        }
-        if (parts[0][parts[0].Length - 1] == Path.VolumeSeparatorChar) {
-            if (path.StartsWith($"{parts[0]}{Path.DirectorySeparatorChar}") ||
-                path.StartsWith($"{parts[0]}{Path.AltDirectorySeparatorChar}")) {
-                parts[0] = parts[0] + Path.DirectorySeparatorChar;
-            }
+            return root;
         }
         args = args ?? new Dictionary<string, Func<object>> {
             { "AppDomain.FriendlyName", () => AppDomain.CurrentDomain?.FriendlyName },
             { "Thread.Name", () => Thread.CurrentThread?.Name },
             { "Thread.ManagedThreadId", () => Thread.CurrentThread?.ManagedThreadId }
         };
-        foreach (var arg in args) {
-            var key = "{" + arg.Key + "}";
-            var val = default(string);
-            for (var i = 0; i < parts.Length; i++) {
-                var idx = parts[i].IndexOf(key, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0) {
-                    continue;
-                }
-                if (val == null) {
-                    val = $"{arg.Value?.Invoke()}";
-                    lock (InvalidFileNameChars) {
-                        val = new string(val.Select(c => InvalidFileNameChars.Contains(c) ? '_' : c).ToArray());
+        var replacements = args
+            .Select(arg => new KeyValuePair<string, Func<object>>("{" + arg.Key + "}", arg.Value))
+            .ToArray();
+        var values = new string[replacements.Length];
+        var resolved = new bool[replacements.Length];
+        string formatPart(string part) {
+            var builder = default(StringBuilder);
+            for (var index = 0; index < part.Length;) {
+                var match = -1;
+                for (var replacementIndex = 0; replacementIndex < replacements.Length; replacementIndex++) {
+                    var key = replacements[replacementIndex].Key;
+                    if (index + key.Length <= part.Length &&
+                        string.Compare(part, index, key, 0, key.Length, StringComparison.OrdinalIgnoreCase) == 0) {
+                        match = replacementIndex;
+                        break;
                     }
                 }
-                parts[i] = parts[i].Remove(idx, key.Length);
-                parts[i] = parts[i].Insert(idx, val);
+                if (match < 0) {
+                    builder?.Append(part[index]);
+                    index++;
+                    continue;
+                }
+                if (builder is null) {
+                    builder = new StringBuilder(part.Length);
+                    builder.Append(part, 0, index);
+                }
+                if (resolved[match] == false) {
+                    var
+                    value = $"{replacements[match].Value?.Invoke()}";
+                    value = new string([.. value.Select(c => InvalidFileNameChars.Contains(c) ? '_' : c)]);
+                    values[match] = value;
+                    resolved[match] = true;
+                }
+                builder.Append(values[match]);
+                index += replacements[match].Key.Length;
+            }
+            return builder?.ToString() ?? part;
+        }
+        for (var i = 0; i < parts.Length; i++) {
+            parts[i] = formatPart(parts[i]);
+        }
+        var rootBuilder = new StringBuilder(root.Length);
+        var rootPartIndex = 0;
+        for (var i = 0; i < root.Length;) {
+            if (root[i] == Path.DirectorySeparatorChar || root[i] == Path.AltDirectorySeparatorChar) {
+                rootBuilder.Append(root[i++]);
+            }
+            else {
+                while (i < root.Length &&
+                       root[i] != Path.DirectorySeparatorChar &&
+                       root[i] != Path.AltDirectorySeparatorChar) {
+                    i++;
+                }
+                rootBuilder.Append(parts[rootPartIndex++]);
             }
         }
-        return Path.Combine(parts);
+        var formattedRoot = rootBuilder.ToString();
+        var relativeParts = parts.Skip(rootPartCount).ToArray();
+        if (relativeParts.Length == 0) {
+            return formattedRoot;
+        }
+        var formatted = Path.Combine(relativeParts);
+        if (root.Length == 0) {
+            return formatted;
+        }
+        var lastRootChar = formattedRoot[formattedRoot.Length - 1];
+        if (lastRootChar == Path.DirectorySeparatorChar ||
+            lastRootChar == Path.AltDirectorySeparatorChar ||
+            lastRootChar == Path.VolumeSeparatorChar) {
+            return formattedRoot + formatted;
+        }
+        return formattedRoot + Path.DirectorySeparatorChar + formatted;
     }
 
     public string Format(string path) {

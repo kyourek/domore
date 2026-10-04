@@ -1,10 +1,13 @@
-﻿using Domore.Logs.Mocks;
+using Domore.Logs.Mocks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
+using Domore.Logs.Service;
 using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs.Services; 
@@ -86,6 +89,217 @@ internal sealed class FileLogTest {
         if (Directory.Exists(TempDir)) {
             Directory.Delete(TempDir, recursive: true);
         }
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void LogCountLimitRejectsNonPositiveValues(int limit) {
+        var fileLog = new FileLog();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.LogCountLimit = limit);
+        Assert.That(fileLog.LogCountLimit, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void LogCountLimitCanBeChangedWhileFileLogIsRunning() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "test.log",
+            FlushInterval = TimeSpan.FromHours(1),
+            LogCountLimit = 5
+        };
+        var service = (ILogService)fileLog;
+        service.Log("test", "queued", LogSeverity.Info);
+
+        Assert.That(fileLog.Started, Is.True);
+        Assert.DoesNotThrow(() => fileLog.LogCountLimit = 2);
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.LogCountLimit = 0);
+        Assert.That(fileLog.LogCountLimit, Is.EqualTo(2));
+
+        service.Complete();
+
+        Assert.That(File.ReadAllText(Path.Combine(TempDir, "test.log")).Trim(), Is.EqualTo("queued"));
+    }
+
+    [TestCase(-2d)]
+    [TestCase(-1d)]
+    [TestCase(0d)]
+    [TestCase(0.5d)]
+    [TestCase(1.5d)]
+    [TestCase(2147483648d)]
+    public void FlushIntervalRejectsUnusableTimerDelays(double milliseconds) {
+        var fileLog = new FileLog();
+        var original = fileLog.FlushInterval;
+        var interval = TimeSpan.FromTicks((long)(milliseconds * TimeSpan.TicksPerMillisecond));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.FlushInterval = interval);
+        Assert.That(fileLog.FlushInterval, Is.EqualTo(original));
+    }
+
+    [TestCase(1d)]
+    [TestCase(2147483647d)]
+    public void FlushIntervalAcceptsTimerRepresentableBounds(double milliseconds) {
+        var fileLog = new FileLog();
+        var expected = TimeSpan.FromMilliseconds(milliseconds);
+
+        fileLog.FlushInterval = expected;
+
+        Assert.That(fileLog.FlushInterval, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CorrectedFlushIntervalAllowsWriterToStartAndPreservesFirstEntry() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "flush-interval.log"
+        };
+        var service = (ILogService)fileLog;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => fileLog.FlushInterval = TimeSpan.FromMilliseconds(-2));
+        Assert.That(fileLog.Started, Is.False);
+        fileLog.FlushInterval = TimeSpan.FromSeconds(1);
+        service.Log("test", "first entry", LogSeverity.Info);
+
+        Assert.That(fileLog.Started, Is.True);
+        service.Complete();
+
+        Assert.That(File.ReadAllText(Path.Combine(TempDir, "flush-interval.log")).Trim(), Is.EqualTo("first entry"));
+    }
+
+    [Test]
+    public void FailedTimerStartupCanRetryWithoutDroppingQueuedEntries() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "retry-flush-interval.log"
+        };
+        var intervalField = typeof(FileLog).GetField("_FlushInterval", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? typeof(FileLog).GetField("<FlushInterval>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(intervalField, Is.Not.Null);
+        intervalField.SetValue(fileLog, TimeSpan.FromMilliseconds(-2));
+        var service = (ILogService)fileLog;
+
+        Assert.Throws<InvalidOperationException>(() => service.Log("test", "first entry", LogSeverity.Info));
+        Assert.That(fileLog.Started, Is.False);
+        fileLog.FlushInterval = TimeSpan.FromSeconds(1);
+        service.Log("test", "retry entry", LogSeverity.Info);
+        service.Complete();
+
+        var actual = File.ReadAllLines(Path.Combine(TempDir, "retry-flush-interval.log"));
+        Assert.That(actual, Is.EqualTo(["first entry", "retry entry"]));
+    }
+
+    [Test]
+    public void CompletionRotatesFinalFlushAndAppliesRetention() {
+        Directory.CreateDirectory(TempDir);
+        var name = "final-flush.log";
+        var activePath = Path.Combine(TempDir, name);
+        var expiredArchive = Path.Combine(TempDir, "final-flush_20200101-000000-000+0000.log");
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = name,
+            FileSizeLimit = 1,
+            TotalSizeLimit = 1024,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)fileLog;
+        File.WriteAllText(expiredArchive, "expired");
+        service.Log("test", "pending final entry", LogSeverity.Info);
+
+        service.Complete();
+
+        var archives = Directory.GetFiles(TempDir, "final-flush_*.log", SearchOption.TopDirectoryOnly);
+        Assert.Multiple(() => {
+            Assert.That(fileLog.Complete, Is.True);
+            Assert.That(File.Exists(activePath), Is.False);
+            Assert.That(File.Exists(expiredArchive), Is.False);
+            Assert.That(archives, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(archives.Single()).Trim(), Is.EqualTo("pending final entry"));
+        });
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FileNameParentIsCreatedForAbsoluteAndRelativeNames(bool absoluteName) {
+        var configuredDirectory = Path.Combine(TempDir, "configured");
+        var activeDirectory = absoluteName
+            ? Path.Combine(TempDir, "actual", "nested")
+            : Path.Combine(configuredDirectory, "nested");
+        var activePath = Path.Combine(activeDirectory, "app.log");
+        var writer = new FileLog {
+            Directory = configuredDirectory,
+            Name = absoluteName ? activePath : Path.Combine("nested", "app.log"),
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)writer;
+
+        service.Log("test", "created in resolved parent", LogSeverity.Info);
+        service.Complete();
+
+        Assert.That(File.ReadAllLines(activePath), Is.EqualTo(["created in resolved parent"]));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FileNameParentControlsRotationAndRetention(bool absoluteName) {
+        var configuredDirectory = Path.Combine(TempDir, "configured");
+        var activeDirectory = absoluteName
+            ? Path.Combine(TempDir, "actual", "nested")
+            : Path.Combine(configuredDirectory, "nested");
+        Directory.CreateDirectory(configuredDirectory);
+        Directory.CreateDirectory(activeDirectory);
+        var archiveName = "app_20200101-000000-000+0000.log";
+        var unrelatedArchive = Path.Combine(configuredDirectory, archiveName);
+        var expiredArchive = Path.Combine(activeDirectory, archiveName);
+        var oversizedArchive = Path.Combine(activeDirectory,
+            "app_" + DateTime.UtcNow.AddHours(-1).ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "+0000.log");
+        File.WriteAllText(unrelatedArchive, "another directory's archive");
+        File.WriteAllText(expiredArchive, "expired");
+        File.WriteAllText(oversizedArchive, new string('x', 2048));
+        var activePath = Path.Combine(activeDirectory, "app.log");
+        var writer = new FileLog {
+            Directory = configuredDirectory,
+            Name = absoluteName ? activePath : Path.Combine("nested", "app.log"),
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            TotalSizeLimit = 1024,
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var service = (ILogService)writer;
+
+        service.Log("test", "resolved parent archive", LogSeverity.Info);
+        service.Complete();
+
+        var archives = Directory.GetFiles(activeDirectory, "app_*.log");
+        Assert.Multiple(() => {
+            Assert.That(File.Exists(activePath), Is.False);
+            Assert.That(File.Exists(expiredArchive), Is.False);
+            Assert.That(File.Exists(oversizedArchive), Is.False);
+            Assert.That(File.ReadAllText(unrelatedArchive), Is.EqualTo("another directory's archive"));
+            Assert.That(archives, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllLines(archives.Single()), Is.EqualTo(["resolved parent archive"]));
+            Assert.That(Directory.GetFiles(configuredDirectory, "app_*.log"), Is.EqualTo([unrelatedArchive]));
+        });
+    }
+
+    [Test]
+    public void AppendPreservesFileCreatedAfterMissingStateWasCached() {
+        var writer = new FileLog {
+            Directory = TempDir,
+            Name = "append.log",
+            FlushInterval = TimeSpan.FromHours(1)
+        };
+        var property = typeof(FileLog).GetProperty("FileInfo", BindingFlags.Instance | BindingFlags.NonPublic);
+        var file = (FileInfo)property.GetValue(writer);
+        Assert.That(file.Exists, Is.False);
+        Directory.CreateDirectory(TempDir);
+        File.WriteAllLines(file.FullName, ["other writer's data"]);
+        var service = (ILogService)writer;
+
+        service.Log("test", "logger's data", LogSeverity.Info);
+        service.Complete();
+
+        Assert.That(File.ReadAllLines(file.FullName), Is.EqualTo(["other writer's data", "logger's data"]));
     }
 
     [Test]
@@ -186,7 +400,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(3));
     }
 
@@ -206,7 +420,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*.{extension}", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(3));
     }
 
@@ -227,7 +441,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(1));
     }
 
@@ -248,7 +462,7 @@ internal sealed class FileLogTest {
         Log.Critical("That's all");
         Thread.Sleep(100);
         Logging.Complete();
-        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???.{extension}", SearchOption.TopDirectoryOnly);
+        var datedLogs = Directory.GetFiles(TempDir, $"{name}_????????-??????-???*.{extension}", SearchOption.TopDirectoryOnly);
         Assert.That(datedLogs.Length, Is.EqualTo(1));
     }
 
@@ -290,6 +504,76 @@ internal sealed class FileLogTest {
         Logging.Complete();
         var files = Directory.GetFiles(fileDir);
         Assert.That(files.Length, Is.Zero);
+    }
+
+    [Test]
+    public void ArchiveTimestampsUseLocalTimeAndPreserveOffsets() {
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "archive.log"
+        };
+        var fileDateNameMethod = typeof(FileLog).GetMethod("FileDateName", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fileDateMethod = typeof(FileLog).GetMethod("FileDate", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(fileDateNameMethod, Is.Not.Null);
+        Assert.That(fileDateMethod, Is.Not.Null);
+
+        var before = DateTime.UtcNow;
+        var generatedName = (string)fileDateNameMethod.Invoke(fileLog, null);
+        var generatedDate = (DateTime?)fileDateMethod.Invoke(fileLog, [generatedName]);
+        var legacyDate = (DateTime?)fileDateMethod.Invoke(fileLog, ["archive_20260115-120000-000.log"]);
+        var expectedLocalText = generatedDate.Value.ToLocalTime().ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
+        var offset = TimeZoneInfo.Local.GetUtcOffset(generatedDate.Value);
+        var offsetMinutes = (int)offset.TotalMinutes;
+        var absoluteOffsetMinutes = Math.Abs(offsetMinutes);
+        var expectedOffsetText = $"{(offsetMinutes < 0 ? "-" : "+")}{absoluteOffsetMinutes / 60:00}{absoluteOffsetMinutes % 60:00}.log";
+
+        Assert.Multiple(() => {
+            Assert.That(generatedName.Substring("archive_".Length, 19), Is.EqualTo(expectedLocalText));
+            Assert.That(generatedName, Does.EndWith(expectedOffsetText));
+            Assert.That(generatedDate.HasValue, Is.True);
+            Assert.That(generatedDate.Value.Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(generatedDate.Value, Is.InRange(before.AddSeconds(-1), DateTime.UtcNow.AddSeconds(1)));
+            Assert.That(legacyDate.HasValue, Is.True);
+            Assert.That(legacyDate.Value.Kind, Is.EqualTo(DateTimeKind.Local));
+        });
+    }
+
+    [Test]
+    public void InvalidArchiveDatesDoNotAbortRetention() {
+        Directory.CreateDirectory(TempDir);
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "archive.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            TotalSizeLimit = long.MaxValue
+        };
+        var expiredArchive = Path.Combine(TempDir, "archive_20200101-000000-000.log");
+        var invalidArchives = new[] {
+            "archive_20261301-000000-000.log",
+            "archive_20260230-000000-000.log",
+            "archive_20230229-000000-000.log",
+            "archive_20260101-246000-000.log"
+        }.Select(name => Path.Combine(TempDir, name)).ToArray();
+        File.WriteAllText(Path.Combine(TempDir, "archive.log"), "trigger rotation");
+        File.WriteAllText(expiredArchive, "expired");
+        foreach (var path in invalidArchives) {
+            File.WriteAllText(path, "invalid");
+        }
+
+        var fileInfoProperty = typeof(FileLog).GetProperty("FileInfo", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fileDateMethod = typeof(FileLog).GetMethod("FileDate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var rotateMethod = typeof(FileLog).GetMethod("Rotate", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(fileInfoProperty, Is.Not.Null);
+        Assert.That(fileDateMethod, Is.Not.Null);
+        Assert.That(rotateMethod, Is.Not.Null);
+        fileInfoProperty.GetValue(fileLog);
+
+        Assert.That((DateTime?)fileDateMethod.Invoke(fileLog, ["another_20200101-000000-000.log"]), Is.Null);
+        Assert.That((DateTime?)fileDateMethod.Invoke(fileLog, ["archive_20200101-000000-000.txt"]), Is.Null);
+        Assert.DoesNotThrow(() => rotateMethod.Invoke(fileLog, null));
+        Assert.That(File.Exists(expiredArchive), Is.False);
+        Assert.That(invalidArchives.All(File.Exists), Is.True);
     }
 
     [Test]

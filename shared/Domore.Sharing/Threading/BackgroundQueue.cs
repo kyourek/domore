@@ -10,6 +10,9 @@ internal sealed class BackgroundQueue : IDisposable {
     private readonly object ThreadLocker = new();
     private readonly BlockingCollection<Action> Collection = new();
 
+    public bool ThreadIsCurrentThread =>
+        Thread == Thread.CurrentThread;
+
     private void ThreadStart() {
         for (; ; ) {
             var action = default(Action);

@@ -1,8 +1,18 @@
 ﻿using Domore.Conf;
 using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogConfFile : IDisposable {
+    private sealed class Target {
+        [ConfPopulatedCallback]
+        private void Populate(IConf conf) {
+            // This callback runs for explicit and watcher-driven applications.
+            // Resolve and lease one manager for every pair in this file.
+            Logging.Configure(target => conf.Configure(target, key: ""));
+        }
+    }
+
     private readonly ConfFile Agent;
 
     private void Dispose(bool disposing) {
@@ -12,7 +22,7 @@ internal sealed class LogConfFile : IDisposable {
     }
 
     public LogConfFile(string path) {
-        Agent = new ConfFile(path, key: "", target: Logging.Config);
+        Agent = new ConfFile(path, key: "", target: new Target());
     }
 
     public void Configure(bool? watch = null) {

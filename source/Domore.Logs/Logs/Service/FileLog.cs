@@ -2,30 +2,41 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using DIRECTORY = System.IO.Directory;
 
-namespace Domore.Logs.Service; 
+namespace Domore.Logs.Service;
+
 internal sealed class FileLog : ILogService {
-    private readonly object Locker = new();
     private readonly ConcurrentQueue<string> Queue = new();
     private readonly PathFormatter PathFormatter = new();
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        Locker = new();
 
     private Timer Timer;
 
-    public string FileName => _FileName ??= FileInfo.Name;
+    public string FileName => _FileName ??=
+        FileInfo.Name;
     private string _FileName;
 
-    public string FileNameWithoutExtension => _FileNameWithoutExtension ??= Path.GetFileNameWithoutExtension(FileName);
+    public string FileNameWithoutExtension => _FileNameWithoutExtension ??=
+        Path.GetFileNameWithoutExtension(FileName);
     private string _FileNameWithoutExtension;
 
-    public string FileExtension => _FileExtension ??= Path.GetExtension(FileName);
+    public string FileExtension => _FileExtension ??=
+        Path.GetExtension(FileName);
     private string _FileExtension;
 
-    private FileInfo FileInfo => _FileInfo ??= new(
-        Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
+    private FileInfo FileInfo => _FileInfo ??=
+        new(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
     private FileInfo _FileInfo;
 
     private DirectoryInfo DirectoryInfo => _DirectoryInfo ??= new(
@@ -35,8 +46,12 @@ internal sealed class FileLog : ILogService {
     private DirectoryInfo _DirectoryInfo;
 
     private string FileDateName() {
-        var dt = DateTime.Now;
-        return $"{FileNameWithoutExtension}_{dt.Year}{dt.Month:00}{dt.Day:00}-{dt.Hour:00}{dt.Minute:00}{dt.Second:00}-{dt.Millisecond:000}{FileExtension}";
+        var now = DateTimeOffset.Now;
+        var offsetMinutes = (int)now.Offset.TotalMinutes;
+        var absoluteOffsetMinutes = Math.Abs(offsetMinutes);
+        var offset = $"{(offsetMinutes < 0 ? "-" : "+")}{absoluteOffsetMinutes / 60:00}{absoluteOffsetMinutes % 60:00}";
+        var date = now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
+        return $"{FileNameWithoutExtension}_{date}{offset}{FileExtension}";
     }
 
     private DateTime? FileDate(string name) {
@@ -44,41 +59,40 @@ internal sealed class FileLog : ILogService {
             return null;
         }
         var prefix = $"{FileNameWithoutExtension}_";
-        if (prefix.Length + FileExtension.Length >= name.Length) {
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !name.EndsWith(FileExtension, StringComparison.OrdinalIgnoreCase) ||
+            prefix.Length + FileExtension.Length >= name.Length) {
             return null;
         }
-        var date = name.Substring(prefix.Length).Substring(0, name.Length - prefix.Length - FileExtension.Length);
-        if (date.Length != 19) {
+        var date = name.Substring(prefix.Length, name.Length - prefix.Length - FileExtension.Length);
+        var hasOffset = date.Length == 24 && (date[19] == '+' || date[19] == '-');
+        if (date.Length != 19 && hasOffset == false) {
             return null;
         }
-        if (date[8] != '-') {
+        if (!DateTime.TryParseExact(
+            date.Substring(0, 19),
+            "yyyyMMdd-HHmmss-fff",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var wallTime)) {
             return null;
         }
-        if (date[15] != '-') {
+        if (hasOffset == false) {
+            return DateTime.SpecifyKind(wallTime, DateTimeKind.Local);
+        }
+        if (!int.TryParse(date.Substring(20, 2), NumberStyles.None, CultureInfo.InvariantCulture, out var offsetHour) ||
+            !int.TryParse(date.Substring(22, 2), NumberStyles.None, CultureInfo.InvariantCulture, out var offsetMinute) ||
+            offsetHour > 14 || offsetMinute > 59 || (offsetHour == 14 && offsetMinute != 0)) {
             return null;
         }
-        if (!int.TryParse(date.Substring(0, 4), out var year)) {
+        var offsetSign = date[19] == '-' ? -1 : 1;
+        var offsetValue = TimeSpan.FromMinutes(offsetSign * (offsetHour * 60 + offsetMinute));
+        try {
+            return new DateTimeOffset(wallTime, offsetValue).UtcDateTime;
+        }
+        catch (ArgumentException) {
             return null;
         }
-        if (!int.TryParse(date.Substring(4, 2), out var month)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(6, 2), out var day)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(9, 2), out var hour)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(11, 2), out var minute)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(13, 2), out var second)) {
-            return null;
-        }
-        if (!int.TryParse(date.Substring(16, 3), out var millisecond)) {
-            return null;
-        }
-        return new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Utc);
     }
 
     private void Rotate() {
@@ -86,6 +100,7 @@ internal sealed class FileLog : ILogService {
         if (fileInfo == null) {
             return;
         }
+        var directoryInfo = fileInfo.Directory;
         fileInfo.Refresh();
         var exists = fileInfo.Exists;
         if (exists == false) {
@@ -96,7 +111,7 @@ internal sealed class FileLog : ILogService {
             return;
         }
         var nextName = FileDateName();
-        var nextPath = Path.Combine(DirectoryInfo.FullName, nextName);
+        var nextPath = Path.Combine(directoryInfo.FullName, nextName);
         try {
             fileInfo.MoveTo(nextPath);
         }
@@ -109,11 +124,11 @@ internal sealed class FileLog : ILogService {
         _FileInfo = null;
         var now = DateTime.UtcNow;
         var fileSearchPattern = $"{FileNameWithoutExtension}_*{FileExtension}";
-        var files = DirectoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
+        var files = directoryInfo.GetFiles(fileSearchPattern, SearchOption.TopDirectoryOnly);
         var items = files
             .Select(file => new { File = file, Date = FileDate(file.Name) })
             .Where(item => item.Date.HasValue)
-            .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value })
+            .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value.ToUniversalTime() })
             .OrderByDescending(item => item.Age)
             .ToList();
         var itemsToDelete = items
@@ -131,17 +146,14 @@ internal sealed class FileLog : ILogService {
     }
 
     private void Log(IEnumerable<string> lines) {
+        var fileInfo = FileInfo;
+        var directoryInfo = fileInfo.Directory;
         void log() {
-            if (DirectoryInfo.Exists == false) {
-                DIRECTORY.CreateDirectory(DirectoryInfo.FullName);
-                DirectoryInfo.Refresh();
+            if (directoryInfo.Exists == false) {
+                DIRECTORY.CreateDirectory(directoryInfo.FullName);
+                directoryInfo.Refresh();
             }
-            if (FileInfo.Exists == false) {
-                using (FileInfo.Create()) {
-                }
-                FileInfo.Refresh();
-            }
-            File.AppendAllLines(FileInfo.FullName, lines);
+            File.AppendAllLines(fileInfo.FullName, lines);
         }
         for (var retry = 1; ; retry++) {
             try {
@@ -158,62 +170,142 @@ internal sealed class FileLog : ILogService {
             if (delay > 0) {
                 Thread.Sleep(delay);
             }
-            DirectoryInfo.Refresh();
-            FileInfo.Refresh();
+            directoryInfo.Refresh();
+            fileInfo.Refresh();
         }
     }
 
+    private void Flush(IEnumerable<string> lines) {
+        Log(lines);
+        Rotate();
+    }
+
     private void TimerCallback(object _) {
-        using (Timer) {
-            for (; ; ) {
-                lock (Locker) {
-                    if (Complete) {
-                        break;
-                    }
-                    if (Queue.Count == 0) {
-                        break;
-                    }
-                    var limit = LogCountLimit;
-                    var lines = new List<string>(capacity: limit);
-                    for (; ; ) {
-                        if (lines.Count >= limit) {
+        try {
+            using (Timer) {
+                for (; ; ) {
+                    lock (Locker) {
+                        if (Complete) {
                             break;
                         }
-                        var dequeued = Queue.TryDequeue(out var line);
-                        if (dequeued == false) {
+                        if (Queue.Count == 0) {
                             break;
                         }
-                        lines.Add(line);
-                    }
-                    if (lines.Count > 0) {
-                        try {
-                            Log(lines);
-                            Rotate();
+                        var limit = LogCountLimit;
+                        if (limit <= 0) {
+                            throw new InvalidOperationException(
+                                $"{nameof(LogCountLimit)} must be greater than zero.");
                         }
-                        catch (Exception ex) {
-                            Logging.Notify(ex);
+                        var lines = new List<string>(capacity: limit);
+                        for (; ; ) {
+                            if (lines.Count >= limit) {
+                                break;
+                            }
+                            var dequeued = Queue.TryDequeue(out var line);
+                            if (dequeued == false) {
+                                break;
+                            }
+                            lines.Add(line);
+                        }
+                        if (lines.Count > 0) {
+                            try {
+                                Flush(lines);
+                            }
+                            catch (Exception ex) {
+                                Logging.Notify(ex);
+                            }
                         }
                     }
                 }
             }
         }
-        Start();
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+        finally {
+            try {
+                lock (Locker) {
+                    if (Complete == false) {
+                        try {
+                            Start();
+                        }
+                        catch (Exception ex) {
+                            Started = false;
+                            Logging.Notify(ex);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
+            }
+        }
+    }
+
+    private static int ValidateFlushIntervalInMilliseconds(TimeSpan interval, string paramName = null) {
+        var maxTicks = (long)int.MaxValue * TimeSpan.TicksPerMillisecond;
+        var invalid = interval.Ticks < TimeSpan.TicksPerMillisecond ||
+                      interval.Ticks % TimeSpan.TicksPerMillisecond != 0 ||
+                      interval.Ticks > maxTicks;
+        if (invalid) {
+            if (paramName is not null) {
+                throw new ArgumentOutOfRangeException(paramName, interval,
+                    $"The flush interval must be a whole number of milliseconds between 1 and {int.MaxValue}.");
+            }
+            else {
+                throw new InvalidOperationException("The value is invalid.");
+            }
+        }
+        return (int)interval.TotalMilliseconds;
     }
 
     private void Start() {
         if (Complete) {
             return;
         }
-        Timer = new(TimerCallback, state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite);
+        Timer = new(TimerCallback,
+                    state: null,
+                    dueTime: ValidateFlushIntervalInMilliseconds(FlushInterval),
+                    period: Timeout.Infinite);
     }
 
     public int IORetryLimit { get; set; } = 5;
     public int IORetryDelay { get; set; } = 10;
-    public int LogCountLimit { get; set; } = 100;
     public long FileSizeLimit { get; set; } = 100000;
     public long TotalSizeLimit { get; set; } = 100000000;
     public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
-    public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(2.5);
+
+    public TimeSpan FlushInterval {
+        get {
+            lock (Locker) {
+                return _FlushInterval;
+            }
+        }
+        set {
+            ValidateFlushIntervalInMilliseconds(value, nameof(FlushInterval));
+            lock (Locker) {
+                _FlushInterval = value;
+            }
+        }
+    }
+    private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
+
+    public int LogCountLimit {
+        get {
+            lock (Locker) {
+                return field;
+            }
+        }
+        set {
+            if (value <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(LogCountLimit), value,
+                    "The log count limit must be greater than zero.");
+            }
+            lock (Locker) {
+                field = value;
+            }
+        }
+    } = 100;
 
     public string Directory {
         get => _Directory;
@@ -270,7 +362,7 @@ internal sealed class FileLog : ILogService {
             }
             if (lines.Count > 0) {
                 try {
-                    Log(lines);
+                    Flush(lines);
                 }
                 catch (Exception ex) {
                     Logging.Notify(ex);
@@ -280,14 +372,15 @@ internal sealed class FileLog : ILogService {
     }
 
     void ILogService.Log(string name, string data, LogSeverity severity) {
-        if (Started == false) {
-            lock (Locker) {
-                if (Started == false) {
-                    Started = true;
-                    Start();
-                }
+        lock (Locker) {
+            if (Complete) {
+                return;
+            }
+            Queue.Enqueue(data);
+            if (Started == false) {
+                Start();
+                Started = true;
             }
         }
-        Queue.Enqueue(data);
     }
 }

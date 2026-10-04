@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogEntry : ILogEntry {
     private static readonly Dictionary<LogSeverity, string> Sev = new() {
         { LogSeverity.Critical, "crt" },
@@ -13,11 +15,13 @@ internal sealed class LogEntry : ILogEntry {
     };
 
     private readonly Dictionary<string, string> Format = [];
+    private readonly string[] EntryList;
+    private readonly ReadOnlyCollection<string> EntryView;
 
     private DateTime LocalDate => _LocalDate ??= EntryDate.ToLocalTime();
     private DateTime? _LocalDate;
 
-    private string GetFormat(string format) {            
+    private string GetFormat(string format) {
         var s = format
             .Replace("{log}", LogName)
             .Replace("{sev}", Sev[EntrySeverity])
@@ -43,12 +47,22 @@ internal sealed class LogEntry : ILogEntry {
 
     public Type LogType { get; }
     public DateTime EntryDate { get; }
-    public string[] EntryList { get; }
     public LogSeverity EntrySeverity { get; }
 
-    public LogEntry(Type logType, DateTime entryDate, LogSeverity entrySeverity, string[] entryList) {
+    public LogEntry(Type logType,
+                    DateTime entryDate,
+                    LogSeverity entrySeverity,
+                    string[] entryList,
+                    bool takeOwnership = false) {
+        if (entryList is null) {
+            throw new ArgumentNullException(nameof(entryList));
+        }
         LogType = logType ?? throw new ArgumentNullException(nameof(logType));
-        EntryList = entryList ?? throw new ArgumentNullException(nameof(entryList));
+        /*
+         * Ownership may only be transferred when no caller retains the array.
+         */
+        EntryList = takeOwnership ? entryList : (string[])entryList.Clone();
+        EntryView = Array.AsReadOnly(EntryList);
         EntryDate = entryDate;
         EntrySeverity = entrySeverity;
     }
@@ -64,5 +78,5 @@ internal sealed class LogEntry : ILogEntry {
     Type ILogEntry.LogType => LogType;
     DateTime ILogEntry.LogDate => EntryDate;
     LogSeverity ILogEntry.LogSeverity => EntrySeverity;
-    IEnumerable<string> ILogEntry.LogList => EntryList;
+    IEnumerable<string> ILogEntry.LogList => EntryView;
 }

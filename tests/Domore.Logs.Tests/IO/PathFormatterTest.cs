@@ -1,6 +1,8 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 
 namespace Domore.IO; 
@@ -226,6 +228,81 @@ public sealed class PathFormatterTest {
         var actual = Subject.Format(@"C:\path\to\file.txt");
         var expected = @"C:\path\to\file.txt";
         Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CurrentDriveRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("A current-drive-rooted path is a Windows path.");
+        }
+
+        var actual = Subject.Format(@"\logs\app.log");
+
+        Assert.That(actual, Is.EqualTo(@"\logs\app.log"));
+    }
+
+    [TestCase(@"\\server\share\logs\app.log")]
+    [TestCase(@"\\?\UNC\server\share\logs\app.log")]
+    [TestCase(@"\\?\C:\logs\app.log")]
+    public void UncAndExtendedWindowsRootsArePreserved(string path) {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format(path);
+
+        Assert.That(actual, Is.EqualTo(path));
+    }
+
+    [Test]
+    public void TokensInUncRootAreStillFormatted() {
+        if (Path.DirectorySeparatorChar != '\\') {
+            Assert.Ignore("UNC paths are Windows paths.");
+        }
+
+        var actual = Subject.Format($@"\\{{thread.managedthreadid}}\share\app.log");
+        var expected = $@"\\{Thread.CurrentThread.ManagedThreadId}\share\app.log";
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void UnixAbsoluteRootIsPreserved() {
+        if (Path.DirectorySeparatorChar != '/') {
+            Assert.Ignore("A Unix absolute path requires a Unix runtime.");
+        }
+
+        var actual = Subject.Format("/var/log/app.log");
+
+        Assert.That(actual, Is.EqualTo("/var/log/app.log"));
+    }
+
+    [TestCase("{Thread.ManagedThreadId}-{thread.managedthreadid}.log", "-")]
+    [TestCase("{THREAD.MANAGEDTHREADID}{Thread.ManagedThreadId}.log", "")]
+    public void EveryRepeatedMixedCaseTokenIsReplaced(string path, string separator) {
+        var id = Thread.CurrentThread.ManagedThreadId;
+
+        Assert.That(Subject.Format(path), Is.EqualTo($"{id}{separator}{id}.log"));
+    }
+
+    [Test]
+    public void RepeatedTokenValuesAreResolvedOnceWithoutExpandingInsertedTokens() {
+        var firstCalls = 0;
+        var secondCalls = 0;
+        var args = new Dictionary<string, Func<object>> {
+            ["first"] = () => { firstCalls++; return "{second}/value"; },
+            ["second"] = () => { secondCalls++; return "expanded"; }
+        };
+        var format = typeof(PathFormatter).GetMethod("Format", BindingFlags.Static | BindingFlags.NonPublic);
+        var path = Path.Combine("{first}-{FIRST}", "{first}-{second}.log");
+        var actual = (string)format.Invoke(null, [path, args]);
+        var expected = Path.Combine("{second}_value-{second}_value", "{second}_value-expanded.log");
+
+        Assert.Multiple(() => {
+            Assert.That(actual, Is.EqualTo(expected));
+            Assert.That(firstCalls, Is.EqualTo(1));
+            Assert.That(secondCalls, Is.EqualTo(1));
+        });
     }
 
     [Test]
