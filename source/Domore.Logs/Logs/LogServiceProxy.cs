@@ -103,6 +103,15 @@ internal sealed class LogServiceProxy {
     }
 
     public void Complete() {
-        Service.Complete();
+        var service = Interlocked.CompareExchange(ref _Service, null, null);
+        if (service == null) {
+            return;
+        }
+        try {
+            service.Complete();
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
     }
 }

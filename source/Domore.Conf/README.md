@@ -32,7 +32,10 @@ By default, keys begin with the target type's name (`AppSettings` in this exampl
 var settings = new AppSettings().ConfFrom("Port = 8080", key: "");
 ```
 
-Keys and property names are matched without regard to case. Values are converted using the invariant culture. Properties not mentioned in the text retain their existing values; an empty value such as `Port =` or `Host =` does not overwrite a property.
+Keys and property names are matched without regard to case. Values are converted using the invariant culture. Properties not
+mentioned in the text retain their existing values; an empty value such as `Port =` or `Host =` does not overwrite a
+property. Parent properties are populated before nested properties, so nested settings apply to the final parent object
+regardless of line order.
 
 ## Read a file
 
