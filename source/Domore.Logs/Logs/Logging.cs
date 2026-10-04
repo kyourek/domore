@@ -28,6 +28,23 @@ public sealed class Logging {
     private Logging() {
     }
 
+    private static void NotifyCompleted() {
+        var completed = Completed;
+        if (completed == null) {
+            return;
+        }
+        foreach (EventHandler handler in completed.GetInvocationList()) {
+            try {
+                handler(null, EventArgs.Empty);
+            }
+            catch (Exception ex) {
+                Notify(ex);
+            }
+        }
+    }
+
+    internal static event EventHandler Completed;
+
     internal bool Log(Logger logger, LogSeverity severity) {
         try {
             return Manager.Log(severity, logger?.Type);
@@ -147,6 +164,7 @@ public sealed class Logging {
                 catch (Exception ex) {
                     Notify(ex);
                 }
+                NotifyCompleted();
             }
             return queueDrained;
         }
