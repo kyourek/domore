@@ -108,7 +108,8 @@ public sealed class LogFormatterRepairTest {
         Assert.That(actual[0], Is.EqualTo("0"));
         Assert.That(actual[1], Is.EqualTo("1"));
         Assert.That(actual[2], Does.Contain("truncated"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => formatter.EnumerableItemLimit = 0);
+        var error = Assert.Throws<ArgumentOutOfRangeException>(() => formatter.EnumerableItemLimit = 0);
+        Assert.That(error.ParamName, Is.EqualTo("EnumerableItemLimit"));
     }
 
     [Test]
