@@ -207,6 +207,21 @@ public sealed class Logging {
         new { Log = Instance.GetManager() };
 
     /// <summary>
+    /// Gets queue limits, pending work, and drop counters for a named logging destination.
+    /// </summary>
+    /// <param name="name">The configured logging destination name.</param>
+    /// <returns>
+    /// The destination's status, or null when that destination has not been configured or used.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
+    public static LogQueueStatus GetQueueStatus(string name) {
+        if (name is null) {
+            throw new ArgumentNullException(nameof(name));
+        }
+        return Instance.UseManager(manager => manager.GetQueueStatus(name));
+    }
+
+    /// <summary>
     /// Gets an instance of <see cref="ILog"/> for the specified <paramref name="type"/>.
     /// </summary>
     /// <param name="type">The type whose log is returned.</param>

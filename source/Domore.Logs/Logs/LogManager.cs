@@ -23,6 +23,9 @@ internal sealed class LogManager : IDisposable {
     public LogServiceProxy this[string name] =>
         Services[name];
 
+    public LogQueueStatus GetQueueStatus(string name) =>
+        Services.GetQueueStatus(name);
+
     public LogManager() {
         Services = new LogServiceCollection(this);
     }
