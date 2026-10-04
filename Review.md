@@ -24,9 +24,9 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 14 | Medium | LogSubscriptionProxy | Resolved: Threshold cache invalidation race can make a stale threshold permanent |
 | 15 | Medium | LogSubscriptionCollection | Resolved: `Remove`/`Clear` leave the proxy subscribed to the agent's `ThresholdChanged` |
 | 16 | Medium | BackgroundQueue | Item added before the worker thread starts can be lost by a concurrent `Complete()` |
-| 17 | Medium | Logs.Conf | `Logging.Config` snapshots the manager. After `Logging.Complete()`, file hot-reload configures a dead manager |
-| 18 | Medium | Logs.Conf | `Log.Conf.Configure` sets `File` before success. A failure leaves `Configured == true`, and it can't be retried |
-| 19 | Medium | Logs.Conf | Hot-reload errors (`ConfigureError`/`WatchError`) are silently dropped |
+| 17 | Medium | Logs.Conf | Resolved: `Logging.Config` snapshots the manager. After `Logging.Complete()`, file hot-reload configures a dead manager |
+| 18 | Medium | Logs.Conf | Resolved: `Log.Conf.Configure` sets `File` before success. A failure leaves `Configured == true`, and it can't be retried |
+| 19 | Medium | Logs.Conf | Resolved: Hot-reload errors (`ConfigureError`/`WatchError`) are silently dropped |
 | 20 | Medium | FileLog | Rotation names use local time but are parsed as UTC, so file ages are skewed by the UTC offset |
 | 21 | Medium | FileLog | `FileDate` can throw (`new DateTime` with invalid parts), and a failed `Delete` aborts cleanup. Old logs are never pruned |
 | 22 | Medium | FileLog/PathFormatter | `{Thread.*}` tokens resolve on random thread-pool threads. The file name changes after rotation, and caches go stale |
@@ -313,7 +313,7 @@ The entry is lost. This affects short-lived apps and tests that log from one thr
 
 ---
 
-## 17. Conf hot reload targets a dead manager after `Logging.Complete()`. **Medium**
+## 17. Conf hot reload targets a dead manager after `Logging.Complete()`. **Medium** (Resolved)
 
 **Files:** `Logs/Logging.cs` lines 86–87, `Logs.Conf/Logs/LogConfFile.cs` line 15, `Logs.Conf/Logs/Log.cs`
 
@@ -330,7 +330,7 @@ The entry is lost. This affects short-lived apps and tests that log from one thr
 
 ---
 
-## 18. `Log.Conf.Configure` cannot be retried after a failure, and `Configured` is reported too early. **Medium**
+## 18. `Log.Conf.Configure` cannot be retried after a failure, and `Configured` is reported too early. **Medium** (Resolved)
 
 **File:** `Logs.Conf/Logs/Log.cs` lines 10–21
 
@@ -354,7 +354,7 @@ Validate `path` (`ArgumentNullException`). This is not a log method, so throwing
 
 ---
 
-## 19. Hot-reload errors are silently swallowed. **Medium**
+## 19. Hot-reload errors are silently swallowed. **Medium** (Resolved)
 
 **File:** `Logs.Conf/Logs/LogConfFile.cs`
 
