@@ -75,4 +75,27 @@ internal sealed class ConsoleLogTest {
             output.Dispose();
         }
     }
+
+    [Test]
+    public void ConsoleLogWritesWhenColorSettingFails() {
+        var log = new ConsoleLog();
+        log.Foreground[LogSeverity.Warn] = (ConsoleColor)int.MaxValue;
+        var service = (ILogService)log;
+        var output = new StringWriter();
+        var original = Console.Out;
+
+        try {
+            Console.SetOut(output);
+
+            Assert.DoesNotThrow(() => service.Log(
+                nameof(ConsoleLogWritesWhenColorSettingFails),
+                "color failure line",
+                LogSeverity.Warn));
+            Assert.That(output.ToString(), Is.EqualTo($"color failure line{Environment.NewLine}"));
+        }
+        finally {
+            Console.SetOut(original);
+            output.Dispose();
+        }
+    }
 }

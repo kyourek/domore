@@ -343,7 +343,7 @@ internal sealed class FileLog : ILogService {
     }
 
     public string Directory {
-        get => _Directory;
+        get => string.IsNullOrEmpty(_Directory) ? "." : _Directory;
         set {
             if (_Directory != value) {
                 lock (Locker) {
@@ -363,7 +363,7 @@ internal sealed class FileLog : ILogService {
     private string _Directory;
 
     public string Name {
-        get => _Name;
+        get => string.IsNullOrEmpty(_Name) ? $"{AppDomain.CurrentDomain.FriendlyName}.log" : _Name;
         set {
             if (_Name != value) {
                 lock (Locker) {
