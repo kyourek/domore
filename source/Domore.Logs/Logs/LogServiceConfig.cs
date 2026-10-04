@@ -6,6 +6,7 @@ namespace Domore.Logs;
 internal sealed class LogServiceConfig {
     private readonly object Locker = new();
     private readonly Dictionary<string, LogTypeConfig> Type = [];
+    private LogTypeConfig _Default;
 
     private void Type_ThresholdChanged(object sender, EventArgs e) {
         var config = (LogTypeConfig)sender;
@@ -35,20 +36,27 @@ internal sealed class LogServiceConfig {
 
     public LogTypeConfig Default {
         get {
-            if (_Default == null) {
+            var @default = Interlocked.CompareExchange(ref _Default, null, null);
+            if (@default == null) {
                 lock (Locker) {
-                    if (_Default == null) {
-                        var @default = new LogTypeConfig();
-                        Thread.MemoryBarrier();
-                        _Default = @default;
-                        _Default.ThresholdChanged += Default_ThresholdChanged;
+                    @default = Interlocked.CompareExchange(ref _Default, null, null);
+                    if (@default == null) {
+                        @default = new LogTypeConfig();
+                        @default.ThresholdChanged += Default_ThresholdChanged;
+                        Interlocked.Exchange(ref _Default, @default);
                     }
                 }
             }
-            return _Default;
+            return @default;
         }
     }
-    private LogTypeConfig _Default;
+
+    public LogSeverity? DefaultThreshold {
+        get {
+            var @default = Interlocked.CompareExchange(ref _Default, null, null);
+            return @default?.Threshold;
+        }
+    }
 
     public IEnumerable<string> Names {
         get {
