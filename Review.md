@@ -23,7 +23,7 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 13 | Medium | LogServiceCollection | Resolved: The aggregate threshold used by `Enabled()` is wrong when type and default thresholds are mixed across services |
 | 14 | Medium | LogSubscriptionProxy | Resolved: Threshold cache invalidation race can make a stale threshold permanent |
 | 15 | Medium | LogSubscriptionCollection | Resolved: `Remove`/`Clear` leave the proxy subscribed to the agent's `ThresholdChanged` |
-| 16 | Medium | BackgroundQueue | Item added before the worker thread starts can be lost by a concurrent `Complete()` |
+| 16 | Medium | BackgroundQueue | Resolved: Item added before the worker thread starts can be lost by a concurrent `Complete()` |
 | 17 | Medium | Logs.Conf | Resolved: `Logging.Config` snapshots the manager. After `Logging.Complete()`, file hot-reload configures a dead manager |
 | 18 | Medium | Logs.Conf | Resolved: `Log.Conf.Configure` sets `File` before success. A failure leaves `Configured == true`, and it can't be retried |
 | 19 | Medium | Logs.Conf | Resolved: Hot-reload errors (`ConfigureError`/`WatchError`) are silently dropped |
@@ -32,7 +32,7 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 22 | Medium | FileLog/PathFormatter | Resolved: `{Thread.*}` tokens resolve on random thread-pool threads. The file name changes after rotation, and caches go stale |
 | 23 | Medium | LogEntry | Resolved: `{dat}`/`{tim}` formatting is culture-sensitive (calendar and time separator) |
 | 24 | Medium | ConsoleLog/FileLog | Resolved: Service properties mutated by Conf hot reload race with the logging thread (`Dictionary` corruption) |
-| 25 | Medium | Logging | Logs queued in memory are lost on process exit or crash unless `Complete()` is called |
+| 25 | Medium | Logging | Resolved: Logs queued in memory are lost on process exit or crash unless `Complete()` is called |
 | 26 | Medium | LogFormatter | Resolved: One bad item, or a `null` result from a custom formatter, replaces the whole message with an exception dump |
 | 27 | Low | LogFormatter | Unbounded `IEnumerable` expansion (infinite sequences, `IQueryable`) can hang or OOM the calling thread |
 | 28 | Low | LogManager | Every log call is fully formatted and queued even when nothing is enabled |
@@ -296,7 +296,7 @@ A thread in `ThresholdCache.GetOrAdd(type, factory)` calls `Agent.Threshold(type
 
 ---
 
-## 16. `BackgroundQueue` can lose the first item to a concurrent `Complete()`. **Medium**
+## 16. `BackgroundQueue` can lose the first item to a concurrent `Complete()`. **Medium** (Resolved)
 
 **File:** `shared/Domore.Sharing/Threading/BackgroundQueue.cs` lines 43–58, 66–96
 
@@ -429,7 +429,7 @@ Conf exposes `log[x].service.*`. For example, `log[f].service.flush interval = .
 
 ---
 
-## 25. Pending logs are lost on process exit or crash without `Complete()`. **Medium**
+## 25. Pending logs are lost on process exit or crash without `Complete()`. **Medium** (Resolved)
 
 **Files:** `Logs/Logging.cs`, `shared/.../BackgroundQueue.cs` (`IsBackground = true`), `Logs/Service/FileLog.cs` (timer-based flushing)
 

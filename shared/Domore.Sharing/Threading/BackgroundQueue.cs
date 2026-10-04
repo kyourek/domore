@@ -69,32 +69,21 @@ internal sealed class BackgroundQueue : IDisposable {
     public void Add(Action action) {
         if (action != null) {
             try {
-                Collection.Add(action);
-            }
-            catch (Exception ex) {
-                if (ex is ObjectDisposedException) {
-                    return;
-                }
-                if (ex is InvalidOperationException && Collection.IsAddingCompleted) {
-                    return;
-                }
-                if (ex is OperationCanceledException && Collection.IsAddingCompleted) {
-                    return;
-                }
-                throw;
-            }
-            if (Thread == null) {
-                lock (ThreadLocker) {
-                    if (Thread == null) {
-                        var thread = new Thread(ThreadStart) {
-                            Name = GetType().Name,
-                            IsBackground = true
-                        };
-                        Thread.MemoryBarrier();
-                        Thread = thread;
-                        Thread.Start();
+                if (Thread == null) {
+                    lock (ThreadLocker) {
+                        if (Thread == null) {
+                            var thread = new Thread(ThreadStart) {
+                                Name = GetType().Name,
+                                IsBackground = true
+                            };
+                            thread.Start();
+                            Thread = thread;
+                        }
                     }
                 }
+                Collection.Add(action);
+            }
+            catch {
             }
         }
     }
