@@ -161,6 +161,15 @@ public sealed class Logging {
     }
 
     /// <summary>
+    /// Gets or sets the maximum number of items expanded from an enumerable log argument.
+    /// The default is 100. Values must be positive.
+    /// </summary>
+    public static int EnumerableItemLimit {
+        get => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit);
+        set => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit = value);
+    }
+
+    /// <summary>
     /// Completes all logging.
     /// </summary>
     public static void Complete() {

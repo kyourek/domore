@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 
 namespace Domore.Logs;
@@ -22,13 +23,16 @@ internal sealed class LogEntry : ILogEntry {
     private DateTime? _LocalDate;
 
     private string GetFormat(string format) {
+        var severity = Sev.TryGetValue(EntrySeverity, out var abbreviation)
+            ? abbreviation
+            : EntrySeverity.ToString().ToLowerInvariant();
         var s = format
             .Replace("{log}", LogName)
-            .Replace("{sev}", Sev[EntrySeverity])
-            .Replace("{dat}", EntryDate.ToString("yyyy-MM-dd"))
-            .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff"))
-            .Replace("{loc.dat}", LocalDate.ToString("yyyy-MM-dd"))
-            .Replace("{loc.tim}", LocalDate.ToString("HH:mm:ss.fff"));
+            .Replace("{sev}", severity)
+            .Replace("{dat}", EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+            .Replace("{tim}", EntryDate.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture))
+            .Replace("{loc.dat}", LocalDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+            .Replace("{loc.tim}", LocalDate.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture));
         var logList = EntryList;
         if (logList.Length == 1) {
             return s == ""
