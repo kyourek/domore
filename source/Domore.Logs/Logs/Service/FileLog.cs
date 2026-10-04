@@ -45,21 +45,6 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
     private bool TimerStarting;
     private bool AdmissionClosed;
 
-    public string FileName {
-        get => field ??= FileInfo.Name;
-        private set;
-    }
-
-    public string FileNameWithoutExtension {
-        get => field ??= Path.GetFileNameWithoutExtension(FileName);
-        private set;
-    }
-
-    public string FileExtension {
-        get => field ??= Path.GetExtension(FileName);
-        private set;
-    }
-
     private FileInfo FileInfo {
         get => field ??= new(Path.Combine(DirectoryInfo.FullName, PathFormatter.Format(Name)));
         set;
@@ -72,6 +57,9 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                     Environment.ExpandEnvironmentVariables(Directory))));
         set;
     }
+
+    private static long SaturatingAdd(long value, long increment) =>
+        value > long.MaxValue - increment ? long.MaxValue : value + increment;
 
     private string FileDateName() {
         var now = DateTimeOffset.Now;
@@ -329,6 +317,21 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                 TimerStarting = false;
             }
         }
+    }
+
+    public string FileName {
+        get => field ??= FileInfo.Name;
+        private set;
+    }
+
+    public string FileNameWithoutExtension {
+        get => field ??= Path.GetFileNameWithoutExtension(FileName);
+        private set;
+    }
+
+    public string FileExtension {
+        get => field ??= Path.GetExtension(FileName);
+        private set;
     }
 
     public int IORetryLimit {
@@ -606,7 +609,4 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
             }
         }
     }
-
-    private static long SaturatingAdd(long value, long increment) =>
-        value > long.MaxValue - increment ? long.MaxValue : value + increment;
 }
