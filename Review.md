@@ -30,10 +30,10 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 20 | Medium | FileLog | Rotation names use local time but are parsed as UTC, so file ages are skewed by the UTC offset |
 | 21 | Medium | FileLog | `FileDate` can throw (`new DateTime` with invalid parts), and a failed `Delete` aborts cleanup. Old logs are never pruned |
 | 22 | Medium | FileLog/PathFormatter | `{Thread.*}` tokens resolve on random thread-pool threads. The file name changes after rotation, and caches go stale |
-| 23 | Medium | LogEntry | `{dat}`/`{tim}` formatting is culture-sensitive (calendar and time separator) |
+| 23 | Medium | LogEntry | Resolved: `{dat}`/`{tim}` formatting is culture-sensitive (calendar and time separator) |
 | 24 | Medium | ConsoleLog/FileLog | Service properties mutated by Conf hot reload race with the logging thread (`Dictionary` corruption) |
 | 25 | Medium | Logging | Logs queued in memory are lost on process exit or crash unless `Complete()` is called |
-| 26 | Medium | LogFormatter | One bad item, or a `null` result from a custom formatter, replaces the whole message with an exception dump |
+| 26 | Medium | LogFormatter | Resolved: One bad item, or a `null` result from a custom formatter, replaces the whole message with an exception dump |
 | 27 | Low | LogFormatter | Unbounded `IEnumerable` expansion (infinite sequences, `IQueryable`) can hang or OOM the calling thread |
 | 28 | Low | LogManager | Every log call is fully formatted and queued even when nothing is enabled |
 | 29 | Low | LogEntry | Undefined `LogSeverity` values cause a `KeyNotFoundException` in the formatter |
@@ -401,7 +401,7 @@ Validate `path` (`ArgumentNullException`). This is not a log method, so throwing
 
 ---
 
-## 23. `{dat}`/`{tim}` formatting is culture-sensitive. **Medium**
+## 23. `{dat}`/`{tim}` formatting is culture-sensitive. **Medium** (Resolved)
 
 **File:** `Logs/LogEntry.cs` lines 24–27
 
@@ -439,7 +439,7 @@ Entries sit in the `BackgroundQueue` and then in the `FileLog` queue for up to `
 
 ---
 
-## 26. One bad item replaces the whole message. **Medium**
+## 26. One bad item replaces the whole message. **Medium** (Resolved)
 
 **File:** `Logs/LogFormatter.cs` lines 19–38, 50–58
 

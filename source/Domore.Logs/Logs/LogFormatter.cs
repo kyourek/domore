@@ -16,29 +16,36 @@ internal sealed class LogFormatter {
                 : line);
     }
 
-    private IEnumerable<string> Format(object obj, bool expandEnumerable) {
-        if (obj == null) return new[] { "" };
-        if (obj is string s) return Split(s);
-        if (Lookup.IsEmpty == false) {
-            if (Lookup.TryGetValue(obj.GetType(), out var format)) {
-                if (format != null) {
-                    return format(obj);
+    private void Format(object obj, bool expandEnumerable, List<string> lines) {
+        try {
+            if (obj == null) {
+                lines.Add("");
+                return;
+            }
+            if (obj is string s) {
+                lines.AddRange(Split(s));
+                return;
+            }
+            if (Lookup.TryGetValue(obj.GetType(), out var format) && format != null) {
+                var formatted = format(obj);
+                if (formatted != null) {
+                    lines.AddRange(formatted);
+                    return;
                 }
             }
-        }
-        if (expandEnumerable && obj is IEnumerable enumerable) {
-            IEnumerable<IEnumerable<string>> format() {
+            if (expandEnumerable && obj is IEnumerable enumerable) {
                 foreach (var item in enumerable) {
-                    yield return Format(item, expandEnumerable: false);
+                    Format(item, expandEnumerable: false, lines);
                 }
+                return;
             }
-            return format().SelectMany(s => s);
+            lines.AddRange(Split(obj.ToString()));
         }
-        return Split(obj.ToString());
-    }
-
-    private IEnumerable<string> Format(object obj) {
-        return Format(obj, ExpandEnumerable);
+        catch (Exception ex) {
+            Logging.Notify(ex);
+            var message = ex.Message?.Replace("\r", " ").Replace("\n", " ");
+            lines.Add($"<format error: {ex.GetType().Name}: {message}>");
+        }
     }
 
     public bool ExpandEnumerable { get; set; } = true;
@@ -49,11 +56,10 @@ internal sealed class LogFormatter {
 
     public string[] Format(params object[] data) {
         if (data == null) return [""];
-        try {
-            return data.SelectMany(Format).ToArray();
+        var lines = new List<string>();
+        foreach (var obj in data) {
+            Format(obj, ExpandEnumerable, lines);
         }
-        catch (Exception ex) {
-            return Split($"{ex}").ToArray();
-        }
+        return lines.ToArray();
     }
 }
