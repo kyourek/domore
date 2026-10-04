@@ -29,6 +29,7 @@ public interface IConf {
     /// <param name="target">The object populated by the instance.</param>
     /// <param name="key">The key used to identify the items in the serialization source that are used to populate <paramref name="target"/>.</param>
     /// <returns>The populated <paramref name="target"/>.</returns>
+    /// <remarks>Pairs are applied in the order supplied by the content provider.</remarks>
     T Configure<T>(T target, string key = null);
 
     /// <summary>

@@ -5,3 +5,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Domore.Conf.Cli")]
 [assembly: InternalsVisibleTo("Domore.Conf.ConfigurationManager")]
 [assembly: InternalsVisibleTo("Domore.Conf.Tests")]
+[assembly: InternalsVisibleTo("Domore.Logs.Conf")]

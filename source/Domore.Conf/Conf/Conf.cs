@@ -57,6 +57,7 @@ public sealed class Conf : IConf {
     /// <param name="target">The object to be populated.</param>
     /// <param name="key">The conf key that identifies the conf items used to populate the <paramref name="target"/>.</param>
     /// <returns>The populated instance of <typeparamref name="T"/>.</returns>
+    /// <remarks>Pairs are applied in the order supplied by the content provider.</remarks>
     public static T Configure<T>(T target, string key = null) {
         return _Container.Configure(target, key);
     }
