@@ -489,7 +489,7 @@ This happens even when nothing is enabled (#28).
 
 ---
 
-## 30. `ConsoleLog` robustness. **Low**
+## 30. `ConsoleLog` robustness. **Low** (Resolved)
 
 **File:** `Logs/Service/ConsoleLog.cs` lines 34–46
 
@@ -501,7 +501,7 @@ This happens even when nothing is enabled (#28).
 
 ---
 
-## 31. `FileLog` with no `Name`/`Directory` fails on every flush. **Low**
+## 31. `FileLog` with no `Name`/`Directory` fails on every flush. **Low** (Resolved)
 
 **File:** `Logs/Service/FileLog.cs` lines 27–35, 133–145
 

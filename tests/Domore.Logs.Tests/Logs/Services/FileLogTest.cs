@@ -147,6 +147,38 @@ internal sealed class FileLogTest {
     }
 
     [Test]
+    public void FileLogUsesDefaultsWhenNameAndDirectoryAreUnset() {
+        var log = new FileLog {
+            FlushInterval = TimeSpan.FromDays(1)
+        };
+        var service = (ILogService)log;
+        var filePath = Path.Combine(
+            Environment.CurrentDirectory,
+            $"{AppDomain.CurrentDomain.FriendlyName}.log");
+        var originalContents = File.Exists(filePath) ? File.ReadAllBytes(filePath) : null;
+        var line = Guid.NewGuid().ToString();
+
+        try {
+            service.Log(nameof(FileLogUsesDefaultsWhenNameAndDirectoryAreUnset), line, LogSeverity.Info);
+            service.Complete();
+
+            Assert.That(File.Exists(filePath), Is.True);
+            Assert.That(File.ReadAllText(filePath), Does.Contain(line));
+        }
+        finally {
+            service.Complete();
+            if (originalContents == null) {
+                if (File.Exists(filePath)) {
+                    File.Delete(filePath);
+                }
+            }
+            else {
+                File.WriteAllBytes(filePath, originalContents);
+            }
+        }
+    }
+
+    [Test]
     public void FileLogTimerFlushesZeroCountLimitBeforeComplete() {
         ConfigFile("log[f].service.log count limit = 0");
         Log.Info("zero count limit line");
