@@ -11,7 +11,7 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 1 | High | Logging | `Manager` getter double-read races with `Complete()` and causes an NRE thrown from `Log` |
 | 2 | High | LogManager | `LogEvent` handler exceptions propagate out of `Log` methods |
 | 3 | High | Logger/LogManager | `Logging.For(null)` gives an `ILog` whose `Data`/`Info`/... throw `ArgumentNullException` |
-| 4 | High | LogSubscriptionCollection | User callbacks run under `lock (Lookup)`, which can deadlock |
+| 4 | High | LogSubscriptionCollection | User callbacks run under `lock (Lookup)`, which can deadlock (Resolved) |
 | 5 | High | LogServiceCollection | Services run under `Locker`, which is also taken by `Enabled()`. This can deadlock or stall the app |
 | 6 | High | Logging/LogManager | Re-entrant logging from handlers, subscribers, or services can recurse without bound (stack overflow) or amplify |
 | 7 | High | FileLog | Bad config values can crash the process from the timer callback or permanently stop file logging |
@@ -113,7 +113,7 @@ if (handler != null) {
 
 ---
 
-## 4. Subscription callbacks run under `lock (Lookup)`, which can deadlock. **High**
+## 4. Subscription callbacks run under `lock (Lookup)`, which can deadlock. **High** (Resolved)
 
 **File:** `Logs/LogSubscriptionCollection.cs` lines 16–33, 111–122, 10–14
 
