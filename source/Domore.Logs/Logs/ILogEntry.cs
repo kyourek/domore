@@ -27,7 +27,7 @@ public interface ILogEntry {
     LogSeverity LogSeverity { get; }
 
     /// <summary>
-    /// Gets the log message list.
+    /// Gets the read-only log message list.
     /// </summary>
     IEnumerable<string> LogList { get; }
 }

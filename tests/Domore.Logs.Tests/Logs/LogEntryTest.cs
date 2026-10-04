@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Domore.Logs;
@@ -9,6 +10,29 @@ public sealed class LogEntryTest {
     private static LogEntry NewEntry() {
         var date = new DateTime(2026, 1, 2, 3, 4, 5, 678, DateTimeKind.Utc);
         return new(typeof(LogEntryTest), date, LogSeverity.Info, new[] { "message" });
+    }
+
+    [Test]
+    public void UndefinedSeverityUsesNumericFallback() {
+        var date = new DateTime(2026, 1, 2, 3, 4, 5, 678, DateTimeKind.Utc);
+        var entry = new LogEntry(typeof(LogEntryTest), date, (LogSeverity)7, new[] { "message" });
+        Assert.That(entry.LogData("{sev}"), Is.EqualTo("7 message"));
+    }
+
+    [Test]
+    public void LogListDoesNotExposeMutableEntryArray() {
+        var entry = NewEntry();
+        var logList = ((ILogEntry)entry).LogList;
+        if (logList is string[] array) {
+            array[0] = "changed";
+        }
+
+        Assert.That(entry.LogData("prefix"), Is.EqualTo("prefix message"));
+        Assert.That(logList, Is.Not.SameAs(entry.EntryList));
+        Assert.That(logList, Is.Not.InstanceOf<string[]>());
+        var list = (IList<string>)logList;
+        Assert.That(list.IsReadOnly, Is.True);
+        Assert.Throws<NotSupportedException>(() => list[0] = "changed");
     }
 
     [Test]
