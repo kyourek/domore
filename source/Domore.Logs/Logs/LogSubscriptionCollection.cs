@@ -82,29 +82,39 @@ internal sealed class LogSubscriptionCollection {
         if (item == null) {
             return false;
         }
+        LogSubscriptionProxy removed;
         lock (Locker) {
             if (Lookup.TryGetValue(item, out var proxy)) {
                 Lookup.Remove(item);
                 proxy.ThresholdChanged -= Item_ThresholdChanged;
                 Items = Lookup.Values.ToArray();
                 InvalidateThresholds();
-                return true;
+                removed = proxy;
+            }
+            else {
+                return false;
             }
         }
-        return false;
+        removed.Complete();
+        return true;
     }
 
     public void Clear() {
+        LogSubscriptionProxy[] removed;
         lock (Locker) {
             if (Lookup.Count == 0) {
                 return;
             }
-            foreach (var item in Lookup.Values) {
+            removed = Lookup.Values.ToArray();
+            foreach (var item in removed) {
                 item.ThresholdChanged -= Item_ThresholdChanged;
             }
             Lookup.Clear();
             Items = new LogSubscriptionProxy[0];
             InvalidateThresholds();
+        }
+        foreach (var item in removed) {
+            item.Complete();
         }
     }
 

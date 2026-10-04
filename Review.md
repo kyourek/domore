@@ -21,8 +21,8 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 11 | Medium | LogServiceProxy | Resolved: `Service` double-read races with a `Type` change (NRE). The old service is never completed |
 | 12 | Medium | LogServiceConfig | Resolved: `Default` is published before its `ThresholdChanged` handler is attached (lost update) |
 | 13 | Medium | LogServiceCollection | Resolved: The aggregate threshold used by `Enabled()` is wrong when type and default thresholds are mixed across services |
-| 14 | Medium | LogSubscriptionProxy | Threshold cache invalidation race can make a stale threshold permanent |
-| 15 | Medium | LogSubscriptionCollection | `Remove`/`Clear` leave the proxy subscribed to the agent's `ThresholdChanged` |
+| 14 | Medium | LogSubscriptionProxy | Resolved: Threshold cache invalidation race can make a stale threshold permanent |
+| 15 | Medium | LogSubscriptionCollection | Resolved: `Remove`/`Clear` leave the proxy subscribed to the agent's `ThresholdChanged` |
 | 16 | Medium | BackgroundQueue | Item added before the worker thread starts can be lost by a concurrent `Complete()` |
 | 17 | Medium | Logs.Conf | `Logging.Config` snapshots the manager. After `Logging.Complete()`, file hot-reload configures a dead manager |
 | 18 | Medium | Logs.Conf | `Log.Conf.Configure` sets `File` before success. A failure leaves `Configured == true`, and it can't be retried |
@@ -276,7 +276,7 @@ Also recompute when a proxy is added, and publish the result as an immutable sna
 
 ---
 
-## 14. `LogSubscriptionProxy` threshold cache can keep a stale value permanently. **Medium**
+## 14. `LogSubscriptionProxy` threshold cache can keep a stale value permanently. **Medium** (Resolved)
 
 **Files:** `Logs/LogSubscriptionProxy.cs` lines 15–35, `Logs/LogSubscriptionCollection.cs` lines 10–33
 
@@ -286,7 +286,7 @@ A thread in `ThresholdCache.GetOrAdd(type, factory)` calls `Agent.Threshold(type
 
 ---
 
-## 15. Unsubscribing leaves the proxy attached to the subscription. **Medium**
+## 15. Unsubscribing leaves the proxy attached to the subscription. **Medium** (Resolved)
 
 **File:** `Logs/LogSubscriptionCollection.cs` lines 64–95, `Logs/LogSubscriptionProxy.cs` lines 10–13, 52–54
 
