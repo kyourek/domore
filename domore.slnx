@@ -52,6 +52,7 @@
   </Folder>
   <Folder Name="/logs/tests/">
     <Project Path="tests/Domore.Logs.Tests/Domore.Logs.Tests.csproj" />
+    <Project Path="tests/Domore.Logs.ExitHelper/Domore.Logs.ExitHelper.csproj" />
   </Folder>
   <Folder Name="/notification/">
     <Project Path="source/Domore.Notification/Domore.Notification.csproj" />

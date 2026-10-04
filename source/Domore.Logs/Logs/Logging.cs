@@ -8,6 +8,15 @@ namespace Domore.Logs;
 /// Provides implementations of <see cref="ILog"/>.
 /// </summary>
 public sealed class Logging {
+    static Logging() {
+        try {
+            AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+        }
+        catch (Exception ex) {
+            Notify(ex);
+        }
+    }
+
     private static readonly TimeSpan DefaultCompleteTimeout = TimeSpan.FromSeconds(5);
     private static readonly object CompleteLocker = new();
     private static readonly Logging Instance = new();
@@ -26,6 +35,15 @@ public sealed class Logging {
     private LogManager _Manager;
 
     private Logging() {
+    }
+
+    private static void ProcessExit(object sender, EventArgs e) {
+        try {
+            Complete();
+        }
+        catch (Exception ex) {
+            Notify(ex);
+        }
     }
 
     private static void NotifyCompleted() {
