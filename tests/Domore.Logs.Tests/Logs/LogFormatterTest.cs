@@ -44,6 +44,13 @@ public sealed class LogFormatterTest {
         Assert.That(actual, Is.EqualTo(expected));
     }
 
+    private static IEnumerable<object> CreateEnumerable(int count, Action onYield) {
+        for (var index = 0; index < count; index++) {
+            onYield();
+            yield return index.ToString();
+        }
+    }
+
     private sealed class SpecialMessage {
     }
 
@@ -132,5 +139,30 @@ public sealed class LogFormatterTest {
         Assert.That(actual[0], Is.EqualTo("first"));
         Assert.That(actual[1], Does.StartWith("<format error: InvalidOperationException: "));
         Assert.That(actual[2], Is.EqualTo("after"));
+    }
+
+    [Test]
+    public void EnumerableWithOneHundredItemsIsFormattedWithoutTruncation() {
+        var enumerated = 0;
+        var actual = Subject.Format(CreateEnumerable(100, () => enumerated++));
+        var expected = new List<string>();
+        for (var index = 0; index < 100; index++) {
+            expected.Add(index.ToString());
+        }
+        Assert.That(actual, Is.EqualTo(expected));
+        Assert.That(enumerated, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void LongEnumerableIsTruncatedAfterOneHundredItems() {
+        var enumerated = 0;
+        var actual = Subject.Format(CreateEnumerable(1000, () => enumerated++));
+        var expected = new List<string>();
+        for (var index = 0; index < 100; index++) {
+            expected.Add(index.ToString());
+        }
+        expected.Add("… (truncated)");
+        Assert.That(actual, Is.EqualTo(expected));
+        Assert.That(enumerated, Is.EqualTo(101));
     }
 }

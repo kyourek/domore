@@ -56,6 +56,22 @@ public sealed partial class LoggingTest {
         Assert.That(message, Is.EqualTo(""));
     }
 
+    private sealed class FormattedMessage {
+    }
+
+    [Test]
+    public void FormatterIsNotCalledWhenNothingAcceptsEntry() {
+        var formatterCalls = 0;
+        Logging.Format(typeof(FormattedMessage), _ => {
+            formatterCalls++;
+            return ["formatted"];
+        });
+
+        Logging.For(typeof(LoggingTest)).Debug(new FormattedMessage());
+
+        Assert.That(formatterCalls, Is.EqualTo(0));
+    }
+
     [Test]
     public void LogEventIsRaisedWithManyMessages2() {
         var message = new List<string>();

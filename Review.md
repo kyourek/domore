@@ -454,7 +454,7 @@ all cause the **entire** message, including the other arguments, to be replaced 
 
 ---
 
-## 27. Unbounded `IEnumerable` expansion. **Low**
+## 27. Unbounded `IEnumerable` expansion. **Low** (Resolved)
 
 **File:** `Logs/LogFormatter.cs` lines 29–36
 
@@ -469,7 +469,7 @@ This happens even when nothing is enabled (#28).
 
 ---
 
-## 28. Every log call is fully formatted and queued even when nothing listens. **Low**
+## 28. Every log call is fully formatted and queued even when nothing listens. **Low** (Resolved)
 
 **File:** `Logs/LogManager.cs` lines 53–70, `Logs/Logger.cs` line 17
 

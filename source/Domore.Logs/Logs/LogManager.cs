@@ -58,6 +58,9 @@ internal sealed class LogManager : IDisposable {
         if (type == null || severity == LogSeverity.None || data == null) {
             return;
         }
+        if (Log(severity, type) == false) {
+            return;
+        }
 
         var depth = _LogDepth++;
         try {
