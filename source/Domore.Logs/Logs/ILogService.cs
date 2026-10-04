@@ -1,4 +1,5 @@
-﻿namespace Domore.Logs; 
+﻿namespace Domore.Logs;
+
 /// <summary>
 /// A provider of log services.
 /// </summary>

@@ -36,7 +36,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 #else
         object
 #endif
-        Locker = new();
+        FileLocker = new();
 
     private Timer Timer;
     private long PendingMessageBytes;
@@ -236,7 +236,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                 }
             }
             timer?.Dispose();
-            lock (Locker) {
+            lock (FileLocker) {
                 for (; ; ) {
                     List<string> lines;
                     lock (AdmissionLocker) {
@@ -336,12 +336,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public int IORetryLimit {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -349,12 +349,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public int IORetryDelay {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -362,12 +362,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public long FileSizeLimit {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -375,12 +375,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public long TotalSizeLimit {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -388,12 +388,12 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public TimeSpan FileAgeLimit {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -401,13 +401,13 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public TimeSpan FlushInterval {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
         set {
             ValidateFlushIntervalInMilliseconds(value, nameof(FlushInterval));
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -415,7 +415,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
 
     public int LogCountLimit {
         get {
-            lock (Locker) {
+            lock (FileLocker) {
                 return field;
             }
         }
@@ -424,7 +424,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
                 throw new ArgumentOutOfRangeException(nameof(LogCountLimit), value,
                     "The log count limit must be greater than zero.");
             }
-            lock (Locker) {
+            lock (FileLocker) {
                 field = value;
             }
         }
@@ -482,7 +482,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         get;
         set {
             if (field != value) {
-                lock (Locker) {
+                lock (FileLocker) {
                     if (field != value) {
                         field = value;
                         DirectoryInfo = null;
@@ -500,7 +500,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
         get;
         set {
             if (field != value) {
-                lock (Locker) {
+                lock (FileLocker) {
                     if (field != value) {
                         field = value;
                         FileInfo = null;
@@ -547,7 +547,7 @@ internal sealed class FileLog : ILogService, ILogQueueStatusProvider {
             Timer = null;
         }
         timer?.Dispose();
-        lock (Locker) {
+        lock (FileLocker) {
             List<string> lines;
             lock (AdmissionLocker) {
                 lines = new List<string>(Queue.Count);

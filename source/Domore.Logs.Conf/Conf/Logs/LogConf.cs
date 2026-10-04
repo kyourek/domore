@@ -1,6 +1,7 @@
 ﻿using CONF = Domore.Conf.Conf;
 
-namespace Domore.Conf.Logs; 
+namespace Domore.Conf.Logs;
+
 public sealed class LogConf {
     private LogConf() {
     }

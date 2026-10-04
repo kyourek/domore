@@ -9,6 +9,10 @@ namespace Domore.Logs;
 /// Provides implementations of <see cref="ILog"/>.
 /// </summary>
 public sealed class Logging {
+    static Logging() {
+        AppDomain.CurrentDomain?.ProcessExit += ProcessExit;
+    }
+
     private static readonly object ManagerLocker = new();
     private static readonly TimeSpan InfiniteTimeout = TimeSpan.FromMilliseconds(-1);
 
@@ -22,10 +26,6 @@ public sealed class Logging {
     private LogManager Manager;
 
     private Logging() {
-    }
-
-    static Logging() {
-        AppDomain.CurrentDomain.ProcessExit += ProcessExit;
     }
 
     private sealed class Retirement {
@@ -89,200 +89,6 @@ public sealed class Logging {
             action(manager);
             return 0;
         });
-    }
-
-    internal static void Configure(Action<object> configure) {
-        if (configure is null) {
-            throw new ArgumentNullException(nameof(configure));
-        }
-        Instance.UseManager(manager => configure(new { Log = manager }));
-    }
-
-    internal bool Log(Logger logger, LogSeverity severity) {
-        try {
-            if (LogCallbackGuard.IsActive) {
-                return false;
-            }
-            var type = logger?.Type;
-            if (type is null) {
-                return false;
-            }
-            return UseManager(manager => manager.Log(severity, type));
-        }
-        catch (Exception ex) {
-            Notify(ex);
-            return false;
-        }
-    }
-
-    internal void Log(Logger logger, LogSeverity severity, params object[] data) {
-        try {
-            if (LogCallbackGuard.IsActive) {
-                return;
-            }
-            var type = logger?.Type;
-            if (type is null) {
-                return;
-            }
-            UseManager(manager => manager.Log(severity, type, data));
-        }
-        catch (Exception ex) {
-            Notify(ex);
-        }
-    }
-
-    internal static void Notify(object obj) {
-        try {
-            if (LogCallbackGuard.IsDiagnosing) {
-                return;
-            }
-            using (LogCallbackGuard.EnterDiagnostic()) {
-                try {
-                    Console.Error.WriteLine(obj);
-                }
-                catch {
-                    // Diagnostic output must not interfere with logging.
-                }
-            }
-        }
-        catch {
-            // Guard setup and diagnostic output are both best-effort.
-        }
-    }
-
-    internal static void CompleteService(LogManager manager, ILogService service) {
-        // Replacement can invoke this on a configuration thread while holding a proxy lock.
-        // Preserve the owner so reentrant shutdown defers and cannot retire a later session.
-        var previousManager = UsedManager;
-        UsedManager = manager ?? previousManager;
-        try {
-            using (LogCallbackGuard.EnterManager(manager))
-            using (LogCallbackGuard.Enter()) {
-                service?.Complete();
-            }
-        }
-        finally {
-            UsedManager = previousManager;
-        }
-    }
-
-    /// <summary>
-    /// Raised when a log event occurs.
-    /// </summary>
-    public static event LogEventHandler Event {
-        add => Instance.UseManager(manager => manager.LogEvent += value);
-        remove => Instance.UseManager(manager => manager.LogEvent -= value);
-    }
-
-    /// <summary>
-    /// Gets or sets the threshold for log events.
-    /// </summary>
-    public static LogSeverity EventThreshold {
-        get => Instance.UseManager(manager => manager.LogEventThreshold);
-        set => Instance.UseManager((Action<LogManager>)(manager => manager.LogEventThreshold = value));
-    }
-
-    /// <summary>
-    /// Adds a subscription to log events.
-    /// </summary>
-    /// <param name="subscription">The subscription to be added.</param>
-    /// <returns>True if the subscription was added. Otherwise, false.</returns>
-    public static bool Subscribe(ILogSubscription subscription) {
-        return Instance.UseManager(manager => manager.Subscribe(subscription));
-    }
-
-    /// <summary>
-    /// Removes a subscription to log events.
-    /// </summary>
-    /// <param name="subscription">The subscription to be removed.</param>
-    /// <returns>True if the subscription was removed. Otherwise, false.</returns>
-    public static bool Unsubscribe(ILogSubscription subscription) {
-        return Instance.UseManager(manager => manager.Unsubscribe(subscription));
-    }
-
-    /// <summary>
-    /// Gets an object that may be used to configure log behavior.
-    /// </summary>
-    public static object Config =>
-        new { Log = Instance.GetManager() };
-
-    /// <summary>
-    /// Gets queue limits, pending work, and drop counters for a named logging destination.
-    /// </summary>
-    /// <param name="name">The configured logging destination name.</param>
-    /// <returns>
-    /// The destination's status, or null when that destination has not been configured or used.
-    /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
-    public static LogQueueStatus GetQueueStatus(string name) {
-        if (name is null) {
-            throw new ArgumentNullException(nameof(name));
-        }
-        return Instance.UseManager(manager => manager.GetQueueStatus(name));
-    }
-
-    /// <summary>
-    /// Gets an instance of <see cref="ILog"/> for the specified <paramref name="type"/>.
-    /// </summary>
-    /// <param name="type">The type whose log is returned.</param>
-    /// <returns>The instance of <see cref="ILog"/> for the <paramref name="type"/>.</returns>
-    public static ILog For(Type type) {
-        return new Logger(type, Instance);
-    }
-
-    /// <summary>
-    /// Provides a callback used to format instances of <paramref name="type"/> in log messages.
-    /// </summary>
-    /// <param name="type">The type of instances to be formatted.</param>
-    /// <param name="toString">The callback called to format instances of <paramref name="type"/>.</param>
-    public static void Format(Type type, Func<object, string[]> toString) {
-        Instance.UseManager(manager => manager.Formatter.Format(type, toString));
-    }
-
-    /// <summary>
-    /// Gets or sets the maximum number of items expanded from an enumerable log argument.
-    /// The default is 100. Values must be positive.
-    /// </summary>
-    public static int EnumerableItemLimit {
-        get => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit);
-        set => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit = value);
-    }
-
-    /// <summary>
-    /// Completes all logging.
-    /// </summary>
-    public static void Complete() {
-        Instance.CompleteCore(InfiniteTimeout);
-    }
-
-    /// <summary>
-    /// Completes all logging, waiting up to <paramref name="timeout"/> for pending
-    /// manager retirements. Retirements continue safely in the background after a
-    /// timeout.
-    /// </summary>
-    /// <param name="timeout">A nonnegative timeout, or -1 millisecond for an infinite wait.</param>
-    /// <returns>True if all retirements completed before this call returned.</returns>
-    public static bool Complete(TimeSpan timeout) {
-        if (timeout < TimeSpan.Zero && timeout != InfiniteTimeout) {
-            throw new ArgumentOutOfRangeException(nameof(timeout));
-        }
-        return Instance.CompleteCore(timeout);
-    }
-
-    private static void ProcessExit(object sender, EventArgs e) {
-        try {
-            Instance.CompleteCore(TimeSpan.FromSeconds(5));
-        }
-        catch (Exception ex) {
-            // Do not let an arbitrary Console.Error writer extend the process-exit
-            // budget. Report asynchronously once the bounded shutdown has returned.
-            try {
-                ThreadPool.QueueUserWorkItem(_ => Notify(ex));
-            }
-            catch {
-                // Process shutdown is already in progress.
-            }
-        }
     }
 
     private bool CompleteCore(TimeSpan timeout) {
@@ -518,6 +324,200 @@ public sealed class Logging {
             catch (Exception ex) {
                 try { Notify(ex); } catch { }
                 try { Thread.Sleep(10); } catch { }
+            }
+        }
+    }
+
+    internal static void Configure(Action<object> configure) {
+        if (configure is null) {
+            throw new ArgumentNullException(nameof(configure));
+        }
+        Instance.UseManager(manager => configure(new { Log = manager }));
+    }
+
+    internal bool Log(Logger logger, LogSeverity severity) {
+        try {
+            if (LogCallbackGuard.IsActive) {
+                return false;
+            }
+            var type = logger?.Type;
+            if (type is null) {
+                return false;
+            }
+            return UseManager(manager => manager.Log(severity, type));
+        }
+        catch (Exception ex) {
+            Notify(ex);
+            return false;
+        }
+    }
+
+    internal void Log(Logger logger, LogSeverity severity, params object[] data) {
+        try {
+            if (LogCallbackGuard.IsActive) {
+                return;
+            }
+            var type = logger?.Type;
+            if (type is null) {
+                return;
+            }
+            UseManager(manager => manager.Log(severity, type, data));
+        }
+        catch (Exception ex) {
+            Notify(ex);
+        }
+    }
+
+    internal static void Notify(object obj) {
+        try {
+            if (LogCallbackGuard.IsDiagnosing) {
+                return;
+            }
+            using (LogCallbackGuard.EnterDiagnostic()) {
+                try {
+                    Console.Error.WriteLine(obj);
+                }
+                catch {
+                    // Diagnostic output must not interfere with logging.
+                }
+            }
+        }
+        catch {
+            // Guard setup and diagnostic output are both best-effort.
+        }
+    }
+
+    internal static void CompleteService(LogManager manager, ILogService service) {
+        // Replacement can invoke this on a configuration thread while holding a proxy lock.
+        // Preserve the owner so reentrant shutdown defers and cannot retire a later session.
+        var previousManager = UsedManager;
+        UsedManager = manager ?? previousManager;
+        try {
+            using (LogCallbackGuard.EnterManager(manager))
+            using (LogCallbackGuard.Enter()) {
+                service?.Complete();
+            }
+        }
+        finally {
+            UsedManager = previousManager;
+        }
+    }
+
+    /// <summary>
+    /// Raised when a log event occurs.
+    /// </summary>
+    public static event LogEventHandler Event {
+        add => Instance.UseManager(manager => manager.LogEvent += value);
+        remove => Instance.UseManager(manager => manager.LogEvent -= value);
+    }
+
+    /// <summary>
+    /// Gets or sets the threshold for log events.
+    /// </summary>
+    public static LogSeverity EventThreshold {
+        get => Instance.UseManager(manager => manager.LogEventThreshold);
+        set => Instance.UseManager((Action<LogManager>)(manager => manager.LogEventThreshold = value));
+    }
+
+    /// <summary>
+    /// Adds a subscription to log events.
+    /// </summary>
+    /// <param name="subscription">The subscription to be added.</param>
+    /// <returns>True if the subscription was added. Otherwise, false.</returns>
+    public static bool Subscribe(ILogSubscription subscription) {
+        return Instance.UseManager(manager => manager.Subscribe(subscription));
+    }
+
+    /// <summary>
+    /// Removes a subscription to log events.
+    /// </summary>
+    /// <param name="subscription">The subscription to be removed.</param>
+    /// <returns>True if the subscription was removed. Otherwise, false.</returns>
+    public static bool Unsubscribe(ILogSubscription subscription) {
+        return Instance.UseManager(manager => manager.Unsubscribe(subscription));
+    }
+
+    /// <summary>
+    /// Gets an object that may be used to configure log behavior.
+    /// </summary>
+    public static object Config =>
+        new { Log = Instance.GetManager() };
+
+    /// <summary>
+    /// Gets queue limits, pending work, and drop counters for a named logging destination.
+    /// </summary>
+    /// <param name="name">The configured logging destination name.</param>
+    /// <returns>
+    /// The destination's status, or null when that destination has not been configured or used.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
+    public static LogQueueStatus GetQueueStatus(string name) {
+        if (name is null) {
+            throw new ArgumentNullException(nameof(name));
+        }
+        return Instance.UseManager(manager => manager.GetQueueStatus(name));
+    }
+
+    /// <summary>
+    /// Gets an instance of <see cref="ILog"/> for the specified <paramref name="type"/>.
+    /// </summary>
+    /// <param name="type">The type whose log is returned.</param>
+    /// <returns>The instance of <see cref="ILog"/> for the <paramref name="type"/>.</returns>
+    public static ILog For(Type type) {
+        return new Logger(type, Instance);
+    }
+
+    /// <summary>
+    /// Provides a callback used to format instances of <paramref name="type"/> in log messages.
+    /// </summary>
+    /// <param name="type">The type of instances to be formatted.</param>
+    /// <param name="toString">The callback called to format instances of <paramref name="type"/>.</param>
+    public static void Format(Type type, Func<object, string[]> toString) {
+        Instance.UseManager(manager => manager.Formatter.Format(type, toString));
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum number of items expanded from an enumerable log argument.
+    /// The default is 100. Values must be positive.
+    /// </summary>
+    public static int EnumerableItemLimit {
+        get => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit);
+        set => Instance.UseManager(manager => manager.Formatter.EnumerableItemLimit = value);
+    }
+
+    /// <summary>
+    /// Completes all logging.
+    /// </summary>
+    public static void Complete() {
+        Instance.CompleteCore(InfiniteTimeout);
+    }
+
+    /// <summary>
+    /// Completes all logging, waiting up to <paramref name="timeout"/> for pending
+    /// manager retirements. Retirements continue safely in the background after a
+    /// timeout.
+    /// </summary>
+    /// <param name="timeout">A nonnegative timeout, or -1 millisecond for an infinite wait.</param>
+    /// <returns>True if all retirements completed before this call returned.</returns>
+    public static bool Complete(TimeSpan timeout) {
+        if (timeout < TimeSpan.Zero && timeout != InfiniteTimeout) {
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+        }
+        return Instance.CompleteCore(timeout);
+    }
+
+    private static void ProcessExit(object sender, EventArgs e) {
+        try {
+            Instance.CompleteCore(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex) {
+            // Do not let an arbitrary Console.Error writer extend the process-exit
+            // budget. Report asynchronously once the bounded shutdown has returned.
+            try {
+                ThreadPool.QueueUserWorkItem(_ => Notify(ex));
+            }
+            catch {
+                // Process shutdown is already in progress.
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogServiceFactory {
     public ILogService Create(string typeName) {
         var type = Type.GetType(typeName, ignoreCase: true, throwOnError: false);

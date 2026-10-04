@@ -1,6 +1,7 @@
 using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class Logger : ILog {
     public Type Type { get; }
     public Logging Logging { get; }

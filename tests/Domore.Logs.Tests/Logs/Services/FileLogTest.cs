@@ -10,7 +10,8 @@ using System.Threading;
 using Domore.Logs.Service;
 using CONF = Domore.Conf.Conf;
 
-namespace Domore.Logs.Services; 
+namespace Domore.Logs.Services;
+
 [TestFixture]
 [NonParallelizable]
 internal sealed class FileLogTest {

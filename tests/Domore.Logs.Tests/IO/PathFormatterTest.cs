@@ -5,7 +5,8 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 
-namespace Domore.IO; 
+namespace Domore.IO;
+
 public sealed class PathFormatterTest {
     private PathFormatter Subject {
         get => _Subject ??= new();

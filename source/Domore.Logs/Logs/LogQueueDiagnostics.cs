@@ -5,33 +5,43 @@ using System.Threading;
 namespace Domore.Logs;
 
 internal static class LogQueueDiagnostics {
-    private const string OverflowMessage = "One or more log messages were rejected because a logging queue is over capacity.";
+    private const string OverflowMessage =
+        "One or more log messages were rejected because a logging queue is over capacity.";
+
     private static int Reporting;
     private static long NextReportTimestamp;
 
     private static void Report(object message) {
-        if (Interlocked.CompareExchange(ref Reporting, 1, 0) != 0) {
+        var reporting = Interlocked.CompareExchange(ref Reporting, 1, 0) != 0;
+        if (reporting) {
             return;
         }
         try {
             var now = Stopwatch.GetTimestamp();
             var nextReport = Interlocked.Read(ref NextReportTimestamp);
-            if (now < nextReport ||
-                Interlocked.CompareExchange(ref NextReportTimestamp, now + Stopwatch.Frequency, nextReport) != nextReport) {
+            var reportingTooSoon = now < nextReport;
+            var reportIntervalSet = new Func<bool>(() =>
+                Interlocked.CompareExchange(ref NextReportTimestamp,
+                                            now + Stopwatch.Frequency,
+                                            nextReport) == nextReport);
+            if (reportingTooSoon || !reportIntervalSet()) {
                 Interlocked.Exchange(ref Reporting, 0);
                 return;
             }
-            if (ThreadPool.QueueUserWorkItem(_ => {
+            var reportQueued = ThreadPool.QueueUserWorkItem(_ => {
                 try {
                     Logging.Notify(message);
                 }
                 catch {
-                    // Queue overload reporting is best-effort and runs off the caller.
+                    /*
+                     * Queue overload reporting is best-effort and runs off the caller.
+                     */
                 }
                 finally {
                     Interlocked.Exchange(ref Reporting, 0);
                 }
-            }) == false) {
+            });
+            if (reportQueued == false) {
                 Interlocked.Exchange(ref Reporting, 0);
             }
         }

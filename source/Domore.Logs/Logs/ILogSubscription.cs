@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 /// <summary>
 /// A log subscription.
 /// </summary>

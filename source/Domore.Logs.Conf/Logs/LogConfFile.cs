@@ -1,6 +1,7 @@
 ﻿using Domore.Conf;
 using Domore.Conf.Logs;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace Domore.Logs;
@@ -8,6 +9,7 @@ namespace Domore.Logs;
 internal sealed class LogConfFile : IDisposable {
     private sealed class Target {
         [ConfPopulatedCallback]
+        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Called implicitly")]
         private void Populate(IConf conf) {
             // This callback runs for explicit and watcher-driven applications.
             // Resolve and lease one manager for every pair in this file.

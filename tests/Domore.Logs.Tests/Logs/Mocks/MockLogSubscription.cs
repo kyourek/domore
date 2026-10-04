@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs.Mocks; 
+namespace Domore.Logs.Mocks;
+
 internal sealed class MockLogSubscription : ILogSubscription {
     private event EventHandler OnThresholdChanged;
 

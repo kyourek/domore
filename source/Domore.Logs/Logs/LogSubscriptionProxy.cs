@@ -16,6 +16,11 @@ internal sealed class LogSubscriptionProxy {
     private bool Completed;
     private ConcurrentDictionary<Type, LogSeverity> ThresholdCache = [];
 
+    private void Agent_ThresholdChanged(object sender, EventArgs e) {
+        Interlocked.Exchange(ref ThresholdCache, new());
+        ThresholdChanged?.Invoke(this, e);
+    }
+
     public ILogSubscription Agent { get; }
 
     public LogSubscriptionProxy(ILogSubscription agent) {
@@ -25,15 +30,10 @@ internal sealed class LogSubscriptionProxy {
         }
     }
 
-    private void Agent_ThresholdChanged(object sender, EventArgs e) {
-        Interlocked.Exchange(ref ThresholdCache, new());
-        ThresholdChanged?.Invoke(this, e);
-    }
-
     public event EventHandler ThresholdChanged;
 
     public LogSeverity Threshold(Type type) {
-        if (type == null) {
+        if (type is null) {
             return LogSeverity.None;
         }
         var cache = Interlocked.CompareExchange(ref ThresholdCache, null, null);
@@ -51,7 +51,7 @@ internal sealed class LogSubscriptionProxy {
     }
 
     public void Receive(LogEntry entry) {
-        if (entry == null) {
+        if (entry is null) {
             return;
         }
         var threshold = Threshold(entry.LogType);

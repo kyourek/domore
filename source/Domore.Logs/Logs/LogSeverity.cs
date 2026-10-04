@@ -1,4 +1,5 @@
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 /// <summary>
 /// Log message severity
 /// </summary>
@@ -7,7 +8,7 @@ public enum LogSeverity {
     /// No severity
     /// </summary>
     None = 0,
-    
+
     /// <summary>
     /// Debug severity
     /// </summary>

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 /// <summary>
 /// A log message entry.
 /// </summary>

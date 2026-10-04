@@ -1,4 +1,5 @@
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 /// <summary>
 /// Logging methods.
 /// </summary>

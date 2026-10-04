@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal delegate void LogTypeThresholdChangedEvent(object sender, LogTypeThresholdChangedEventArgs e);
 
 internal sealed class LogTypeThresholdChangedEventArgs : EventArgs {
