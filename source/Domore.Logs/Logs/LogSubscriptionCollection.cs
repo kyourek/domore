@@ -1,47 +1,64 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Domore.Logs; 
 internal sealed class LogSubscriptionCollection {
-    private readonly Dictionary<Type, LogSeverity> Thresholds = [];
+    private readonly object Locker = new();
+    private readonly ConcurrentDictionary<Type, ThresholdValue> Thresholds = new();
     private readonly Dictionary<ILogSubscription, LogSubscriptionProxy> Lookup = [];
+    private volatile LogSubscriptionProxy[] Items = new LogSubscriptionProxy[0];
+    private long ThresholdGeneration;
 
     private void Item_ThresholdChanged(object sender, EventArgs e) {
-        lock (Lookup) {
-            Thresholds.Clear();
-        }
+        InvalidateThresholds();
     }
 
     private LogSeverity Threshold(Type type) {
-        if (Count == 0) {
-            return LogSeverity.None;
-        }
         if (type == null) {
             return LogSeverity.None;
         }
-        lock (Lookup) {
-            if (Thresholds.TryGetValue(type, out var severity) == false) {
-                Thresholds[type] = severity = Lookup.Values
-                    .Select(item => item.Threshold(type))
-                    .Where(s => s != LogSeverity.None)
-                    .OrderBy(s => s)
-                    .FirstOrDefault();
+        while (true) {
+            var generation = Interlocked.Read(ref ThresholdGeneration);
+            var items = Items;
+            if (generation != Interlocked.Read(ref ThresholdGeneration)) {
+                continue;
+            }
+            if (items.Length == 0) {
+                return LogSeverity.None;
+            }
+            if (Thresholds.TryGetValue(type, out var cached) && cached.Generation == generation) {
+                if (generation == Interlocked.Read(ref ThresholdGeneration)) {
+                    return cached.Severity;
+                }
+                continue;
+            }
+            var severity = items
+                .Select(item => item.Threshold(type))
+                .Where(s => s != LogSeverity.None)
+                .OrderBy(s => s)
+                .FirstOrDefault();
+            if (generation == Interlocked.Read(ref ThresholdGeneration)) {
+                Thresholds[type] = new ThresholdValue(generation, severity);
             }
             return severity;
         }
     }
 
-    public int Count { get; private set; }
+    private void InvalidateThresholds() {
+        Interlocked.Increment(ref ThresholdGeneration);
+        Thresholds.Clear();
+    }
+
+    public int Count =>
+        Items.Length;
 
     public void Complete() {
-        if (Count == 0) {
-            return;
-        }
-        lock (Lookup) {
-            foreach (var item in Lookup.Values) {
-                item.Complete();
-            }
+        var items = Items;
+        foreach (var item in items) {
+            item.Complete();
         }
     }
 
@@ -49,12 +66,12 @@ internal sealed class LogSubscriptionCollection {
         if (item == null) {
             return false;
         }
-        lock (Lookup) {
+        lock (Locker) {
             if (Lookup.TryGetValue(item, out var proxy) == false) {
                 Lookup[item] = proxy = new LogSubscriptionProxy(item);
-                Thresholds.Clear();
-                Count = Lookup.Count;
                 proxy.ThresholdChanged += Item_ThresholdChanged;
+                Items = Lookup.Values.ToArray();
+                InvalidateThresholds();
                 return true;
             }
         }
@@ -65,15 +82,12 @@ internal sealed class LogSubscriptionCollection {
         if (item == null) {
             return false;
         }
-        if (Count == 0) {
-            return false;
-        }
-        lock (Lookup) {
+        lock (Locker) {
             if (Lookup.TryGetValue(item, out var proxy)) {
                 Lookup.Remove(item);
-                Thresholds.Clear();
-                Count = Lookup.Count;
                 proxy.ThresholdChanged -= Item_ThresholdChanged;
+                Items = Lookup.Values.ToArray();
+                InvalidateThresholds();
                 return true;
             }
         }
@@ -81,16 +95,16 @@ internal sealed class LogSubscriptionCollection {
     }
 
     public void Clear() {
-        if (Count == 0) {
-            return;
-        }
-        lock (Lookup) {
+        lock (Locker) {
+            if (Lookup.Count == 0) {
+                return;
+            }
             foreach (var item in Lookup.Values) {
                 item.ThresholdChanged -= Item_ThresholdChanged;
             }
             Lookup.Clear();
-            Thresholds.Clear();
-            Count = Lookup.Count;
+            Items = new LogSubscriptionProxy[0];
+            InvalidateThresholds();
         }
     }
 
@@ -109,15 +123,24 @@ internal sealed class LogSubscriptionCollection {
     }
 
     public void Send(LogEntry entry) {
-        if (Count == 0) {
+        if (entry == null) {
             return;
         }
-        lock (Lookup) {
-            foreach (var item in Lookup.Values) {
-                if (item != null) {
-                    item.Receive(entry);
-                }
+        var items = Items;
+        foreach (var item in items) {
+            if (item != null) {
+                item.Receive(entry);
             }
+        }
+    }
+
+    private readonly struct ThresholdValue {
+        public long Generation { get; }
+        public LogSeverity Severity { get; }
+
+        public ThresholdValue(long generation, LogSeverity severity) {
+            Generation = generation;
+            Severity = severity;
         }
     }
 }
