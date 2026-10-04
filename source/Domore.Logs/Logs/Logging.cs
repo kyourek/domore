@@ -8,6 +8,7 @@ namespace Domore.Logs;
 /// Provides implementations of <see cref="ILog"/>.
 /// </summary>
 public sealed class Logging {
+    private static readonly TimeSpan DefaultCompleteTimeout = TimeSpan.FromSeconds(5);
     private static readonly object CompleteLocker = new();
     private static readonly Logging Instance = new();
 
@@ -111,19 +112,43 @@ public sealed class Logging {
     }
 
     /// <summary>
-    /// Completes all logging.
+    /// Completes all logging, waiting up to five seconds for queued service calls.
     /// </summary>
     public static void Complete() {
+        Complete(DefaultCompleteTimeout);
+    }
+
+    /// <summary>
+    /// Completes all logging, waiting up to the specified timeout for queued service calls to drain.
+    /// </summary>
+    /// <param name="timeout">The maximum time to wait for the service queue to drain.</param>
+    /// <returns>
+    /// <see langword="true"/> if the service queue drained within the timeout; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool Complete(TimeSpan timeout) {
         lock (CompleteLocker) {
             var manager = Interlocked.Exchange(ref Instance._Manager, null);
-            if (manager != null) {
+            if (manager == null) {
+                return true;
+            }
+
+            var queueDrained = false;
+            try {
+                queueDrained = manager.Complete(timeout);
+            }
+            catch (Exception ex) {
+                Notify(ex);
+            }
+            finally {
                 try {
-                    manager.Complete();
-                }
-                finally {
                     manager.Dispose();
                 }
+                catch (Exception ex) {
+                    Notify(ex);
+                }
             }
+            return queueDrained;
         }
     }
 }

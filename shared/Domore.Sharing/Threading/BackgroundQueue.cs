@@ -43,18 +43,20 @@ internal sealed class BackgroundQueue : IDisposable {
     private bool Complete(TimeSpan? timeout) {
         Collection.CompleteAdding();
 
-        if (Thread != null) {
-            lock (ThreadLocker) {
-                if (Thread != null) {
-                    if (timeout.HasValue) {
-                        return Thread.Join(timeout.Value);
-                    }
-                    Thread.Join();
-                    return true;
-                }
-            }
+        Thread thread;
+        lock (ThreadLocker) {
+            thread = Thread;
         }
-
+        if (thread == null) {
+            return true;
+        }
+        if (thread == Thread.CurrentThread) {
+            return false;
+        }
+        if (timeout.HasValue) {
+            return thread.Join(timeout.Value);
+        }
+        thread.Join();
         return true;
     }
 

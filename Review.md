@@ -12,11 +12,11 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 2 | High | LogManager | Resolved: `LogEvent` handler exceptions propagate out of `Log` methods |
 | 3 | High | Logger/LogManager | Resolved: `Logging.For(null)` gives an `ILog` whose `Data`/`Info`/... throw `ArgumentNullException` |
 | 4 | High | LogSubscriptionCollection | Resolved: User callbacks run under `lock (Lookup)`, which can deadlock |
-| 5 | High | LogServiceCollection | Services run under `Locker`, which is also taken by `Enabled()`. This can deadlock or stall the app |
+| 5 | High | LogServiceCollection | Resolved: Services run under `Locker`, which is also taken by `Enabled()`. This can deadlock or stall the app |
 | 6 | High | Logging/LogManager | Resolved: Re-entrant logging from handlers, subscribers, or services can recurse without bound (stack overflow) or amplify |
 | 7 | High | FileLog | Resolved: Bad config values can crash the process from the timer callback or permanently stop file logging |
-| 8 | High | Logging/LogServiceCollection | One failing `ILogService.Complete()` stops the rest from flushing and leaves a disposed manager installed for good |
-| 9 | High | Logging/BackgroundQueue | `Complete()` can hang forever, or deadlock when called from a service thread |
+| 8 | High | Logging/LogServiceCollection | Resolved: One failing `ILogService.Complete()` stops the rest from flushing and leaves a disposed manager installed for good |
+| 9 | High | Logging/BackgroundQueue | Resolved: `Complete()` can hang forever, or deadlock when called from a service thread |
 | 10 | Medium | LogServiceCollection | One throwing service drops the entry for all later services |
 | 11 | Medium | LogServiceProxy | `Service` double-read races with a `Type` change (NRE). The old service is never completed |
 | 12 | Medium | LogServiceConfig | `Default` is published before its `ThresholdChanged` handler is attached (lost update) |
@@ -132,7 +132,7 @@ Here is a realistic deadlock. A UI log viewer's `Receive` does `Dispatcher.Invok
 
 ---
 
-## 5. Services run under the same lock as `Enabled()`, which can deadlock or stall the app. **High**
+## 5. Services run under the same lock as `Enabled()`, which can deadlock or stall the app. **High** (Resolved)
 
 **File:** `Logs/LogServiceCollection.cs` lines 71–90 (also 20–45, 55–66)
 
@@ -181,7 +181,7 @@ Several paths re-enter logging:
 
 ---
 
-## 8. One failing `ILogService.Complete()` breaks shutdown and leaves a dead manager. **High**
+## 8. One failing `ILogService.Complete()` breaks shutdown and leaves a dead manager. **High** (Resolved)
 
 **Files:** `Logs/LogServiceCollection.cs` lines 92–99, `Logs/LogManager.cs` lines 72–77, `Logs/Logging.cs` lines 110–117, `Logs/LogServiceProxy.cs` lines 84–86
 
@@ -195,7 +195,7 @@ Several paths re-enter logging:
 
 ---
 
-## 9. `Logging.Complete()` can hang forever, or deadlock from a service thread. **High**
+## 9. `Logging.Complete()` can hang forever, or deadlock from a service thread. **High** (Resolved)
 
 **Files:** `Logs/LogServiceCollection.cs` line 93, `shared/.../BackgroundQueue.cs` lines 43–58
 
