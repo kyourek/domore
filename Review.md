@@ -14,7 +14,7 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 4 | High | LogSubscriptionCollection | Resolved: User callbacks run under `lock (Lookup)`, which can deadlock |
 | 5 | High | LogServiceCollection | Services run under `Locker`, which is also taken by `Enabled()`. This can deadlock or stall the app |
 | 6 | High | Logging/LogManager | Resolved: Re-entrant logging from handlers, subscribers, or services can recurse without bound (stack overflow) or amplify |
-| 7 | High | FileLog | Bad config values can crash the process from the timer callback or permanently stop file logging |
+| 7 | High | FileLog | Resolved: Bad config values can crash the process from the timer callback or permanently stop file logging |
 | 8 | High | Logging/LogServiceCollection | One failing `ILogService.Complete()` stops the rest from flushing and leaves a disposed manager installed for good |
 | 9 | High | Logging/BackgroundQueue | `Complete()` can hang forever, or deadlock when called from a service thread |
 | 10 | Medium | LogServiceCollection | One throwing service drops the entry for all later services |
@@ -164,7 +164,7 @@ Several paths re-enter logging:
 
 ---
 
-## 7. `FileLog` timer: bad config values can crash the process or stop file logging. **High**
+## 7. `FileLog` timer: bad config values can crash the process or stop file logging. **High** (Resolved)
 
 **File:** `Logs/Service/FileLog.cs` lines 166–216
 

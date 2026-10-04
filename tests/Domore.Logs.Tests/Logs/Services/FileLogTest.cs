@@ -1,9 +1,11 @@
 ﻿using Domore.Logs.Mocks;
+using Domore.Logs.Service;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using CONF = Domore.Conf.Conf;
 
@@ -65,6 +67,21 @@ internal sealed class FileLogTest {
         return File.ReadAllText(TempFile).Trim();
     }
 
+    private bool WaitForFileContains(string value, TimeSpan timeout) {
+        var end = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < end) {
+            try {
+                if (File.Exists(TempFile) && File.ReadAllText(TempFile).Contains(value)) {
+                    return true;
+                }
+            }
+            catch (IOException) {
+            }
+            Thread.Sleep(10);
+        }
+        return File.Exists(TempFile) && File.ReadAllText(TempFile).Contains(value);
+    }
+
     [SetUp]
     public void SetUp() {
         Id = null;
@@ -74,6 +91,98 @@ internal sealed class FileLogTest {
         Config = null;
         if (Directory.Exists(TempDir)) {
             Directory.Delete(TempDir, recursive: true);
+        }
+    }
+
+    [Test]
+    public void FileLogTimerClampsSettings() {
+        var log = new FileLog();
+
+        log.LogCountLimit = 0;
+        Assert.That(log.LogCountLimit, Is.EqualTo(1));
+        log.LogCountLimit = -1;
+        Assert.That(log.LogCountLimit, Is.EqualTo(1));
+
+        log.IORetryLimit = 0;
+        Assert.That(log.IORetryLimit, Is.EqualTo(1));
+        log.IORetryLimit = -1;
+        Assert.That(log.IORetryLimit, Is.EqualTo(1));
+
+        log.IORetryDelay = -5;
+        Assert.That(log.IORetryDelay, Is.Zero);
+
+        log.FlushInterval = TimeSpan.FromMilliseconds(-1);
+        Assert.That(log.FlushInterval, Is.EqualTo(TimeSpan.FromMilliseconds(1)));
+        log.FlushInterval = TimeSpan.Zero;
+        Assert.That(log.FlushInterval, Is.EqualTo(TimeSpan.FromMilliseconds(1)));
+        log.FlushInterval = TimeSpan.MaxValue;
+        Assert.That(log.FlushInterval, Is.EqualTo(TimeSpan.FromMilliseconds(int.MaxValue)));
+    }
+
+    [Test]
+    public void FileLogTimerFlushesZeroCountLimitBeforeComplete() {
+        ConfigFile("log[f].service.log count limit = 0");
+        Log.Info("zero count limit line");
+
+        Assert.That(
+            WaitForFileContains("zero count limit line", TimeSpan.FromSeconds(5)),
+            Is.True);
+    }
+
+    [Test]
+    public void FileLogTimerFlushesInvalidFlushIntervalBeforeComplete() {
+        ConfigFile("log[f].service.flush interval = -00:00:01");
+        Log.Info("invalid flush interval line");
+
+        Assert.That(
+            WaitForFileContains("invalid flush interval line", TimeSpan.FromSeconds(5)),
+            Is.True);
+    }
+
+    [Test]
+    public void FileLogTimerFlushesZeroIntervalBeforeComplete() {
+        var output = new StringWriter();
+        var original = Console.Out;
+        try {
+            Console.SetOut(output);
+            ConfigFile("log[f].service.flush interval = 00:00:00");
+            for (var i = 0; i < 5; i++) {
+                Log.Info($"zero flush interval line {i}");
+                Thread.Sleep(25);
+            }
+
+            Assert.That(
+                WaitForFileContains("zero flush interval line 4", TimeSpan.FromSeconds(5)),
+                Is.True);
+            Assert.That(output.ToString(), Is.Empty);
+        }
+        finally {
+            Console.SetOut(original);
+        }
+    }
+
+    [Test]
+    public void FileLogTimerReusesTimerForZeroInterval() {
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = Path.GetFileName(TempFile),
+            FlushInterval = TimeSpan.Zero
+        };
+        var service = (ILogService)log;
+        try {
+            service.Log(nameof(FileLogTimerReusesTimerForZeroInterval), "zero interval timer line", LogSeverity.Info);
+            var timerField = typeof(FileLog).GetField("Timer", BindingFlags.Instance | BindingFlags.NonPublic);
+            var timer = (Timer)timerField.GetValue(log);
+
+            Assert.That(
+                WaitForFileContains("zero interval timer line", TimeSpan.FromSeconds(5)),
+                Is.True);
+            Thread.Sleep(100);
+
+            Assert.That(timerField.GetValue(log), Is.SameAs(timer));
+        }
+        finally {
+            service.Complete();
         }
     }
 

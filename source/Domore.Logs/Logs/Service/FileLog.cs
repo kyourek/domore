@@ -14,6 +14,10 @@ internal sealed class FileLog : ILogService {
     private readonly PathFormatter PathFormatter = new();
 
     private Timer Timer;
+    private int _IORetryLimit = 5;
+    private int _IORetryDelay = 10;
+    private int _LogCountLimit = 100;
+    private TimeSpan _FlushInterval = TimeSpan.FromSeconds(2.5);
 
     public string FileName => _FileName ??= FileInfo.Name;
     private string _FileName;
@@ -164,7 +168,7 @@ internal sealed class FileLog : ILogService {
     }
 
     private void TimerCallback(object _) {
-        using (Timer) {
+        try {
             for (; ; ) {
                 lock (Locker) {
                     if (Complete) {
@@ -197,23 +201,76 @@ internal sealed class FileLog : ILogService {
                 }
             }
         }
-        Start();
-    }
-
-    private void Start() {
-        if (Complete) {
-            return;
+        catch (Exception ex) {
+            Logging.Notify(ex);
         }
-        Timer = new(TimerCallback, state: null, dueTime: (int)FlushInterval.TotalMilliseconds, period: Timeout.Infinite);
+        finally {
+            try {
+                lock (Locker) {
+                    if (Complete == false) {
+                        if (Timer.Change((int)FlushInterval.TotalMilliseconds, Timeout.Infinite) == false) {
+                            throw new ObjectDisposedException(nameof(Timer));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) {
+                Logging.Notify(ex);
+            }
+        }
     }
 
-    public int IORetryLimit { get; set; } = 5;
-    public int IORetryDelay { get; set; } = 10;
-    public int LogCountLimit { get; set; } = 100;
+    private bool Start() {
+        if (Complete) {
+            return false;
+        }
+        if (Timer != null) {
+            return true;
+        }
+        var timer = new Timer(TimerCallback, state: null, dueTime: Timeout.Infinite, period: Timeout.Infinite);
+        Timer = timer;
+        try {
+            if (timer.Change((int)FlushInterval.TotalMilliseconds, Timeout.Infinite) == false) {
+                throw new ObjectDisposedException(nameof(Timer));
+            }
+        }
+        catch {
+            Timer = null;
+            timer.Dispose();
+            throw;
+        }
+        return true;
+    }
+
+    public int IORetryLimit {
+        get => _IORetryLimit;
+        set => _IORetryLimit = Math.Max(1, value);
+    }
+    public int IORetryDelay {
+        get => _IORetryDelay;
+        set => _IORetryDelay = Math.Max(0, value);
+    }
+    public int LogCountLimit {
+        get => _LogCountLimit;
+        set => _LogCountLimit = Math.Max(1, value);
+    }
     public long FileSizeLimit { get; set; } = 100000;
     public long TotalSizeLimit { get; set; } = 100000000;
     public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
-    public TimeSpan FlushInterval { get; set; } = TimeSpan.FromSeconds(2.5);
+    public TimeSpan FlushInterval {
+        get => _FlushInterval;
+        set {
+            if (value < TimeSpan.FromMilliseconds(1)) {
+                _FlushInterval = TimeSpan.FromMilliseconds(1);
+            }
+            else if (value > TimeSpan.FromMilliseconds(int.MaxValue)) {
+                _FlushInterval = TimeSpan.FromMilliseconds(int.MaxValue);
+            }
+            else {
+                _FlushInterval = value;
+            }
+        }
+    }
 
     public string Directory {
         get => _Directory;
@@ -267,6 +324,7 @@ internal sealed class FileLog : ILogService {
             }
             finally {
                 Complete = true;
+                Timer?.Dispose();
             }
             if (lines.Count > 0) {
                 try {
@@ -280,14 +338,18 @@ internal sealed class FileLog : ILogService {
     }
 
     void ILogService.Log(string name, string data, LogSeverity severity) {
-        if (Started == false) {
-            lock (Locker) {
-                if (Started == false) {
-                    Started = true;
-                    Start();
+        try {
+            Queue.Enqueue(data);
+            if (Started == false) {
+                lock (Locker) {
+                    if (Started == false) {
+                        Started = Start();
+                    }
                 }
             }
         }
-        Queue.Enqueue(data);
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
     }
 }
