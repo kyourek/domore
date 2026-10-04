@@ -6,6 +6,7 @@ namespace Domore.Logs;
 
 internal sealed class LogServiceProxy {
     private static readonly LogServiceFactory Factory = new();
+
     private readonly LogManager Manager;
     private readonly Domore.Threading.BackgroundQueue DispatchQueue;
     private readonly
@@ -35,6 +36,82 @@ internal sealed class LogServiceProxy {
     private long DroppedItemCount;
     private long DroppedMessageBytes;
     private bool AdmissionClosed;
+
+    private static long SaturatingAdd(long value, long increment) =>
+        value > long.MaxValue - increment ? long.MaxValue : value + increment;
+
+    private ILogService GetServiceUnsafe() {
+        if (_Service is null) {
+            try {
+                using (LogCallbackGuard.EnterManager(Manager))
+                using (LogCallbackGuard.Enter()) {
+                    _Service = Factory.Create(Type) ?? new None();
+                }
+                ServiceInitializationError = null;
+                ServiceCompleted = false;
+            }
+            catch (Exception ex) {
+                ServiceInitializationError = ex;
+                throw;
+            }
+        }
+        return _Service;
+    }
+
+    private void Deliver(LogEntry entry, long messageBytes) {
+        lock (AdmissionLocker) {
+            if (PendingItemCount > 0) {
+                PendingItemCount--;
+            }
+            if (PendingMessageBytes >= messageBytes) {
+                PendingMessageBytes -= messageBytes;
+            }
+            else {
+                PendingMessageBytes = 0;
+            }
+        }
+        Log(entry);
+    }
+
+    private void CompleteServiceUnsafe(ILogService service) {
+        ServiceCallDepth++;
+        try {
+            Logging.CompleteService(Manager, service);
+        }
+        finally {
+            ServiceCallDepth--;
+            ApplyPendingType();
+        }
+    }
+
+    private void ApplyPendingType() {
+        if (ServiceCallDepth > 0 || PendingTypeChange == false) {
+            return;
+        }
+        var type = PendingType;
+        PendingType = null;
+        PendingTypeChange = false;
+        Type = type;
+    }
+
+    public ILogService Service {
+        get {
+            lock (Locker) {
+                // Configure the future instance without changing delivery during the active callback.
+                if (PendingTypeChange) {
+                    if (PendingService is null) {
+                        using (LogCallbackGuard.EnterManager(Manager))
+                        using (LogCallbackGuard.Enter()) {
+                            PendingService = Factory.Create(PendingType) ?? new None();
+                        }
+                    }
+                    return PendingService;
+                }
+                return GetServiceUnsafe();
+            }
+        }
+    }
+    private volatile ILogService _Service;
 
     public bool ThreadIsCurrentThread =>
         DispatchQueue.ThreadIsCurrentThread;
@@ -104,127 +181,6 @@ internal sealed class LogServiceProxy {
         }
     }
 
-    private static long SaturatingAdd(long value, long increment) =>
-        value > long.MaxValue - increment ? long.MaxValue : value + increment;
-
-    public bool Enqueue(LogEntry entry) {
-        if (entry is null) {
-            return false;
-        }
-
-        var messageBytes = entry.RetainedTextBytes;
-        var rejected = false;
-        lock (AdmissionLocker) {
-            if (AdmissionClosed) {
-                return false;
-            }
-            if (PendingItemCount >= QueueItemLimit ||
-                messageBytes > QueueByteLimit ||
-                PendingMessageBytes > QueueByteLimit - messageBytes) {
-                DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
-                DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, messageBytes);
-                rejected = true;
-            }
-            else {
-                PendingItemCount++;
-                PendingMessageBytes += messageBytes;
-                DispatchQueue.Add(() => Deliver(entry, messageBytes));
-            }
-        }
-        if (rejected) {
-            LogQueueDiagnostics.ReportOverflow();
-            return false;
-        }
-        return true;
-    }
-
-    private void Deliver(LogEntry entry, long messageBytes) {
-        lock (AdmissionLocker) {
-            if (PendingItemCount > 0) {
-                PendingItemCount--;
-            }
-            if (PendingMessageBytes >= messageBytes) {
-                PendingMessageBytes -= messageBytes;
-            }
-            else {
-                PendingMessageBytes = 0;
-            }
-        }
-        Log(entry);
-    }
-
-    public void CloseAdmission() {
-        lock (AdmissionLocker) {
-            AdmissionClosed = true;
-        }
-    }
-
-    public void DrainQueue() {
-        DispatchQueue.Complete();
-    }
-
-    public void DisposeQueue() {
-        DispatchQueue.Dispose();
-    }
-
-    private ILogService GetServiceUnsafe() {
-        if (_Service is null) {
-            try {
-                using (LogCallbackGuard.EnterManager(Manager))
-                using (LogCallbackGuard.Enter()) {
-                    _Service = Factory.Create(Type) ?? new None();
-                }
-                ServiceInitializationError = null;
-                ServiceCompleted = false;
-            }
-            catch (Exception ex) {
-                ServiceInitializationError = ex;
-                throw;
-            }
-        }
-        return _Service;
-    }
-
-    private void CompleteServiceUnsafe(ILogService service) {
-        ServiceCallDepth++;
-        try {
-            Logging.CompleteService(Manager, service);
-        }
-        finally {
-            ServiceCallDepth--;
-            ApplyPendingType();
-        }
-    }
-
-    private void ApplyPendingType() {
-        if (ServiceCallDepth > 0 || PendingTypeChange == false) {
-            return;
-        }
-        var type = PendingType;
-        PendingType = null;
-        PendingTypeChange = false;
-        Type = type;
-    }
-
-    public ILogService Service {
-        get {
-            lock (Locker) {
-                // Configure the future instance without changing delivery during the active callback.
-                if (PendingTypeChange) {
-                    if (PendingService is null) {
-                        using (LogCallbackGuard.EnterManager(Manager))
-                        using (LogCallbackGuard.Enter()) {
-                            PendingService = Factory.Create(PendingType) ?? new None();
-                        }
-                    }
-                    return PendingService;
-                }
-                return GetServiceUnsafe();
-            }
-        }
-    }
-    private volatile ILogService _Service;
-
     public LogServiceConfig Config {
         get {
             if (field is null) {
@@ -286,6 +242,51 @@ internal sealed class LogServiceProxy {
         Name = name;
         Manager = manager;
         DispatchQueue = new Domore.Threading.BackgroundQueue(Logging.Notify);
+    }
+
+    public bool Enqueue(LogEntry entry) {
+        if (entry is null) {
+            return false;
+        }
+
+        var messageBytes = entry.RetainedTextBytes;
+        var rejected = false;
+        lock (AdmissionLocker) {
+            if (AdmissionClosed) {
+                return false;
+            }
+            if (PendingItemCount >= QueueItemLimit ||
+                messageBytes > QueueByteLimit ||
+                PendingMessageBytes > QueueByteLimit - messageBytes) {
+                DroppedItemCount = SaturatingAdd(DroppedItemCount, 1);
+                DroppedMessageBytes = SaturatingAdd(DroppedMessageBytes, messageBytes);
+                rejected = true;
+            }
+            else {
+                PendingItemCount++;
+                PendingMessageBytes += messageBytes;
+                DispatchQueue.Add(() => Deliver(entry, messageBytes));
+            }
+        }
+        if (rejected) {
+            LogQueueDiagnostics.ReportOverflow();
+            return false;
+        }
+        return true;
+    }
+
+    public void CloseAdmission() {
+        lock (AdmissionLocker) {
+            AdmissionClosed = true;
+        }
+    }
+
+    public void DrainQueue() {
+        DispatchQueue.Complete();
+    }
+
+    public void DisposeQueue() {
+        DispatchQueue.Dispose();
     }
 
     public void Log(LogEntry entry) {
