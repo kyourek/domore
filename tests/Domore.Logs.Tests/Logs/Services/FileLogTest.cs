@@ -121,6 +121,66 @@ internal sealed class FileLogTest {
         Assert.That(File.ReadAllText(Path.Combine(TempDir, "test.log")).Trim(), Is.EqualTo("queued"));
     }
 
+    [Test]
+    public void WideSettingsWaitForTheFileServiceLock() {
+        var fileLog = new FileLog();
+        var locker = typeof(FileLog).GetField("Locker", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fileLog);
+
+        AssertWideSettingWaitsForLock(locker, () => fileLog.FileSizeLimit = 1234567890123L);
+        AssertWideSettingWaitsForLock(locker, () => fileLog.TotalSizeLimit = 2345678901234L);
+        AssertWideSettingWaitsForLock(locker, () => fileLog.FileAgeLimit = TimeSpan.FromTicks(3456789012345L));
+        AssertWideSettingWaitsForLock(locker, () => _ = fileLog.FileSizeLimit);
+        AssertWideSettingWaitsForLock(locker, () => _ = fileLog.TotalSizeLimit);
+        AssertWideSettingWaitsForLock(locker, () => _ = fileLog.FileAgeLimit);
+    }
+
+    private static void AssertWideSettingWaitsForLock(object locker, Action operation) {
+        using var started = new ManualResetEventSlim(false);
+        using var completed = new ManualResetEventSlim(false);
+        Exception failure = null;
+        var worker = new Thread(() => {
+            started.Set();
+            try {
+                operation();
+            }
+            catch (Exception ex) {
+                failure = ex;
+            }
+            finally {
+                completed.Set();
+            }
+        }) {
+            IsBackground = true
+        };
+        var waited = false;
+
+        WithServiceLock(locker, () => {
+            worker.Start();
+            Assert.That(started.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            waited = completed.Wait(TimeSpan.FromMilliseconds(100)) == false;
+        });
+
+        Assert.That(completed.Wait(TimeSpan.FromSeconds(5)), Is.True);
+        worker.Join();
+        Assert.Multiple(() => {
+            Assert.That(waited, Is.True);
+            Assert.That(failure, Is.Null);
+        });
+    }
+
+    private static void WithServiceLock(object locker, Action action) {
+#if NET9_0_OR_GREATER
+        var serviceLock = (Lock)locker;
+        lock (serviceLock) {
+            action();
+        }
+#else
+        lock (locker) {
+            action();
+        }
+#endif
+    }
+
     [TestCase(-2d)]
     [TestCase(-1d)]
     [TestCase(0d)]
@@ -574,6 +634,37 @@ internal sealed class FileLogTest {
         Assert.DoesNotThrow(() => rotateMethod.Invoke(fileLog, null));
         Assert.That(File.Exists(expiredArchive), Is.False);
         Assert.That(invalidArchives.All(File.Exists), Is.True);
+    }
+
+    [Test]
+    public void IndividualRetentionDeleteFailuresDoNotStopCleanupOrLoseByteAccounting() {
+        Directory.CreateDirectory(TempDir);
+        var lockedArchive = Path.Combine(TempDir, "archive_20000101-000000-000.log");
+        var firstDeletableArchive = Path.Combine(TempDir, "archive_20200101-000000-000.log");
+        var secondDeletableArchive = Path.Combine(TempDir, "archive_20210101-000000-000.log");
+        File.WriteAllText(Path.Combine(TempDir, "archive.log"), "x");
+        File.WriteAllText(lockedArchive, "locked");
+        File.WriteAllText(firstDeletableArchive, "four");
+        File.WriteAllText(secondDeletableArchive, "sixsix");
+        var fileLog = new FileLog {
+            Directory = TempDir,
+            Name = "archive.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromDays(50000),
+            TotalSizeLimit = 7
+        };
+        typeof(FileLog).GetProperty("FileInfo", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fileLog);
+        var rotateMethod = typeof(FileLog).GetMethod("Rotate", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        using (File.Open(lockedArchive, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+            Assert.DoesNotThrow(() => rotateMethod.Invoke(fileLog, null));
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(File.Exists(lockedArchive), Is.True);
+            Assert.That(File.Exists(firstDeletableArchive), Is.False);
+            Assert.That(File.Exists(secondDeletableArchive), Is.False);
+        });
     }
 
     [Test]
