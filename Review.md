@@ -8,12 +8,12 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 
 | # | Sev | Area | Summary |
 |---|-----|------|---------|
-| 1 | High | Logging | `Manager` getter double-read races with `Complete()` and causes an NRE thrown from `Log` |
-| 2 | High | LogManager | `LogEvent` handler exceptions propagate out of `Log` methods |
-| 3 | High | Logger/LogManager | `Logging.For(null)` gives an `ILog` whose `Data`/`Info`/... throw `ArgumentNullException` |
+| 1 | High | Logging | Resolved: `Manager` getter double-read races with `Complete()` and causes an NRE thrown from `Log` |
+| 2 | High | LogManager | Resolved: `LogEvent` handler exceptions propagate out of `Log` methods |
+| 3 | High | Logger/LogManager | Resolved: `Logging.For(null)` gives an `ILog` whose `Data`/`Info`/... throw `ArgumentNullException` |
 | 4 | High | LogSubscriptionCollection | User callbacks run under `lock (Lookup)`, which can deadlock |
 | 5 | High | LogServiceCollection | Services run under `Locker`, which is also taken by `Enabled()`. This can deadlock or stall the app |
-| 6 | High | Logging/LogManager | Re-entrant logging from handlers, subscribers, or services can recurse without bound (stack overflow) or amplify |
+| 6 | High | Logging/LogManager | Resolved: Re-entrant logging from handlers, subscribers, or services can recurse without bound (stack overflow) or amplify |
 | 7 | High | FileLog | Bad config values can crash the process from the timer callback or permanently stop file logging |
 | 8 | High | Logging/LogServiceCollection | One failing `ILogService.Complete()` stops the rest from flushing and leaves a disposed manager installed for good |
 | 9 | High | Logging/BackgroundQueue | `Complete()` can hang forever, or deadlock when called from a service thread |
@@ -46,7 +46,7 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 
 ---
 
-## 1. `Logging.Manager` double-read races with `Complete()` (NRE thrown from `Log`). **High**
+## 1. `Logging.Manager` double-read races with `Complete()` (NRE thrown from `Log`). **High** (Resolved)
 
 **File:** `Logs/Logging.cs` lines 15–29, 35–41, 110–117
 
@@ -79,7 +79,7 @@ There is a related problem. Any caller that obtained the *old* manager just befo
 
 ---
 
-## 2. `LogEvent` handler exceptions propagate out of `Log` methods. **High**
+## 2. `LogEvent` handler exceptions propagate out of `Log` methods. **High** (Resolved)
 
 **File:** `Logs/LogManager.cs` line 61
 
@@ -103,7 +103,7 @@ if (handler != null) {
 
 ---
 
-## 3. `Logging.For(null)` gives an `ILog` whose log methods throw. **High**
+## 3. `Logging.For(null)` gives an `ILog` whose log methods throw. **High** (Resolved)
 
 **Files:** `Logs/Logging.cs` line 94, `Logs/Logger.cs` line 9, `Logs/LogManager.cs` lines 53–59, `Logs/LogEntry.cs` line 50
 
@@ -152,7 +152,7 @@ Consequences:
 
 ---
 
-## 6. Re-entrant logging can recurse without bound or amplify. **High**
+## 6. Re-entrant logging can recurse without bound or amplify. **High** (Resolved)
 
 **Files:** `Logs/LogManager.cs` lines 53–70, `Logs/Service/TraceLog.cs`, `Logs/Service/DebugLog.cs`, `Logs/Logging.cs` lines 43–47
 
