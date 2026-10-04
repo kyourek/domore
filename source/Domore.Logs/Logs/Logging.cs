@@ -85,7 +85,7 @@ public sealed class Logging {
     internal static void Notify(object obj) {
         try { Debug.WriteLine(obj); } catch { }
         try { Trace.WriteLine(obj); } catch { }
-        try { Console.WriteLine(obj); } catch { }
+        try { Console.Error.WriteLine(obj); } catch { }
     }
 
     /// <summary>

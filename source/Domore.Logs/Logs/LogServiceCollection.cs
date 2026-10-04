@@ -28,12 +28,6 @@ internal sealed class LogServiceCollection : IDisposable {
         LogSeverity.None,
         new Dictionary<string, LogSeverity>());
 
-    private void Dispose(bool disposing) {
-        if (disposing) {
-            Queue.Dispose();
-        }
-    }
-
     private void QueueServiceCompletion(ILogService service) {
         try {
             Queue.Add(() => {
@@ -113,7 +107,7 @@ internal sealed class LogServiceCollection : IDisposable {
 
     public bool Send(LogSeverity severity, Type type) {
         var thresholds = Thresholds;
-        if (thresholds.TryGetThreshold(type.Name, out var value)) {
+        if (thresholds.TryGetThreshold(type.FullName ?? type.Name, out var value)) {
             return value != LogSeverity.None && value <= severity;
         }
         var defaultThreshold = thresholds.DefaultThreshold;
@@ -146,6 +140,11 @@ internal sealed class LogServiceCollection : IDisposable {
             Logging.Notify(ex);
         }
 
+        var dropped = Queue.DroppedCount;
+        if (dropped > 0) {
+            Logging.Notify($"Dropped {dropped} item(s) from the background log queue (drop-newest policy).");
+        }
+
         var proxies = Proxies;
         foreach (var proxy in proxies) {
             try {
@@ -159,11 +158,6 @@ internal sealed class LogServiceCollection : IDisposable {
     }
 
     public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    ~LogServiceCollection() {
-        Dispose(false);
+        Queue.Dispose();
     }
 }

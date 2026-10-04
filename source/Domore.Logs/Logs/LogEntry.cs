@@ -44,7 +44,7 @@ internal sealed class LogEntry : ILogEntry {
 
     public string LogName =>
         _LogName ?? (
-        _LogName = LogType.Name);
+        _LogName = LogType.FullName ?? LogType.Name);
     private string _LogName;
 
     public Type LogType { get; }

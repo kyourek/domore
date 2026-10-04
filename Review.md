@@ -541,7 +541,7 @@ If a conf file lists `log[f].service.name = ...` **before** `log[f].type = file`
 
 ---
 
-## 35. Miscellaneous. **Low**
+## 35. Miscellaneous. **Low** (Resolved)
 
 1. **Empty finalizers** (`LogManager`, `LogServiceCollection`, `LogConfFile`, and `BackgroundQueue`): `Dispose(false)` does nothing, so the finalizers only add GC cost (finalization queue, objects promoted to Gen 1). Remove them, and drop the `Dispose(bool)` pattern where nothing unmanaged is owned.
 2. **Unbounded `BackgroundQueue`:** a slow sink lets memory grow without limit. Consider a bounded capacity with a drop-oldest or drop-newest policy, and a counter of dropped entries reported through `Notify`. `Add` must never block or throw on the log path.

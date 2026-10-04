@@ -10,14 +10,6 @@ internal sealed class LogConfFile : IDisposable {
         Logging.Notify(e.GetException());
     }
 
-    private void Dispose(bool disposing) {
-        if (disposing) {
-            Agent.ConfigureError -= Agent_Error;
-            Agent.WatchError -= Agent_Error;
-            Agent.Dispose();
-        }
-    }
-
     public LogConfFile(string path) {
         Agent = new ConfFile(path, key: "", target: Logging.Config);
         Agent.ConfigureError += Agent_Error;
@@ -29,11 +21,8 @@ internal sealed class LogConfFile : IDisposable {
     }
 
     public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    ~LogConfFile() {
-        Dispose(false);
+        Agent.ConfigureError -= Agent_Error;
+        Agent.WatchError -= Agent_Error;
+        Agent.Dispose();
     }
 }

@@ -15,17 +15,18 @@ internal sealed class LogServiceFactory {
         }
         var obj = default(object);
         try {
+            /*
+             * Type.GetType and Activator.CreateInstance allow configuration to instantiate any resolvable type with
+             * a public parameterless constructor.
+             */
             obj = Activator.CreateInstance(type);
         }
         catch {
             Logging.Notify($"Cannot create instance [{type}]");
             return null;
         }
-        var inst = default(ILogService);
-        try {
-            inst = (ILogService)obj;
-        }
-        catch {
+        var inst = obj as ILogService;
+        if (inst == null) {
             Logging.Notify($"Cannot cast object to instance of {nameof(ILogService)} [{obj}]");
             return null;
         }
