@@ -22,6 +22,11 @@ internal sealed class FileLog : ILogService {
         Locker = new();
 
     private Timer Timer;
+    private int _IORetryLimit = 5;
+    private int _IORetryDelay = 10;
+    private long _FileSizeLimit = 100000;
+    private long _TotalSizeLimit = 100000000;
+    private TimeSpan _FileAgeLimit = TimeSpan.FromDays(28);
 
     public string FileName => _FileName ??=
         FileInfo.Name;
@@ -128,20 +133,48 @@ internal sealed class FileLog : ILogService {
         var items = files
             .Select(file => new { File = file, Date = FileDate(file.Name) })
             .Where(item => item.Date.HasValue)
-            .Select(item => new { item.File, Date = item.Date.Value, Age = now - item.Date.Value.ToUniversalTime() })
+            .Select(item => new {
+                item.File,
+                Date = item.Date.Value,
+                Age = now - item.Date.Value.ToUniversalTime(),
+                Length = item.File.Length
+            })
             .OrderByDescending(item => item.Age)
             .ToList();
         var itemsToDelete = items
             .Where(item => item.Age > FileAgeLimit)
             .ToList();
-        foreach (var item in itemsToDelete) {
-            item.File.Delete();
-            items.Remove(item);
+        var deleteFailures = new HashSet<FileInfo>();
+        bool TryDelete(FileInfo file) {
+            try {
+                file.Delete();
+                return true;
+            }
+            catch (Exception ex) {
+                deleteFailures.Add(file);
+                try {
+                    Logging.Notify(ex);
+                }
+                catch (Exception) {
+                }
+                return false;
+            }
         }
-        while (items.Count > 0 && items.Sum(item => item.File.Length) > TotalSizeLimit) {
-            var oldest = items[0];
-            oldest.File.Delete();
-            items.Remove(oldest);
+        foreach (var item in itemsToDelete) {
+            if (TryDelete(item.File)) {
+                items.Remove(item);
+            }
+        }
+        var totalSize = items.Sum(item => item.Length);
+        while (totalSize > TotalSizeLimit) {
+            var oldest = items.FirstOrDefault(item => deleteFailures.Contains(item.File) == false);
+            if (oldest == null) {
+                break;
+            }
+            if (TryDelete(oldest.File)) {
+                items.Remove(oldest);
+                totalSize -= oldest.Length;
+            }
         }
     }
 
@@ -269,11 +302,70 @@ internal sealed class FileLog : ILogService {
                     period: Timeout.Infinite);
     }
 
-    public int IORetryLimit { get; set; } = 5;
-    public int IORetryDelay { get; set; } = 10;
-    public long FileSizeLimit { get; set; } = 100000;
-    public long TotalSizeLimit { get; set; } = 100000000;
-    public TimeSpan FileAgeLimit { get; set; } = TimeSpan.FromDays(28);
+    public int IORetryLimit {
+        get {
+            lock (Locker) {
+                return _IORetryLimit;
+            }
+        }
+        set {
+            lock (Locker) {
+                _IORetryLimit = value;
+            }
+        }
+    }
+
+    public int IORetryDelay {
+        get {
+            lock (Locker) {
+                return _IORetryDelay;
+            }
+        }
+        set {
+            lock (Locker) {
+                _IORetryDelay = value;
+            }
+        }
+    }
+
+    public long FileSizeLimit {
+        get {
+            lock (Locker) {
+                return _FileSizeLimit;
+            }
+        }
+        set {
+            lock (Locker) {
+                _FileSizeLimit = value;
+            }
+        }
+    }
+
+    public long TotalSizeLimit {
+        get {
+            lock (Locker) {
+                return _TotalSizeLimit;
+            }
+        }
+        set {
+            lock (Locker) {
+                _TotalSizeLimit = value;
+            }
+        }
+    }
+
+    public TimeSpan FileAgeLimit {
+        get {
+            lock (Locker) {
+                return _FileAgeLimit;
+            }
+        }
+        set {
+            lock (Locker) {
+                _FileAgeLimit = value;
+            }
+        }
+    }
 
     public TimeSpan FlushInterval {
         get {
