@@ -3,6 +3,7 @@ using Domore.Logs.Service;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -80,6 +81,32 @@ internal sealed class FileLogTest {
             Thread.Sleep(10);
         }
         return File.Exists(TempFile) && File.ReadAllText(TempFile).Contains(value);
+    }
+
+    private static bool WaitFor(Func<bool> condition, TimeSpan timeout) {
+        var end = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < end) {
+            try {
+                if (condition()) {
+                    return true;
+                }
+            }
+            catch (IOException) {
+            }
+            Thread.Sleep(10);
+        }
+        try {
+            return condition();
+        }
+        catch (IOException) {
+            return false;
+        }
+    }
+
+    private static void Rotate(FileLog log) {
+        typeof(FileLog)
+            .GetMethod("Rotate", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(log, null);
     }
 
     [SetUp]
@@ -279,6 +306,290 @@ internal sealed class FileLogTest {
         Assert.That("crt More data that will be in the original log" + Environment.NewLine, Is.EqualTo(File.ReadAllText(originalLog)));
     }
 
+    [Test]
+    public void RotatedFileNamesEncodeUtc() {
+        if (TimeZoneInfo.Local.GetUtcOffset(DateTime.Now) == TimeSpan.Zero) {
+            Assert.Inconclusive("The local time zone is UTC, so local and UTC rotation names are indistinguishable.");
+        }
+
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "utc.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.FromHours(1),
+            FlushInterval = TimeSpan.FromDays(1)
+        };
+        var service = (ILogService)log;
+        try {
+            service.Log(nameof(RotatedFileNamesEncodeUtc), "utc rotation", LogSeverity.Info);
+            service.Complete();
+            Rotate(log);
+
+            var rotated = Directory.GetFiles(TempDir, "utc_*.log", SearchOption.TopDirectoryOnly).Single();
+            var timestamp = Path.GetFileNameWithoutExtension(rotated).Substring("utc_".Length);
+            var parsed = DateTime.TryParseExact(
+                timestamp,
+                "yyyyMMdd-HHmmss-fff",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var encoded);
+
+            Assert.That(parsed, Is.True);
+            Assert.That(Math.Abs((DateTime.UtcNow - encoded).TotalSeconds), Is.LessThan(5));
+        }
+        finally {
+            service.Complete();
+        }
+    }
+
+    [Test]
+    public void InvalidRotationFileNameDoesNotStopAgeCleanup() {
+        Directory.CreateDirectory(TempDir);
+        var expired = Path.Combine(TempDir, "cleanup_20200101-000000-000.log");
+        var invalid = Path.Combine(TempDir, "cleanup_20261399-250000-000.log");
+        File.WriteAllText(expired, "old");
+        File.WriteAllText(invalid, "invalid");
+
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "cleanup.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.Zero,
+            TotalSizeLimit = long.MaxValue,
+            FlushInterval = TimeSpan.FromDays(1)
+        };
+        var service = (ILogService)log;
+        try {
+            service.Log(nameof(InvalidRotationFileNameDoesNotStopAgeCleanup), "active", LogSeverity.Info);
+            service.Complete();
+
+            Exception failure = null;
+            try {
+                Rotate(log);
+            }
+            catch (Exception ex) {
+                failure = ex;
+            }
+
+            Assert.That(failure, Is.Null);
+            Assert.That(File.Exists(expired), Is.False);
+            Assert.That(File.Exists(invalid), Is.True);
+        }
+        finally {
+            service.Complete();
+        }
+    }
+
+    [Test]
+    public void LockedExpiredRotationFileDoesNotStopAgeCleanup() {
+        Directory.CreateDirectory(TempDir);
+        var locked = Path.Combine(TempDir, "cleanup_20190101-000000-000.log");
+        var expired = Path.Combine(TempDir, "cleanup_20200101-000000-000.log");
+        File.WriteAllText(locked, "locked");
+        File.WriteAllText(expired, "expired");
+
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "cleanup.log",
+            FileSizeLimit = 1,
+            FileAgeLimit = TimeSpan.Zero,
+            TotalSizeLimit = long.MaxValue,
+            FlushInterval = TimeSpan.FromDays(1)
+        };
+        var service = (ILogService)log;
+        FileStream lockedStream = null;
+        try {
+            lockedStream = File.Open(locked, FileMode.Open, FileAccess.Read, FileShare.None);
+            service.Log(nameof(LockedExpiredRotationFileDoesNotStopAgeCleanup), "active", LogSeverity.Info);
+            service.Complete();
+
+            Exception failure = null;
+            try {
+                Rotate(log);
+            }
+            catch (Exception ex) {
+                failure = ex;
+            }
+
+            Assert.That(failure, Is.Null);
+            Assert.That(File.Exists(expired), Is.False);
+        }
+        finally {
+            lockedStream?.Dispose();
+            service.Complete();
+        }
+    }
+
+    [Test]
+    public void ResolvesThreadPathTokensBeforeFlushAndReusesPathAfterRotation() {
+        var callerThreadId = Thread.CurrentThread.ManagedThreadId;
+        var baseName = $"x-{callerThreadId}";
+        var active = Path.Combine(TempDir, $"{baseName}.log");
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "x-{Thread.ManagedThreadId}.log",
+            FileSizeLimit = 1,
+            TotalSizeLimit = long.MaxValue,
+            FileAgeLimit = TimeSpan.FromDays(90),
+            FlushInterval = TimeSpan.FromMilliseconds(5)
+        };
+        var service = (ILogService)log;
+        try {
+            service.Log(
+                nameof(ResolvesThreadPathTokensBeforeFlushAndReusesPathAfterRotation),
+                "first",
+                LogSeverity.Info);
+            var firstRotationObserved = WaitFor(
+                () => Directory.GetFiles(TempDir, "x-*_*.log", SearchOption.TopDirectoryOnly).Length >= 1,
+                TimeSpan.FromSeconds(5));
+            Thread.Sleep(20);
+
+            service.Log(
+                nameof(ResolvesThreadPathTokensBeforeFlushAndReusesPathAfterRotation),
+                "second",
+                LogSeverity.Info);
+            var secondRotationObserved = WaitFor(
+                () => Directory.GetFiles(TempDir, "x-*_*.log", SearchOption.TopDirectoryOnly).Length >= 2,
+                TimeSpan.FromSeconds(5));
+
+            log.FileSizeLimit = long.MaxValue;
+            service.Log(
+                nameof(ResolvesThreadPathTokensBeforeFlushAndReusesPathAfterRotation),
+                "third",
+                LogSeverity.Info);
+            var activeObserved = WaitFor(
+                () => File.Exists(active) && File.ReadAllText(active).Contains("third"),
+                TimeSpan.FromSeconds(5));
+            var rotated = Directory.GetFiles(TempDir, $"{baseName}_*.log", SearchOption.TopDirectoryOnly);
+            var allRotated = Directory.GetFiles(TempDir, "x-*_*.log", SearchOption.TopDirectoryOnly);
+
+            Assert.Multiple(() => {
+                Assert.That(firstRotationObserved, Is.True, "The first log should rotate.");
+                Assert.That(secondRotationObserved, Is.True, "The second log should rotate.");
+                Assert.That(activeObserved, Is.True, "The active file should retain the caller-thread name.");
+                Assert.That(rotated.Length, Is.GreaterThanOrEqualTo(2));
+                Assert.That(
+                    allRotated.Length,
+                    Is.EqualTo(rotated.Length),
+                    "Every rotated file should use the cached base name.");
+            });
+        }
+        finally {
+            service.Complete();
+        }
+    }
+
+    [Test]
+    public void FileLogSettingsCanBeReadAndWrittenWhileLogging() {
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "settings.log",
+            FileSizeLimit = 1024,
+            TotalSizeLimit = 100000,
+            FileAgeLimit = TimeSpan.FromDays(1),
+            FlushInterval = TimeSpan.FromMilliseconds(10)
+        };
+        var service = (ILogService)log;
+        var failures = new List<Exception>();
+        var mutate = new Thread(() => {
+            try {
+                for (var i = 0; i < 1000; i++) {
+                    log.FileSizeLimit = (i & 1) == 0 ? 1 : long.MaxValue;
+                    log.TotalSizeLimit = (i & 1) == 0 ? 1 : long.MaxValue;
+                    log.FileAgeLimit = (i & 1) == 0 ? TimeSpan.Zero : TimeSpan.MaxValue;
+                    log.FlushInterval = TimeSpan.FromMilliseconds(1 + (i % 10));
+                }
+            }
+            catch (Exception ex) {
+                lock (failures) {
+                    failures.Add(ex);
+                }
+            }
+        }) {
+            IsBackground = true
+        };
+        var write = new Thread(() => {
+            try {
+                for (var i = 0; i < 100; i++) {
+                    service.Log(nameof(FileLogSettingsCanBeReadAndWrittenWhileLogging), $"{i}", LogSeverity.Info);
+                }
+            }
+            catch (Exception ex) {
+                lock (failures) {
+                    failures.Add(ex);
+                }
+            }
+        }) {
+            IsBackground = true
+        };
+
+        try {
+            mutate.Start();
+            write.Start();
+            Assert.That(mutate.Join(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(write.Join(TimeSpan.FromSeconds(5)), Is.True);
+        }
+        finally {
+            if (mutate.IsAlive) {
+                mutate.Join(TimeSpan.FromSeconds(1));
+            }
+            if (write.IsAlive) {
+                write.Join(TimeSpan.FromSeconds(1));
+            }
+            service.Complete();
+        }
+
+        lock (failures) {
+            Assert.That(failures, Is.Empty);
+        }
+    }
+
+    [Test]
+    public void FileLogLogUsesLockFreeFastPathAfterPathResolution() {
+        var log = new FileLog {
+            Directory = TempDir,
+            Name = "fast-path.log",
+            FlushInterval = TimeSpan.FromDays(1)
+        };
+        var service = (ILogService)log;
+        var locker = typeof(FileLog)
+            .GetField("Locker", BindingFlags.Instance | BindingFlags.NonPublic)
+            .GetValue(log);
+        var completed = new ManualResetEvent(false);
+        Exception failure = null;
+        var writer = new Thread(() => {
+            try {
+                service.Log(nameof(FileLogLogUsesLockFreeFastPathAfterPathResolution), "second", LogSeverity.Info);
+            }
+            catch (Exception ex) {
+                failure = ex;
+            }
+            finally {
+                completed.Set();
+            }
+        }) {
+            IsBackground = true
+        };
+        var started = false;
+        try {
+            service.Log(nameof(FileLogLogUsesLockFreeFastPathAfterPathResolution), "first", LogSeverity.Info);
+            Assert.That(log.Started, Is.True);
+            lock (locker) {
+                writer.Start();
+                started = true;
+                Assert.That(completed.WaitOne(TimeSpan.FromSeconds(5)), Is.True);
+            }
+            Assert.That(failure, Is.Null);
+        }
+        finally {
+            if (started && writer.IsAlive) {
+                writer.Join(TimeSpan.FromSeconds(5));
+            }
+            service.Complete();
+            completed.Dispose();
+        }
+    }
+
     [TestCase("the_log")]
     [TestCase("the(log)")]
     public void RotatesLogFilesWithoutExtension(string name) {
@@ -460,7 +771,10 @@ internal sealed class FileLogTest {
                 ");
             Log.Info("Got the message?");
             Logging.Complete();
-            var actual = File.ReadAllText(Path.Combine(dir, $"test-{Thread.CurrentThread.ManagedThreadId}.log")).Trim();
+            var files = Directory.GetFiles(dir, "test-*.log", SearchOption.TopDirectoryOnly);
+            Assert.That(files, Has.Length.EqualTo(1));
+            Assert.That(Path.GetFileName(files[0]), Does.Match(@"^test-\d+\.log$"));
+            var actual = File.ReadAllText(files[0]).Trim();
             var expected = "inf Got the message?";
             Assert.That(actual, Is.EqualTo(expected));
         }

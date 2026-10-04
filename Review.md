@@ -27,11 +27,11 @@ Severity: **High** means a crash, deadlock, hang, or throw from a log method. **
 | 17 | Medium | Logs.Conf | Resolved: `Logging.Config` snapshots the manager. After `Logging.Complete()`, file hot-reload configures a dead manager |
 | 18 | Medium | Logs.Conf | Resolved: `Log.Conf.Configure` sets `File` before success. A failure leaves `Configured == true`, and it can't be retried |
 | 19 | Medium | Logs.Conf | Resolved: Hot-reload errors (`ConfigureError`/`WatchError`) are silently dropped |
-| 20 | Medium | FileLog | Rotation names use local time but are parsed as UTC, so file ages are skewed by the UTC offset |
-| 21 | Medium | FileLog | `FileDate` can throw (`new DateTime` with invalid parts), and a failed `Delete` aborts cleanup. Old logs are never pruned |
-| 22 | Medium | FileLog/PathFormatter | `{Thread.*}` tokens resolve on random thread-pool threads. The file name changes after rotation, and caches go stale |
+| 20 | Medium | FileLog | Resolved: Rotation names use local time but are parsed as UTC, so file ages are skewed by the UTC offset |
+| 21 | Medium | FileLog | Resolved: `FileDate` can throw (`new DateTime` with invalid parts), and a failed `Delete` aborts cleanup. Old logs are never pruned |
+| 22 | Medium | FileLog/PathFormatter | Resolved: `{Thread.*}` tokens resolve on random thread-pool threads. The file name changes after rotation, and caches go stale |
 | 23 | Medium | LogEntry | Resolved: `{dat}`/`{tim}` formatting is culture-sensitive (calendar and time separator) |
-| 24 | Medium | ConsoleLog/FileLog | Service properties mutated by Conf hot reload race with the logging thread (`Dictionary` corruption) |
+| 24 | Medium | ConsoleLog/FileLog | Resolved: Service properties mutated by Conf hot reload race with the logging thread (`Dictionary` corruption) |
 | 25 | Medium | Logging | Logs queued in memory are lost on process exit or crash unless `Complete()` is called |
 | 26 | Medium | LogFormatter | Resolved: One bad item, or a `null` result from a custom formatter, replaces the whole message with an exception dump |
 | 27 | Low | LogFormatter | Unbounded `IEnumerable` expansion (infinite sequences, `IQueryable`) can hang or OOM the calling thread |
@@ -364,7 +364,7 @@ Validate `path` (`ArgumentNullException`). This is not a log method, so throwing
 
 ---
 
-## 20. Rotation file names use local time but are parsed as UTC. **Medium**
+## 20. Rotation file names use local time but are parsed as UTC. **Medium** (Resolved)
 
 **File:** `Logs/Service/FileLog.cs` lines 37–40, 81, 110
 
@@ -374,7 +374,7 @@ Validate `path` (`ArgumentNullException`). This is not a log method, so throwing
 
 ---
 
-## 21. Rotation cleanup can throw, and then old logs are never pruned. **Medium**
+## 21. Rotation cleanup can throw, and then old logs are never pruned. **Medium** (Resolved)
 
 **File:** `Logs/Service/FileLog.cs` lines 42–82, 110–130
 
@@ -391,7 +391,7 @@ Validate `path` (`ArgumentNullException`). This is not a log method, so throwing
 
 ---
 
-## 22. `{Thread.*}` path tokens are resolved on random thread-pool threads. **Medium**
+## 22. `{Thread.*}` path tokens are resolved on random thread-pool threads. **Medium** (Resolved)
 
 **Files:** `Logs/Service/FileLog.cs` lines 18–35, 109, `shared/Domore.Sharing/IO/PathFormatter.cs` lines 46–50
 
@@ -415,7 +415,7 @@ Log timestamps then differ between machines and can't be parsed reliably. On som
 
 ---
 
-## 24. Service properties mutated by hot reload race with the logging thread. **Medium**
+## 24. Service properties mutated by hot reload race with the logging thread. **Medium** (Resolved)
 
 **Files:** `Logs/Service/ConsoleLog.cs` lines 22–45, `Logs/Service/FileLog.cs` lines 210–216
 
