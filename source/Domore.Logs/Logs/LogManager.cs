@@ -95,11 +95,34 @@ internal sealed class LogManager : IDisposable {
         }
     }
 
-    public void Complete() {
-        LogEvent = null;
-        Services.Complete();
-        Subscriptions.Complete();
-        Subscriptions.Clear();
+    public bool Complete(TimeSpan timeout) {
+        try {
+            LogEvent = null;
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+
+        var queueDrained = false;
+        try {
+            queueDrained = Services.Complete(timeout);
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+        try {
+            Subscriptions.Complete();
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+        try {
+            Subscriptions.Clear();
+        }
+        catch (Exception ex) {
+            Logging.Notify(ex);
+        }
+        return queueDrained;
     }
 
     public void Dispose() {
