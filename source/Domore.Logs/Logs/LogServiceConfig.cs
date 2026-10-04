@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Domore.Logs;
 
 internal sealed class LogServiceConfig {
-    private readonly object Locker = new();
     private readonly Dictionary<string, LogTypeConfig> Type = [];
+    private readonly
+#if NET9_0_OR_GREATER
+        Lock
+#else
+        object
+#endif
+        Locker = new();
 
     private void Type_ThresholdChanged(object sender, EventArgs e) {
         var config = (LogTypeConfig)sender;
