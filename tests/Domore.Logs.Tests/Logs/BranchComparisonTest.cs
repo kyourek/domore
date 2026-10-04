@@ -2,6 +2,7 @@ using Domore.IO;
 using Domore.Logs.Service;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,12 +13,14 @@ namespace Domore.Logs;
 [TestFixture]
 [NonParallelizable]
 public sealed class BranchComparisonTest {
+    private static readonly List<string> Directories = new();
     private static LogManager Manager() =>
         (LogManager)Logging.Config.GetType().GetProperty("Log").GetValue(Logging.Config, null);
 
     private static string NewDirectory() {
         var path = Path.Combine(Path.GetTempPath(), "domore-branch-probes", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
+        Directories.Add(path);
         return path;
     }
 
@@ -31,6 +34,10 @@ public sealed class BranchComparisonTest {
     public void Cleanup() {
         GatedService.Release.Set();
         Logging.Complete();
+        foreach (var directory in Directories) {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+        Directories.Clear();
     }
 
     [Test]
