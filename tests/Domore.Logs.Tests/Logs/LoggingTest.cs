@@ -8,6 +8,7 @@ using CONF = Domore.Conf.Conf;
 
 namespace Domore.Logs; 
 [TestFixture]
+[NonParallelizable]
 public sealed partial class LoggingTest {
     private ILog Log {
         get => _Log ??= Logging.For(typeof(LoggingTest));

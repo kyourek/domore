@@ -4,7 +4,6 @@ using System;
 using System.Threading;
 
 namespace Domore.Logs;
-[NonParallelizable]
 public sealed partial class LoggingTest {
     [Test]
     public void SubscriptionThresholdChangedDuringCalculationUsesNewValue() {
