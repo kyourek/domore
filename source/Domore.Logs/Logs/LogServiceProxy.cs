@@ -24,7 +24,10 @@ internal sealed class LogServiceProxy {
 
     private ILogService GetServiceUnsafe() {
         if (_Service is null) {
-            _Service = Factory.Create(_Type ?? Name) ?? new None();
+            using (LogCallbackGuard.EnterManager(Manager))
+            using (LogCallbackGuard.Enter()) {
+                _Service = Factory.Create(_Type ?? Name) ?? new None();
+            }
             ServiceCompleted = false;
         }
         return _Service;
@@ -69,7 +72,13 @@ internal sealed class LogServiceProxy {
             lock (Locker) {
                 // Configure the future instance without changing delivery during the active callback.
                 if (PendingTypeChange) {
-                    return PendingService ??= Factory.Create(PendingType) ?? new None();
+                    if (PendingService is null) {
+                        using (LogCallbackGuard.EnterManager(Manager))
+                        using (LogCallbackGuard.Enter()) {
+                            PendingService = Factory.Create(PendingType) ?? new None();
+                        }
+                    }
+                    return PendingService;
                 }
                 return GetServiceUnsafe();
             }
@@ -145,7 +154,10 @@ internal sealed class LogServiceProxy {
                 var service = GetServiceUnsafe();
                 ServiceCallDepth++;
                 try {
-                    service.Log(name, data, sev);
+                    using (LogCallbackGuard.EnterManager(Manager))
+                    using (LogCallbackGuard.Enter()) {
+                        service.Log(name, data, sev);
+                    }
                 }
                 finally {
                     ServiceCallDepth--;

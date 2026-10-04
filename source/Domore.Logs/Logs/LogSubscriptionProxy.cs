@@ -20,7 +20,9 @@ internal sealed class LogSubscriptionProxy {
 
     public LogSubscriptionProxy(ILogSubscription agent) {
         Agent = agent ?? new None();
-        Agent.ThresholdChanged += Agent_ThresholdChanged;
+        using (LogCallbackGuard.Enter()) {
+            Agent.ThresholdChanged += Agent_ThresholdChanged;
+        }
     }
 
     private void Agent_ThresholdChanged(object sender, EventArgs e) {
@@ -37,7 +39,9 @@ internal sealed class LogSubscriptionProxy {
         var cache = Interlocked.CompareExchange(ref ThresholdCache, null, null);
         return cache.GetOrAdd(type, type => {
             try {
-                return Agent.Threshold(type);
+                using (LogCallbackGuard.Enter()) {
+                    return Agent.Threshold(type);
+                }
             }
             catch (Exception ex) {
                 Logging.Notify(ex);
@@ -53,7 +57,9 @@ internal sealed class LogSubscriptionProxy {
         var threshold = Threshold(entry.LogType);
         if (threshold != LogSeverity.None && threshold <= entry.EntrySeverity) {
             try {
-                Agent.Receive(entry);
+                using (LogCallbackGuard.Enter()) {
+                    Agent.Receive(entry);
+                }
             }
             catch (Exception ex) {
                 Logging.Notify(ex);
@@ -66,7 +72,9 @@ internal sealed class LogSubscriptionProxy {
             if (Completed) {
                 return;
             }
-            Agent.ThresholdChanged -= Agent_ThresholdChanged;
+            using (LogCallbackGuard.Enter()) {
+                Agent.ThresholdChanged -= Agent_ThresholdChanged;
+            }
             Completed = true;
         }
     }
