@@ -19,7 +19,7 @@ The shared `BackgroundQueue` keeps Logs independent, writes fallback diagnostics
 ## Validation
 
 - `dotnet build source/Domore.Logs/Domore.Logs.csproj --no-restore -v minimal`: passed all nine library targets (`net40`, `net45`, `net462`, `net48`, `netstandard2.0`, `netcoreapp3.1`, `net6.0`, `net8.0`, `net10.0`).
-- Shutdown and lifetime focused tests: 9/9 passed on net8.0 and 9/9 passed on net462. The net10.0 shutdown/process-exit focus passed, including the two real child-process checks.
+- Shutdown and lifetime focused tests: 10/10 passed on net8.0 and 10/10 passed on net462. The net10.0 shutdown/path focused set passed 16/16, including the two real child-process checks.
 - Net10.0 Logs suite, excluding only `ServicePropertiesBeforeTypeAreApplied` because this worktree predates the separately reviewed C16 configuration commit: 276 passed, 1 skipped, 0 failed. The complete Logs suite is to be rerun after integration with that reviewed configuration repair.
 - `git diff --check` passed after the final documentation and test updates.
 
