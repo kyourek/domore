@@ -15,18 +15,16 @@ namespace Domore.Logs;
 [TestFixture]
 public sealed partial class LoggingTest {
     private ILog Log {
-        get => _Log ??= Logging.For(typeof(LoggingTest));
-        set => _Log = value;
+        get => field ??= Logging.For(typeof(LoggingTest));
+        set;
     }
-    private ILog _Log;
 
     private bool SkipLoggingCompleteOnTearDown;
 
     private string Config {
-        get => _Config;
-        set => CONF.Contain(_Config = value).Configure(Logging.Config, key: "");
+        get;
+        set => CONF.Contain(field = value).Configure(Logging.Config, key: "");
     }
-    private string _Config;
 
     [SetUp]
     public void SetUp() {

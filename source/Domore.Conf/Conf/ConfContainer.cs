@@ -7,8 +7,10 @@ namespace Domore.Conf;
 internal sealed class ConfContainer : IConfContainer {
     private ConfPopulator Populator => field ??= ConfPopulator.Cached;
 
-    private ConfContent Content => _Content ??= MakeContent();
-    private ConfContent _Content;
+    private ConfContent Content {
+        get => field ??= MakeContent();
+        set;
+    }
 
     private ConfContent MakeContent() {
         var provider = ContentProvider;
@@ -27,46 +29,45 @@ internal sealed class ConfContainer : IConfContainer {
     internal bool IncludeEmptyStrings { get; set; }
 
     public IConfContentProvider ContentProvider {
-        get => _ContentProvider ??= new ConfContentProvider();
+        get => field ??= new ConfContentProvider();
         set {
-            if (_ContentProvider != value) {
-                _ContentProvider = value;
-                _Content = null;
-                _Lookup = null;
+            if (field != value) {
+                field = value;
+                Content = null;
+                Lookup = null;
             }
         }
     }
-    private IConfContentProvider _ContentProvider;
 
     public object Source {
-        get => _Source;
+        get;
         set {
-            if (_Source != value) {
-                _Source = value;
-                _Content = null;
-                _Lookup = null;
+            if (field != value) {
+                field = value;
+                Content = null;
+                Lookup = null;
             }
         }
     }
-    private object _Source;
 
     public string Special {
-        get => _Special;
+        get;
         set {
-            if (_Special != value) {
-                _Special = value;
-                _Content = null;
-                _Lookup = null;
+            if (field != value) {
+                field = value;
+                Content = null;
+                Lookup = null;
             }
         }
     }
-    private string _Special;
 
     public IEnumerable<object> Sources =>
         Content.Sources;
 
-    public IConfLookup Lookup => _Lookup ??= new ConfLookup(Content.Pairs);
-    private IConfLookup _Lookup;
+    public IConfLookup Lookup {
+        get => field ??= new ConfLookup(Content.Pairs);
+        private set;
+    }
 
     public T Configure<T>(T target, string key = null) {
         if (null == target) throw new ArgumentNullException(nameof(target));

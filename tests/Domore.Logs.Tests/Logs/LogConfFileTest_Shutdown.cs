@@ -19,13 +19,12 @@ partial class LogConfFileTest {
         public LogSeverity? CompletedThreshold;
 
         public string Option {
-            get => _Option;
+            get;
             set {
                 OptionAssigned?.Invoke(value);
-                _Option = value;
+                field = value;
             }
         }
-        private string _Option;
 
         public void Log(string name, string data, LogSeverity severity) => Entries.Enqueue(data);
         public void Complete() {

@@ -19,9 +19,13 @@ namespace Domore.Logs;
 [NonParallelizable]
 internal sealed class QueueLimitsTest {
     private readonly List<ILogService> FileServices = [];
-    private string TempDir => _TempDir ??= Path.Combine(
-        Path.GetTempPath(), "domore.logs.queue-limits", Guid.NewGuid().ToString("N"));
-    private string _TempDir;
+    private string TempDir {
+        get => field ??=
+            Path.Combine(Path.GetTempPath(),
+                         "domore.logs.queue-limits",
+                         Guid.NewGuid().ToString("N"));
+        set;
+    }
 
     private sealed class GateService : ILogService {
         public static readonly ManualResetEventSlim Entered = new(false);
@@ -193,7 +197,7 @@ internal sealed class QueueLimitsTest {
         GateService.Release.Set();
         ReplacementOldService.Release.Set();
         Logging.Complete();
-        _TempDir = null;
+        TempDir = null;
         FileServices.Clear();
         GateService.Reset();
         FastService.Reset();

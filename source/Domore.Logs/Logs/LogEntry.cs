@@ -53,11 +53,10 @@ internal sealed class LogEntry : ILogEntry {
     public string LogName {
         get {
             lock (FormatLocker) {
-                return _LogName ??= LogType.Name;
+                return field ??= LogType.Name;
             }
         }
     }
-    private string _LogName;
 
     public Type LogType { get; }
     public DateTime EntryDate { get; }

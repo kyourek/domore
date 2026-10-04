@@ -7,12 +7,10 @@ using System.Linq;
 namespace Domore.Logs;
 
 internal sealed class LogFormatter {
-    private const int DefaultEnumerableItemLimit = 100;
+    private const int EnumerableItemLimitDefault = 100;
     private const string FormattingFailure = "<formatting failed>";
 
     private ConcurrentDictionary<Type, Func<object, string[]>> Lookup { get; } = [];
-
-    private int _EnumerableItemLimit = DefaultEnumerableItemLimit;
 
     private static IEnumerable<string> Split(string s) {
         return (s ?? "")
@@ -142,15 +140,15 @@ internal sealed class LogFormatter {
     /// The default is 100. Values must be positive.
     /// </summary>
     public int EnumerableItemLimit {
-        get => _EnumerableItemLimit;
+        get;
         set {
             if (value <= 0) {
-                throw new ArgumentOutOfRangeException(nameof(value), value,
+                throw new ArgumentOutOfRangeException(nameof(EnumerableItemLimit), value,
                     "The enumerable item limit must be greater than zero.");
             }
-            _EnumerableItemLimit = value;
+            field = value;
         }
-    }
+    } = EnumerableItemLimitDefault;
 
     public void Format(Type type, Func<object, string[]> toString) {
         Lookup[type] = toString;

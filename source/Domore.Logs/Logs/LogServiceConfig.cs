@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogServiceConfig {
     private readonly object Locker = new();
     private readonly Dictionary<string, LogTypeConfig> Type = [];
@@ -34,10 +35,11 @@ internal sealed class LogServiceConfig {
 
     public LogTypeConfig Default {
         get {
-            if (_Default == null) {
+            if (_Default is null) {
                 lock (Locker) {
-                    if (_Default == null) {
-                        var @default = new LogTypeConfig();
+                    if (_Default is null) {
+                        var
+                        @default = new LogTypeConfig();
                         @default.ThresholdChanged += Default_ThresholdChanged;
                         _Default = @default;
                     }

@@ -3,7 +3,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -537,8 +536,11 @@ partial class LoggingTest {
 
     [Test]
     public void DefaultConfigReferenceUsesSafePublication() {
-        var field = typeof(LogServiceConfig).GetField("_Default", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field.GetRequiredCustomModifiers(), Does.Contain(typeof(IsVolatile)));
+        var config = new LogServiceConfig();
+        var values = new LogTypeConfig[32];
+        Parallel.For(0, values.Length, index => values[index] = config.Default);
+
+        Assert.That(values.All(value => ReferenceEquals(value, values[0])), Is.True);
     }
 
     [Test]

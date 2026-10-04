@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Domore.Logs; 
+namespace Domore.Logs;
+
 internal sealed class LogTypeConfig {
     public event EventHandler ThresholdChanged;
 
@@ -18,13 +19,12 @@ internal sealed class LogTypeConfig {
     }
 
     public LogSeverity? Threshold {
-        get => _Threshold;
+        get;
         set {
-            if (_Threshold != value) {
-                _Threshold = value;
+            if (field != value) {
+                field = value;
                 ThresholdChanged?.Invoke(this, EventArgs.Empty);
             }
         }
     }
-    private LogSeverity? _Threshold;
 }

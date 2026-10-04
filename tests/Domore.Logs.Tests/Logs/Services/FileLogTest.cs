@@ -15,19 +15,17 @@ namespace Domore.Logs.Services;
 [NonParallelizable]
 internal sealed class FileLogTest {
     private string Id {
-        get => _Id ??= Guid.NewGuid().ToString();
-        set => _Id = value;
+        get => field ??= Guid.NewGuid().ToString();
+        set;
     }
-    private string _Id;
 
     private string TempDir {
-        get => _TempDir ??= Path.Combine(Path.GetTempPath(), "domore.logs.loggingtest", Id);
-        set => _TempDir = value;
+        get => field ??= Path.Combine(Path.GetTempPath(), "domore.logs.loggingtest", Id);
+        set;
     }
-    private string _TempDir;
 
     public string TempFile {
-        get => _TempFile ??= new Func<string>(() => {
+        get => field ??= new Func<string>(() => {
             if (Directory.Exists(TempDir) == false) {
                 Directory.CreateDirectory(TempDir);
             }
@@ -36,21 +34,18 @@ internal sealed class FileLogTest {
                 return path;
             }
         })();
-        set => _TempFile = value;
+        set;
     }
-    private string _TempFile;
 
     private string Config {
-        get => _Config;
-        set => CONF.Contain(_Config = value).Configure(Logging.Config, key: "");
+        get;
+        set => CONF.Contain(field = value).Configure(Logging.Config, key: "");
     }
-    private string _Config;
 
     private ILog Log {
-        get => _Log ??= Logging.For(typeof(LoggingTest));
-        set => _Log = value;
+        get => field ??= Logging.For(typeof(LoggingTest));
+        set;
     }
-    private ILog _Log;
 
     private void ConfigFile(string config = null) {
         Config = $@"
@@ -232,8 +227,7 @@ internal sealed class FileLogTest {
             Directory = TempDir,
             Name = "retry-flush-interval.log"
         };
-        var intervalField = typeof(FileLog).GetField("_FlushInterval", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? typeof(FileLog).GetField("<FlushInterval>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        var intervalField = typeof(FileLog).GetField("<FlushInterval>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.That(intervalField, Is.Not.Null);
         intervalField.SetValue(fileLog, TimeSpan.FromMilliseconds(-2));
         var service = (ILogService)fileLog;

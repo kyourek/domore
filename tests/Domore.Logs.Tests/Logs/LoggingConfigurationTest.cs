@@ -50,13 +50,12 @@ public sealed class LoggingConfigurationTest {
         public static LogSeverity? CompletedThreshold;
 
         public string Label {
-            get => _Label;
+            get;
             set {
                 LabelAssigned?.Invoke(value);
-                _Label = value;
+                field = value;
             }
         }
-        private string _Label;
         public string Type { get; set; }
         public void Log(string name, string data, LogSeverity severity) { }
         public void Complete() {
