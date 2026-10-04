@@ -6,6 +6,8 @@ using System.Linq;
 
 namespace Domore.Logs; 
 internal sealed class LogFormatter {
+    private const int MaxEnumerableItems = 100;
+
     private ConcurrentDictionary<Type, Func<object, string[]>> Lookup { get; } = [];
 
     private IEnumerable<string> Split(string s) {
@@ -34,8 +36,14 @@ internal sealed class LogFormatter {
                 }
             }
             if (expandEnumerable && obj is IEnumerable enumerable) {
+                var itemCount = 0;
                 foreach (var item in enumerable) {
+                    if (itemCount >= MaxEnumerableItems) {
+                        lines.Add("… (truncated)");
+                        break;
+                    }
                     Format(item, expandEnumerable: false, lines);
+                    itemCount++;
                 }
                 return;
             }
