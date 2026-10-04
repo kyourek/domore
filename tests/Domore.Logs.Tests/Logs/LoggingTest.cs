@@ -502,6 +502,7 @@ public sealed partial class LoggingTest {
         AddingServiceDuringComplete.Reset(collection);
         ConfigureCollectionService(collection, "a_mutating", typeof(AddingServiceDuringComplete));
         ConfigureCollectionService(collection, "y_healthy", typeof(HealthyCompleteLogService));
+        _ = collection["y_healthy"].Service;
         var completionFailed = false;
         try {
             collection.Complete();
@@ -621,6 +622,9 @@ public sealed partial class LoggingTest {
     private sealed class CompletingLogService : ILogService {
         public static ManualResetEventSlim CallbackReturned { get; } = new();
         public static ManualResetEventSlim ServiceCompleted { get; } = new();
+        public static ManualResetEventSlim CompleteEntered { get; } = new();
+        public static ManualResetEventSlim AllowComplete { get; } = new();
+        public static bool BlockComplete { get; set; }
 
         public CompletingLogService() {
         }
@@ -628,6 +632,9 @@ public sealed partial class LoggingTest {
         public static void Reset() {
             CallbackReturned.Reset();
             ServiceCompleted.Reset();
+            CompleteEntered.Reset();
+            AllowComplete.Reset();
+            BlockComplete = false;
         }
 
         public void Log(string name, string data, LogSeverity severity) {
@@ -636,6 +643,10 @@ public sealed partial class LoggingTest {
         }
 
         public void Complete() {
+            CompleteEntered.Set();
+            if (BlockComplete) {
+                AllowComplete.Wait(TimeSpan.FromSeconds(10));
+            }
             ServiceCompleted.Set();
         }
     }
@@ -676,20 +687,68 @@ public sealed partial class LoggingTest {
         }
     }
 
-    private static int DeferredCompletionCount() {
+    private static int RetiringManagerCount() {
         var flags = BindingFlags.Static | BindingFlags.NonPublic;
         var instance = typeof(Logging).GetField("Instance", flags).GetValue(null);
         var locker = typeof(Logging).GetField("ManagerLocker", flags).GetValue(null);
-        var requests = (HashSet<LogManager>)typeof(Logging)
-            .GetField("DeferredCompletions", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance);
+        var requests = (System.Collections.IDictionary)typeof(Logging)
+            .GetField("RetiringManagers", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance);
         lock (locker) {
             return requests.Count;
         }
     }
 
+    private sealed class CompletingOnRemovalSubscription : ILogSubscription {
+        private EventHandler Handler;
+        public ManualResetEventSlim RemovalEntered { get; } = new();
+        public ManualResetEventSlim AllowRemoval { get; } = new();
+        public ManualResetEventSlim NestedCompletionReturned { get; } = new();
+        public bool NestedCompletionResult;
+
+        event EventHandler ILogSubscription.ThresholdChanged {
+            add => Handler += value;
+            remove {
+                RemovalEntered.Set();
+                AllowRemoval.Wait(TimeSpan.FromSeconds(10));
+                Handler -= value;
+                NestedCompletionResult = Logging.Complete(TimeSpan.Zero);
+                NestedCompletionReturned.Set();
+            }
+        }
+
+        public LogSeverity Threshold(Type type) => LogSeverity.Info;
+        public void Receive(ILogEntry entry) { }
+    }
+
+    private static LogManager CurrentManager() {
+        var config = Logging.Config;
+        return (LogManager)config.GetType().GetProperty("Log").GetValue(config, null);
+    }
+
     private static void WaitForDeferredCompletions() {
-        Assert.That(SpinWait.SpinUntil(() => DeferredCompletionCount() == 0, TimeSpan.FromSeconds(5)), Is.True,
-            "Queued completion requests should finish before checking the next session.");
+        Assert.That(SpinWait.SpinUntil(() => RetiringManagerCount() == 0, TimeSpan.FromSeconds(5)), Is.True,
+            "Retirement workers should finish before checking the next session.");
+    }
+
+    [Test]
+    public void RepeatedManagerRetirementsDoNotRetainWaitHandles() {
+        Logging.Complete();
+        var retirementType = typeof(Logging).GetNestedType("Retirement", BindingFlags.NonPublic);
+        var waitHandles = retirementType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(field => typeof(WaitHandle).IsAssignableFrom(field.FieldType))
+            .ToArray();
+
+        for (var i = 0; i < 64; i++) {
+            Logging.Configure(_ => { });
+            Assert.That(Logging.Complete(TimeSpan.FromMilliseconds(-1)), Is.True,
+                "Each new manager should fully retire before the next session is created.");
+        }
+
+        Assert.Multiple(() => {
+            Assert.That(waitHandles, Is.Empty,
+                "A retirement record must not own a kernel wait handle that outlives its callers.");
+            Assert.That(RetiringManagerCount(), Is.Zero);
+        });
     }
 
     [Test]
@@ -697,28 +756,24 @@ public sealed partial class LoggingTest {
         CompletingLogService.Reset();
         HealthyCompleteLogService.Reset();
         var subscription = new DeferredCompletionSubscription();
-        var completeLocker = typeof(Logging).GetField("CompleteLocker", BindingFlags.Static | BindingFlags.NonPublic)
-            .GetValue(null);
+        CompletingLogService.BlockComplete = true;
+        Config = $@"
+            log[complete].type = {typeof(CompletingLogService).AssemblyQualifiedName}
+            log[complete].config.default.severity = info
+        ";
+        Log.Info("completion requested from service callback");
+        Assert.That(CompletingLogService.CallbackReturned.Wait(TimeSpan.FromSeconds(5)), Is.True);
+        Assert.That(CompletingLogService.CompleteEntered.Wait(TimeSpan.FromSeconds(5)), Is.True,
+            "The detached manager should continue retirement on its worker.");
+        Assert.That(RetiringManagerCount(), Is.EqualTo(1));
 
-        // Hold shutdown so callback requests cannot run until the next session exists.
-        lock (completeLocker) {
-            Config = $@"
-                log[complete].type = {typeof(CompletingLogService).AssemblyQualifiedName}
-                log[complete].config.default.severity = info
-            ";
-            Log.Info("first completion request");
-            Log.Info("second completion request");
-            Assert.That(CompletingLogService.CallbackReturned.Wait(TimeSpan.FromSeconds(5)), Is.True);
-            Logging.Complete();
-            Assert.That(CompletingLogService.ServiceCompleted.IsSet, Is.True);
-            Assert.That(DeferredCompletionCount(), Is.EqualTo(1), "Repeated requests should share one queued completion.");
-
-            Assert.That(Logging.Subscribe(subscription), Is.True);
-            Config = $@"
-                log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
-                log[healthy].config.default.severity = info
-            ";
-        }
+        Assert.That(Logging.Subscribe(subscription), Is.True);
+        Config = $@"
+            log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+            log[healthy].config.default.severity = info
+        ";
+        CompletingLogService.AllowComplete.Set();
+        Assert.That(CompletingLogService.ServiceCompleted.Wait(TimeSpan.FromSeconds(5)), Is.True);
 
         WaitForDeferredCompletions();
         var detachedByOldRequest = subscription.Detached.IsSet;
@@ -919,6 +974,239 @@ public sealed partial class LoggingTest {
         }
     }
 
+    private sealed class UnusedConfiguredLogService : ILogService {
+        public static int Created;
+        public static int Completed;
+
+        public UnusedConfiguredLogService() => Interlocked.Increment(ref Created);
+        public void Log(string name, string data, LogSeverity severity) { }
+        public void Complete() => Interlocked.Increment(ref Completed);
+    }
+
+    private sealed class LeaseRetirementLogService : ILogService {
+        public static ConcurrentQueue<string> Entries { get; } = new();
+        public void Log(string name, string data, LogSeverity severity) => Entries.Enqueue(data);
+        public void Complete() { }
+    }
+
+    [Test]
+    public void CompletingUnusedConfiguredServiceDoesNotCreateIt() {
+        UnusedConfiguredLogService.Created = 0;
+        UnusedConfiguredLogService.Completed = 0;
+        Config = $@"
+            log[unused].type = {typeof(UnusedConfiguredLogService).AssemblyQualifiedName}
+            log[unused].config.default.severity = info
+        ";
+
+        Logging.Complete();
+
+        Assert.Multiple(() => {
+            Assert.That(UnusedConfiguredLogService.Created, Is.Zero);
+            Assert.That(UnusedConfiguredLogService.Completed, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void RetirementRetriesInterruptedLeaseWaitBeforeDrainingAcceptedWork() {
+        GatedCompleteLogService.Reset();
+        while (LeaseRetirementLogService.Entries.TryDequeue(out _)) { }
+        using var callbackEntered = new ManualResetEventSlim();
+        using var releaseCallback = new ManualResetEventSlim();
+        Logging.EventThreshold = LogSeverity.Info;
+        Logging.Event += (_, entry) => {
+            if (entry.LogList.Contains("leased entry")) {
+                callbackEntered.Set();
+                releaseCallback.Wait(TimeSpan.FromSeconds(5));
+            }
+        };
+        Config = $@"
+            log[accepted].type = {typeof(LeaseRetirementLogService).AssemblyQualifiedName}
+            log[accepted].config.default.severity = info
+            log[gated].type = {typeof(GatedCompleteLogService).AssemblyQualifiedName}
+            log[gated].config.default.severity = info
+        ";
+        var logging = Task.Run(() => Log.Info("leased entry"));
+        Assert.That(callbackEntered.Wait(TimeSpan.FromSeconds(5)), Is.True);
+
+        try {
+            Assert.That(Logging.Complete(TimeSpan.Zero), Is.False,
+                "The active manager lease prevents retirement from completing immediately.");
+            var instance = typeof(Logging).GetField("Instance", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            var retiring = (System.Collections.IDictionary)typeof(Logging)
+                .GetField("RetiringManagers", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance);
+            var record = retiring.Values.Cast<object>().Single();
+            var worker = (Thread)record.GetType().GetField("Worker").GetValue(record);
+            Assert.That(SpinWait.SpinUntil(() => (worker.ThreadState & ThreadState.WaitSleepJoin) != 0,
+                TimeSpan.FromSeconds(5)), Is.True, "Retirement should wait on the active lease.");
+            worker.Interrupt();
+            releaseCallback.Set();
+
+            Assert.That(logging.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(GatedCompleteLogService.CompleteEntered.Wait(TimeSpan.FromSeconds(5)), Is.True,
+                "After the lease ends, retirement must drain accepted work and complete services.");
+            Assert.That(LeaseRetirementLogService.Entries.ToArray(), Is.EqualTo(["leased entry"]));
+        }
+        finally {
+            releaseCallback.Set();
+            GatedCompleteLogService.AllowComplete.Set();
+            logging.Wait(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.That(Logging.Complete(TimeSpan.FromMilliseconds(-1)), Is.True,
+            "A later infinite completion must include and finish the interrupted retirement.");
+    }
+
+    [Test]
+    public void SubscriptionRemovalCompletionKeepsNewLoggingSessionAlive() {
+        var subscription = new CompletingOnRemovalSubscription();
+        Assert.That(Logging.Subscribe(subscription), Is.True);
+        var oldManager = CurrentManager();
+        var completion = Task.Run(() => Logging.Complete(TimeSpan.FromSeconds(5)));
+        try {
+            Assert.That(subscription.RemovalEntered.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            var newManager = CurrentManager();
+            Assert.That(newManager, Is.Not.SameAs(oldManager));
+            Assert.That(Logging.Subscribe(subscription), Is.True);
+            subscription.AllowRemoval.Set();
+
+            Assert.That(subscription.NestedCompletionReturned.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(completion.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            var current = CurrentManager();
+            Assert.Multiple(() => {
+                Assert.That(subscription.NestedCompletionResult, Is.False,
+                    "A callback owned by the retired manager must not wait for itself or retire the new one.");
+                Assert.That(current, Is.SameAs(newManager));
+                Assert.That(Logging.Subscribe(subscription), Is.False,
+                    "The old retirement callback must leave the new manager unchanged.");
+            });
+        }
+        finally {
+            subscription.AllowRemoval.Set();
+            completion.Wait(TimeSpan.FromSeconds(5));
+            Logging.Complete();
+        }
+    }
+
+    [Test]
+    public void FlowedCallbackFromRetiringManagerCannotCompleteNewSession() {
+        using var childStarted = new ManualResetEventSlim();
+        using var releaseChild = new ManualResetEventSlim();
+        using var childReturned = new ManualResetEventSlim();
+        Task child = null;
+        Logging.EventThreshold = LogSeverity.Info;
+        Logging.Event += (_, entry) => {
+            if (entry.LogList.Contains("start old callback")) {
+                child = Task.Run(() => {
+                    childStarted.Set();
+                    releaseChild.Wait(TimeSpan.FromSeconds(10));
+                    Logging.Complete();
+                    childReturned.Set();
+                });
+            }
+        };
+
+        Log.Info("start old callback");
+        Assert.That(childStarted.Wait(TimeSpan.FromSeconds(5)), Is.True);
+        try {
+            Logging.Complete();
+            Logging.EventThreshold = LogSeverity.Info;
+            var newManager = CurrentManager();
+            releaseChild.Set();
+            Assert.That(childReturned.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(child?.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            Assert.That(CurrentManager(), Is.SameAs(newManager));
+        }
+        finally {
+            releaseChild.Set();
+            child?.Wait(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Test]
+    public void TimedCompletionReturnsAtDeadlineAndLaterCompletionFlushesRetirements() {
+        GatedCompleteLogService.Reset();
+        HealthyCompleteLogService.Reset();
+        Config = $@"
+            log[gated].type = {typeof(GatedCompleteLogService).AssemblyQualifiedName}
+            log[gated].config.default.severity = info
+        ";
+        Log.Info("accepted before timed completion");
+
+        Assert.That(Logging.Complete(TimeSpan.FromMilliseconds(40)), Is.False);
+        Assert.That(GatedCompleteLogService.CompleteEntered.Wait(TimeSpan.FromSeconds(5)), Is.True,
+            "Background cleanup should reach service completion after draining the queue.");
+        Assert.That(Logging.Complete(TimeSpan.Zero), Is.False,
+            "A second completion sees the earlier pending retirement and shares its zero timeout.");
+
+        Config = $@"
+            log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+            log[healthy].config.default.severity = info
+        ";
+        Log.Info("new session while old completion is gated");
+        GatedCompleteLogService.AllowComplete.Set();
+
+        Assert.That(Logging.Complete(TimeSpan.FromMilliseconds(-1)), Is.True,
+            "The -1 millisecond timeout requests an unbounded flush of old and current managers.");
+        Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["new session while old completion is gated"]));
+        Assert.That(HealthyCompleteLogService.CompleteCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TimedCompletionValidatesTimeoutBeforeRetiringAnything() {
+        Assert.That(Logging.Complete(TimeSpan.Zero), Is.True);
+        Assert.That(Logging.Complete(TimeSpan.FromMilliseconds(-1)), Is.True);
+        Assert.Throws<ArgumentOutOfRangeException>(() => Logging.Complete(TimeSpan.FromTicks(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Logging.Complete(TimeSpan.FromMilliseconds(-2)));
+    }
+
+    [Test]
+    public void ProcessExitHandlerDrainsAcceptedMessages() {
+        HealthyCompleteLogService.Reset();
+        Config = $@"
+            log[healthy].type = {typeof(HealthyCompleteLogService).AssemblyQualifiedName}
+            log[healthy].config.default.severity = info
+        ";
+        Log.Info("flush at process exit");
+        var processExit = typeof(Logging).GetMethod("ProcessExit", BindingFlags.Static | BindingFlags.NonPublic);
+
+        processExit.Invoke(null, [null, EventArgs.Empty]);
+
+        Assert.Multiple(() => {
+            Assert.That(HealthyCompleteLogService.Entries.ToArray(), Is.EqualTo(["flush at process exit"]));
+            Assert.That(HealthyCompleteLogService.CompleteCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void CompletionOnTaskWithFlowedManagerLeaseDoesNotWaitForThatLease() {
+        var config = Logging.Config;
+        var oldManager = (LogManager)config.GetType().GetProperty("Log").GetValue(config, null);
+        using var childStarted = new ManualResetEventSlim();
+        using var childReturned = new ManualResetEventSlim();
+        Task completion = null;
+        var returnedBeforeLeaseRelease = false;
+
+        Logging.Configure(_ => {
+            completion = Task.Run(() => {
+                childStarted.Set();
+                Logging.Complete();
+                childReturned.Set();
+            });
+            Assert.That(childStarted.Wait(TimeSpan.FromSeconds(5)), Is.True);
+            returnedBeforeLeaseRelease = childReturned.Wait(TimeSpan.FromSeconds(2));
+        });
+        completion?.Wait(TimeSpan.FromSeconds(5));
+        var newConfig = Logging.Config;
+        var newManager = (LogManager)newConfig.GetType().GetProperty("Log").GetValue(newConfig, null);
+        WaitForDeferredCompletions();
+
+        Assert.Multiple(() => {
+            Assert.That(returnedBeforeLeaseRelease, Is.True,
+                "A child task carrying the manager context must defer instead of waiting on its parent lease.");
+            Assert.That(newManager, Is.Not.SameAs(oldManager));
+        });
+    }
+
     private sealed class CompletionWindowSubscription : ILogSubscription {
         public ConcurrentQueue<string> Entries { get; } = new();
 
@@ -943,6 +1231,7 @@ public sealed partial class LoggingTest {
                 log[gated].type = {typeof(GatedCompleteLogService).AssemblyQualifiedName}
                 log[gated].config.default.severity = info
             ";
+        Log.Info("before completion");
 
         var subscription = new CompletionWindowSubscription();
         var completion = Task.Run(Logging.Complete);

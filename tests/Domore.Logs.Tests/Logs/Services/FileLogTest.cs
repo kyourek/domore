@@ -717,7 +717,8 @@ internal sealed class FileLogTest {
     [Test]
     public void LogsToFormattedPath() {
         var id = Guid.NewGuid();
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", id.ToString(), AppDomain.CurrentDomain?.FriendlyName);
+        var idDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest", id.ToString());
+        var dir = Path.Combine(idDir, AppDomain.CurrentDomain?.FriendlyName);
         try {
             ConfigFile($@"
                     Log[f].service.directory = {{LocalApplicationData}}/Domore/Domore.Logs.LoggingTest/{id}/{{appDomain.friendlyName}}
@@ -726,12 +727,25 @@ internal sealed class FileLogTest {
                 ");
             Log.Info("Got the message?");
             Logging.Complete();
-            var actual = File.ReadAllText(Path.Combine(dir, $"test-{Thread.CurrentThread.ManagedThreadId}.log")).Trim();
+            var files = Directory.GetFiles(dir, "test-*.log", SearchOption.TopDirectoryOnly);
+            Assert.That(files, Has.Length.EqualTo(1), "The formatted thread token should produce one log file.");
+            var fileName = Path.GetFileNameWithoutExtension(files[0]);
+            var threadToken = fileName.Substring("test-".Length);
+            Assert.That(int.TryParse(threadToken, NumberStyles.None, CultureInfo.InvariantCulture, out _), Is.True,
+                "The expanded thread token should remain a numeric managed thread identifier.");
+            var actual = File.ReadAllText(files[0]).Trim();
             var expected = "inf Got the message?";
             Assert.That(actual, Is.EqualTo(expected));
         }
         finally {
-            Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Domore", "Domore.Logs.LoggingTest"), recursive: true);
+            try {
+                Logging.Complete();
+            }
+            finally {
+                if (Directory.Exists(idDir)) {
+                    Directory.Delete(idDir, recursive: true);
+                }
+            }
         }
     }
 

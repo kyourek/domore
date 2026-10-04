@@ -5,5 +5,8 @@
     <ProjectReference Include="..\..\source\Domore.Logs.Conf\Domore.Logs.Conf.csproj" />
     <ProjectReference Include="..\..\source\Domore.Conf\Domore.Conf.csproj" />
     <ProjectReference Include="..\..\source\Domore.Logs\Domore.Logs.csproj" />
+    <ProjectReference Include="..\Domore.Logs.ProcessExitProbe\Domore.Logs.ProcessExitProbe.csproj"
+                      ReferenceOutputAssembly="false"
+                      Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 </Project>
