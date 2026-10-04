@@ -79,6 +79,24 @@ internal sealed class ConfContainer : IConfContainer {
         return target;
     }
 
+    internal T Configure<T>(T target, string key, Func<IConfPair, bool> first) {
+        if (target is null) throw new ArgumentNullException(nameof(target));
+        if (first is null) throw new ArgumentNullException(nameof(first));
+        var k = key ?? target?.GetType()?.Name ?? typeof(T).Name;
+        var source = k == ""
+            ? Content.Pairs
+            : Content.Pairs.Where(pair => pair.Key.StartsWith(k))
+                           .Select(pair => new ConfPair(pair.Key.Skip(), pair.Value));
+        var ordered = new List<IConfPair>();
+        var remaining = new List<IConfPair>();
+        foreach (var pair in source) {
+            (first(pair) ? ordered : remaining).Add(pair);
+        }
+        ordered.AddRange(remaining);
+        Populator.Populate(target, this, ordered, IncludeEmptyStrings);
+        return target;
+    }
+
     public IEnumerable<T> Configure<T>(Func<T> factory,
                                        string key = null,
                                        IEqualityComparer<string> comparer = null) {
