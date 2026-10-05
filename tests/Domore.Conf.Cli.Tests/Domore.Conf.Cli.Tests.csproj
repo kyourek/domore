@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\source\Domore.Conf.Cli\Domore.Conf.Cli.csproj" />
-  </ItemGroup>
-</Project>
